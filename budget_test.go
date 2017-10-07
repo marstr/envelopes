@@ -15,6 +15,7 @@
 package envelopes_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/marstr/envelopes"
@@ -75,6 +76,19 @@ func TestBudget_RecursiveTotal(t *testing.T) {
 			}
 		})
 	}
+}
+
+func ExampleBudget_RecursiveBalance() {
+	subject := envelopes.Budget{
+		Balance: 431,
+		Children: []*envelopes.Budget{
+			&envelopes.Budget{Balance: 1296},
+			&envelopes.Budget{Balance: 2},
+		},
+	}
+
+	fmt.Println(subject.RecursiveBalance())
+	// Output: 1729
 }
 
 func TestBudget_String(t *testing.T) {

@@ -23,7 +23,8 @@ import (
 	env "github.com/marstr/envelopes"
 )
 
-// Percentile will proportionaly distribute funds over a set number
+// Percentile will proportionaly distribute funds over a set `envelope.Budget`s as specified
+// by the user.
 type Percentile struct {
 	targets  map[Distributer]float64
 	overflow Distributer
@@ -31,6 +32,13 @@ type Percentile struct {
 
 // NewPercentile validates and instantiates
 func NewPercentile(targets map[Distributer]float64, overflow Distributer) (created Percentile, err error) {
+	// Fun note: There is a reason that `Distributer` is an interface implemented by these types instead of
+	// being a defined as `type Distribution func(int64) envelopes.Effect` and implemented as a series of
+	// constructors. That reason is that map[func(int64) envelopes.Effect]float64 is not permitted in Go.
+	// It would mean that I would not be able to define the function
+	// `NewPercentile(targets map[Distribution]float64, ...) Distribution`. Having it splayed out like this
+	// may also make it easier to do cycle detection for distributions in the future.
+
 	if overflow == nil {
 		err = errors.New("percentile distributions must have a valid overflow recipient")
 	} else {
@@ -55,7 +63,7 @@ func (p Percentile) Distribute(amount int64) (result env.Effect) {
 		result = result.Add(recipient.Distribute(realized))
 	}
 
-	result.Add(p.overflow.Distribute(remaining))
+	result = result.Add(p.overflow.Distribute(remaining))
 	return
 }
 

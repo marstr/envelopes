@@ -12,6 +12,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+// Package distribution exposes tools for taking the amount of a transaction,
+// and determining how the load of that transaction should be spread amoung
+// a collection of budgets.
 package distribution
 
 import (
