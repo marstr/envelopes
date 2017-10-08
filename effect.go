@@ -52,7 +52,7 @@ func (e Effect) Truncate() {
 }
 
 // Equal scans two `Effect`s and returns whether or not they contain the same adjustments
-// to the same `Budget`s.
+// to the same `Budget`s. Zero impact adjustments are `Truncate`d before evaluation.
 func (e Effect) Equal(other Effect) bool {
 	e.Truncate()
 	other.Truncate()

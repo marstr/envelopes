@@ -12,19 +12,18 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package distribution
+package evaluate_test
 
-import env "github.com/marstr/envelopes"
+import (
+	"fmt"
 
-type Flow struct {
-	Target   Distributer
-	Amount   int64
-	Overflow Distributer
-}
+	"github.com/marstr/envelopes/condition"
+)
 
-//
-func (f Flow) Distribute(amount int64) (result env.Effect) {
-	result = make(env.Effect)
-
-	return
+func ExampleBool_Evaluate() {
+	fmt.Println(condition.Bool(true).Evaluate())
+	fmt.Println(condition.Bool(false).Evaluate())
+	// Output:
+	// true
+	// false
 }

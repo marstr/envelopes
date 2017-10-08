@@ -16,14 +16,14 @@ package distribution
 
 import (
 	env "github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/condition"
+	"github.com/marstr/envelopes/evaluate"
 )
 
 // Branch will evaluate a `condition.Conditioner` then use the appropriate child `Distributer`
 type Branch struct {
 	Affirmative Distributer
 	Negative    Distributer
-	Decision    condition.Conditioner
+	Decision    evaluate.Evaluater
 }
 
 // Distribute calculates the impact of one of two child `Distributer`s based on how some
@@ -31,7 +31,7 @@ type Branch struct {
 func (br Branch) Distribute(amount int64) env.Effect {
 	var selected Distributer
 
-	if br.Affirmative == br.Negative || br.Decision.Apply() {
+	if br.Affirmative == br.Negative || br.Decision.Evaluate() {
 		selected = br.Affirmative
 	} else {
 		selected = br.Negative

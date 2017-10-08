@@ -12,35 +12,4 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package condition
-
-type binary struct {
-	Left  Conditioner
-	Right Conditioner
-}
-
-type And binary
-
-func (a And) Apply() bool {
-	return a.Left.Apply() && a.Right.Apply()
-}
-
-type Or binary
-
-func (o Or) Apply() bool {
-	return o.Left.Apply() || o.Right.Apply()
-}
-
-type Not struct {
-	Conditioner
-}
-
-func (n Not) Apply() bool {
-	return !n.Conditioner.Apply()
-}
-
-type Bool bool
-
-func (b Bool) Apply() bool {
-	return bool(b)
-}
+package evaluate

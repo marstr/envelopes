@@ -12,4 +12,35 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package condition
+package evaluate
+
+type binary struct {
+	Left  Conditioner
+	Right Conditioner
+}
+
+type And binary
+
+func (a And) Evaluate() bool {
+	return a.Left.Evaluate() && a.Right.Evaluate()
+}
+
+type Or binary
+
+func (o Or) Evaluate() bool {
+	return o.Left.Evaluate() || o.Right.Evaluate()
+}
+
+type Not struct {
+	Conditioner
+}
+
+func (n Not) Evaluate() bool {
+	return !n.Conditioner.Evaluate()
+}
+
+type Bool bool
+
+func (b Bool) Evaluate() bool {
+	return bool(b)
+}

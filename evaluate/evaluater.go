@@ -12,18 +12,11 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package condition_test
+// Package condition allows a means of programatically evaluating a
+package evaluate
 
-import (
-	"fmt"
-
-	"github.com/marstr/envelopes/condition"
-)
-
-func ExampleBool_Apply() {
-	fmt.Println(condition.Bool(true).Apply())
-	fmt.Println(condition.Bool(false).Apply())
-	// Output:
-	// true
-	// false
+// Evaluater allows for polymorphic determiniation of whether or not to apply
+// an `envelopes.Effect`
+type Evaluater interface {
+	Evaluate() bool
 }

@@ -59,6 +59,37 @@ func ExampleEffect_Truncate() {
 	// ["Groceries":$99.07 "Transit":$5.04]
 }
 
+func ExampleEffect_Equal() {
+	groceries, transit, pet := &envelopes.Budget{
+		Name: "Groceries",
+	}, &envelopes.Budget{
+		Name: "Transit",
+	}, &envelopes.Budget{
+		Name: "Pet",
+	}
+
+	eff1, eff2, eff3 := envelopes.Effect{
+		groceries: 42,
+		transit:   91,
+	}, envelopes.Effect{
+		groceries: 42,
+		transit:   91,
+		pet:       0,
+	}, envelopes.Effect{
+		groceries: 42,
+		transit:   91,
+		pet:       10,
+	}
+
+	fmt.Println("eff1 ?= eff1 :", eff1.Equal(eff1))
+	fmt.Println("eff1 ?= eff2 :", eff1.Equal(eff2))
+	fmt.Println("eff1 ?= eff3 :", eff1.Equal(eff3))
+	// Output:
+	// eff1 ?= eff1 : true
+	// eff1 ?= eff2 : true
+	// eff1 ?= eff3 : false
+}
+
 func TestEffect_String(t *testing.T) {
 	groceries := envelopes.Budget{
 		Name:    "Groceries",

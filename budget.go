@@ -30,7 +30,13 @@ import (
 	"fmt"
 )
 
-// Budget encapsulates a single category of spending
+// Budget encapsulates a single category of spending.
+//
+// Unlike some budgeting systems, these budgets are based on a debit/credit
+// system. There is no built in concept of a monthly reset. However, you can
+// build that yourself easily, ever by building a `distribution` which zeroes
+// out the balances of all non-rollover budgets and places it in a designated
+// savings budget.
 type Budget struct {
 	Name     string    `json:"name"`
 	Balance  int64     `json:"balance"`
@@ -49,8 +55,17 @@ func (b Budget) RecursiveBalance() (sum int64) {
 func (b Budget) String() string {
 	builder := new(bytes.Buffer)
 
-	var helper func(Budget) //Structuring the helper in this way allows for a recursive implementation, while only allocating one buffer.
+	// In order to use a lambda recursively, a symbol must be defined for it
+	// externally.
+	var helper func(Budget)
 
+	// Because `String` shouldn't really be a performance throttling operation,
+	// it is more readable to recursively examine the children. Having
+	// `builder` declared externally allows a closure to capture it, meaning
+	// that we can allocate only one buffer instead of stitching together many
+	// strings. Saving the expensive string allocations, and the resulting GC
+	// hits, should help mitigate any performance concerns associated with the
+	// recursive nature of this function.
 	helper = func(b Budget) {
 		fmt.Fprintf(builder, "{%q:$%0.2f", b.Name, float64(b.Balance)/100)
 
