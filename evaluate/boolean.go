@@ -15,8 +15,8 @@
 package evaluate
 
 type binary struct {
-	Left  Conditioner
-	Right Conditioner
+	Left  Evaluater
+	Right Evaluater
 }
 
 type And binary
@@ -32,11 +32,11 @@ func (o Or) Evaluate() bool {
 }
 
 type Not struct {
-	Conditioner
+	Evaluater
 }
 
 func (n Not) Evaluate() bool {
-	return !n.Conditioner.Evaluate()
+	return !n.Evaluater.Evaluate()
 }
 
 type Bool bool

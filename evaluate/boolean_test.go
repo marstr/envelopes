@@ -17,12 +17,12 @@ package evaluate_test
 import (
 	"fmt"
 
-	"github.com/marstr/envelopes/condition"
+	"github.com/marstr/envelopes/evaluate"
 )
 
 func ExampleBool_Evaluate() {
-	fmt.Println(condition.Bool(true).Evaluate())
-	fmt.Println(condition.Bool(false).Evaluate())
+	fmt.Println(evaluate.Bool(true).Evaluate())
+	fmt.Println(evaluate.Bool(false).Evaluate())
 	// Output:
 	// true
 	// false
