@@ -27,3 +27,69 @@ func ExampleBool_Evaluate() {
 	// true
 	// false
 }
+
+func ExampleAnd_Evaluate() {
+	subject := evaluate.And{}
+
+	subject.Left = evaluate.Bool(false)
+	subject.Right = evaluate.Bool(false)
+	fmt.Println(subject.Evaluate())
+
+	subject.Left = evaluate.Bool(false)
+	subject.Right = evaluate.Bool(true)
+	fmt.Println(subject.Evaluate())
+
+	subject.Left = evaluate.Bool(true)
+	subject.Right = evaluate.Bool(false)
+	fmt.Println(subject.Evaluate())
+
+	subject.Left = evaluate.Bool(true)
+	subject.Right = evaluate.Bool(true)
+	fmt.Println(subject.Evaluate())
+
+	// Output:
+	// false
+	// false
+	// false
+	// true
+}
+
+func ExampleOr_Evaluate() {
+	subject := evaluate.Or{}
+
+	subject.Left = evaluate.Bool(false)
+	subject.Right = evaluate.Bool(false)
+	fmt.Println(subject.Evaluate())
+
+	subject.Left = evaluate.Bool(false)
+	subject.Right = evaluate.Bool(true)
+	fmt.Println(subject.Evaluate())
+
+	subject.Left = evaluate.Bool(true)
+	subject.Right = evaluate.Bool(false)
+	fmt.Println(subject.Evaluate())
+
+	subject.Left = evaluate.Bool(true)
+	subject.Right = evaluate.Bool(true)
+	fmt.Println(subject.Evaluate())
+
+	// Output:
+	// false
+	// true
+	// true
+	// true
+}
+
+func ExampleNot_Evaluate() {
+	subject := evaluate.Not{}
+
+	subject.Evaluater = evaluate.Bool(false)
+	fmt.Println(subject.Evaluate())
+
+	subject.Evaluater = evaluate.Bool(true)
+	fmt.Println(subject.Evaluate())
+
+	// Output:
+	// true
+	// false
+}
