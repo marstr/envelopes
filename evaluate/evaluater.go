@@ -12,7 +12,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-// Package condition allows a means of programatically evaluating a
+// Package evaluate allows a means of programatically evaluating a `State`. This
+// is especially useful when used in tandem with `distribution.Branch` or when
+// building tools for giving suggestions for improving financial help.
 package evaluate
 
 // Evaluater allows for polymorphic determiniation of whether or not to apply

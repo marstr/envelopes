@@ -19,15 +19,15 @@ import (
 	"testing"
 
 	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/condition"
 	"github.com/marstr/envelopes/distribution"
+	"github.com/marstr/envelopes/evaluate"
 )
 
 func ExampleBranch_Distribute() {
 	subject := distribution.Branch{
 		Affirmative: (*distribution.Identity)(&envelopes.Budget{Name: "Groceries"}),
 		Negative:    (*distribution.Identity)(&envelopes.Budget{Name: "Transit"}),
-		Decision:    condition.Bool(true),
+		Decision:    evaluate.Bool(true),
 	}
 
 	fmt.Println(subject.Distribute(42))
