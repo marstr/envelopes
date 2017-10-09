@@ -42,3 +42,24 @@ func ExampleUpperBound_Distribute() {
 	// ["Transit":$24.20 "Groceries":$15.80]
 	// ["Groceries":$10.00]
 }
+
+func ExampleLowerBound_Distribute() {
+	grocery, misc := &envelopes.Budget{
+		Name:    "Groceries",
+		Balance: 8420,
+	}, &envelopes.Budget{
+		Name:    "Miscellaneous",
+		Balance: 1044,
+	}
+
+	subject := distribution.LowerBound{
+		Target:   grocery,
+		Overflow: (*distribution.Identity)(misc),
+	}
+
+	fmt.Println(subject.Distribute(-10434))
+	fmt.Println(subject.Distribute(-7690))
+	// Output:
+	// ["Groceries":$-84.20 "Miscellaneous":$-20.14]
+	// ["Groceries":$-76.90]
+}

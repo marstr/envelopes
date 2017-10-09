@@ -35,6 +35,10 @@ type UpperBound struct {
 	Overflow      Distributer
 }
 
+// LowerBound retrieves funds from a Budget until it reaches a lower bound,
+// then proceeds to fetch funds from another Distributer.
+type LowerBound UpperBound
+
 // Distribute brings a Budget up to a particular balance, then allocates any
 // remaining funds to the overflow. If the amount to be distributed is less
 // than or equal to the amount it would take to bring the target budget up to
@@ -49,6 +53,20 @@ func (ub UpperBound) Distribute(amount int64) (result envelopes.Effect) {
 	} else {
 		result = ub.Overflow.Distribute(split)
 		result = result.Add((*Identity)(ub.Target).Distribute(amount - split))
+	}
+	return
+}
+
+// Distribute reduces a budget to a particular balance, then retreives any
+// further funds from another Distributer.
+func (lb LowerBound) Distribute(amount int64) (result envelopes.Effect) {
+	available := lb.Target.Balance - lb.SoughtBalance
+
+	if split := available + amount; split >= 0 {
+		result = (*Identity)(lb.Target).Distribute(amount)
+	} else {
+		result = lb.Overflow.Distribute(split)
+		result = result.Add((*Identity)(lb.Target).Distribute(amount - split))
 	}
 	return
 }
