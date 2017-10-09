@@ -14,10 +14,28 @@
 
 package envelopes
 
+import (
+	"time"
+)
+
 // Transaction represents one exchange of funds and how it impacted budgets.
 type Transaction struct {
-	Account  Account
-	Effect   `json:"effects"`
-	Amount   int64  `json:"amount"`
-	Merchant string `json:"merchant"`
+	time.Time
+	Account
+	Effect
+	Amount   int64
+	Merchant string
+}
+
+func (t Transaction) Apply() {
+	for budg, adj := range t.Effect {
+		budg.Balance += adj
+	}
+}
+
+func (t Transaction) Undo() {
+	negated := t.Effect.Negate()
+	for budg, adj := range negated {
+		budg.Balance += adj
+	}
 }

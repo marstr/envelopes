@@ -21,9 +21,8 @@ import (
 
 // State records the balances of a collection of budgets and accounts at a given moment in time.
 type State struct {
-	Budgets  []*Budget
-	Accounts []*Account
-	Parent   *State
+	Budgets  []*Budget  `json:"budgets,omitempty"`
+	Accounts []*Account `json:"accounts,omitempty"`
 }
 
 // func (s *State) ApplyEffect(eff Effect) (err error) {
