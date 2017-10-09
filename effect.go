@@ -69,6 +69,17 @@ func (e Effect) Equal(other Effect) bool {
 	return true
 }
 
+// Negate creates an `Effect` with the opposite impact of this one.
+func (e Effect) Negate() (result Effect) {
+	result = make(Effect)
+
+	for budg, adj := range e {
+		result[budg] = -adj
+	}
+
+	return
+}
+
 func (e Effect) String() string {
 	budgets := make([]*Budget, 0, len(e))
 
