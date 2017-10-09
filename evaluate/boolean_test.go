@@ -23,6 +23,7 @@ import (
 func ExampleBool_Evaluate() {
 	fmt.Println(evaluate.Bool(true).Evaluate())
 	fmt.Println(evaluate.Bool(false).Evaluate())
+
 	// Output:
 	// true
 	// false

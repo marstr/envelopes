@@ -24,7 +24,7 @@ type Priority struct {
 	Overflow  Distributer
 }
 
-// Distribute allocations funds first to a `Target` `Priotity` before
+// Distribute allocations funds first to a `Target` `Priority` before
 // allocating funds to an overflow amount.
 func (p Priority) Distribute(amount int64) (result env.Effect) {
 	var mag uint64
