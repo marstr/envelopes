@@ -57,13 +57,17 @@ func (p Percentile) Distribute(amount int64) (result env.Effect) {
 	remaining := amount
 	result = make(env.Effect)
 
-	for recipient, adjustment := range p.targets {
-		realized := int64(adjustment * float64(amount))
-		remaining -= realized
-		result = result.Add(recipient.Distribute(realized))
+	if p.targets != nil {
+		for recipient, adjustment := range p.targets {
+			realized := int64(adjustment * float64(amount))
+			remaining -= realized
+			result = result.Add(recipient.Distribute(realized))
+		}
 	}
 
-	result = result.Add(p.overflow.Distribute(remaining))
+	if p.overflow != nil {
+		result = result.Add(p.overflow.Distribute(remaining))
+	}
 	return
 }
 

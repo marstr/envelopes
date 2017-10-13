@@ -16,6 +16,7 @@ package distribution_test
 
 import (
 	"fmt"
+	"testing"
 
 	env "github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/distribution"
@@ -65,4 +66,25 @@ func ExamplePercentile_String() {
 
 	fmt.Println(distr)
 	// Output: {75.00%:{Transport}, 25.00%:{Grocery}}
+}
+
+func Test_NewPercentile_errs(t *testing.T) {
+	_, err := distribution.NewPercentile(map[distribution.Distributer]float64{}, nil)
+
+	if expected := "percentile distributions must have a valid overflow recipient"; err.Error() != expected {
+		t.Logf("\ngot: \t%q\nwant:\t%q", err.Error(), expected)
+		t.Fail()
+	}
+}
+
+func Test_Distribute_EmptyPercentile(t *testing.T) {
+	subject := new(distribution.Percentile)
+
+	if result := subject.Distribute(45); result == nil {
+		t.Log("unexpected nil encountered")
+		t.Fail()
+	} else if got := len(result); got != 0 {
+		t.Logf("got: %d wamt: 0", got)
+		t.Fail()
+	}
 }
