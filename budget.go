@@ -38,9 +38,9 @@ import (
 // out the balances of all non-rollover budgets and places it in a designated
 // savings budget.
 type Budget struct {
-	Name     string    `json:"name"`
-	Balance  int64     `json:"balance"`
-	Children []*Budget `json:"children,omitempty"`
+	Name     string   `json:"name"`
+	Balance  int64    `json:"balance"`
+	Children []Budget `json:"children,omitempty"`
 }
 
 // RecursiveBalance finds the balance of a `Budget` and all of its children.
@@ -72,7 +72,7 @@ func (b Budget) String() string {
 		if len(b.Children) > 0 {
 			fmt.Fprint(builder, " [")
 			for _, child := range b.Children {
-				helper(*child)
+				helper(child)
 				fmt.Fprint(builder, ", ")
 			}
 			builder.Truncate(builder.Len() - 2)

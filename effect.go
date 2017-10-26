@@ -39,6 +39,9 @@ func (e Effect) Add(other Effect) (result Effect) {
 			result[budg] = adjustment
 		}
 	}
+
+	result.Truncate()
+
 	return
 }
 

@@ -15,59 +15,56 @@
 package envelopes
 
 import (
+	"bytes"
+	"crypto/sha1"
+	"encoding/json"
 	"fmt"
-	"strings"
 )
 
-// State records the balances of a collection of budgets and accounts at a given moment in time.
+// State captures the values of all Budgets and Accounts.
 type State struct {
-	Budgets  []*Budget  `json:"budgets,omitempty"`
-	Accounts []*Account `json:"accounts,omitempty"`
+	Budget
+	Accounts []Account
+	ParentID [20]byte
 }
 
-// func (s *State) ApplyEffect(eff Effect) (err error) {
-// 	for budg := range s.Budgets {
+// MarshalJSON converts a State loaded in memory into a persistable/transmittable string in the form of a JSON object.
+func (s State) MarshalJSON() ([]byte, error) {
+	var err error
+	results := new(bytes.Buffer)
 
-// 	}
-// }
+	results.WriteRune('{')
 
-// func (s *State) ApplyTransaction(trans Transaction) (err error) {
+	marshaledBudget, err := json.Marshal(s.Budget)
+	if err != nil {
+		return nil, err
+	}
+	fmt.Fprint(results, `"budget":`)
+	fmt.Fprint(results, string(marshaledBudget))
+	results.WriteRune(',')
 
-// }
-
-func (s State) FindBudget(specifier string) (found *Budget, err error) {
-	var descend func(*Budget, []string) *Budget
-	descend = func(current *Budget, remaining []string) *Budget {
-		if len(remaining) == 0 {
-			return current
-		}
-
-		for _, child := range current.Children {
-			if child.Name == remaining[0] {
-				return descend(child, remaining[1:])
-			}
-		}
-		return nil
+	marshaledAccounts, err := json.Marshal(s.Accounts)
+	if err != nil {
+		return nil, err
 	}
 
-	for _, child := range s.Budgets {
-		if result := descend(child, strings.Split(specifier, "/")); result != nil {
-			found = result
-			return
-		}
-	}
-	err = ErrorBudgetNotFound{
-		Target:    s,
-		Specifier: specifier,
-	}
-	return
+	fmt.Fprint(results, `"accounts":`)
+	fmt.Fprint(results, string(marshaledAccounts))
+	results.WriteRune(',')
+
+	fmt.Fprint(results, `"parent":`)
+	fmt.Fprintf(results, `"%x"`, s.ParentID)
+
+	results.WriteRune('}')
+
+	return results.Bytes(), nil
 }
 
-type ErrorBudgetNotFound struct {
-	Target    State
-	Specifier string
-}
-
-func (bnf ErrorBudgetNotFound) Error() string {
-	return fmt.Sprintf("Could not find specifier: %q", bnf.Specifier)
+// ID fetches the identifier associated with this `State`.
+func (s State) ID() [20]byte {
+	message, err := json.Marshal(s)
+	if err != nil {
+		panic(err)
+	}
+	return sha1.Sum(message)
 }

@@ -15,6 +15,7 @@
 package envelopes_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -33,8 +34,8 @@ func TestBudget_RecursiveTotal(t *testing.T) {
 		{
 			Budget: &envelopes.Budget{
 				Balance: 42,
-				Children: []*envelopes.Budget{
-					&envelopes.Budget{Balance: 89},
+				Children: []envelopes.Budget{
+					envelopes.Budget{Balance: 89},
 				},
 			},
 			Expected: 131,
@@ -42,9 +43,9 @@ func TestBudget_RecursiveTotal(t *testing.T) {
 		{
 			Budget: &envelopes.Budget{
 				Balance: 42,
-				Children: []*envelopes.Budget{
-					&envelopes.Budget{Balance: 89},
-					&envelopes.Budget{Balance: 1006},
+				Children: []envelopes.Budget{
+					envelopes.Budget{Balance: 89},
+					envelopes.Budget{Balance: 1006},
 				},
 			},
 			Expected: 1137,
@@ -52,15 +53,15 @@ func TestBudget_RecursiveTotal(t *testing.T) {
 		{
 			Budget: &envelopes.Budget{
 				Balance: 42,
-				Children: []*envelopes.Budget{
-					&envelopes.Budget{
+				Children: []envelopes.Budget{
+					envelopes.Budget{
 						Balance: 89,
-						Children: []*envelopes.Budget{
-							&envelopes.Budget{Balance: 99},
-							&envelopes.Budget{Balance: 227},
+						Children: []envelopes.Budget{
+							envelopes.Budget{Balance: 99},
+							envelopes.Budget{Balance: 227},
 						},
 					},
-					&envelopes.Budget{Balance: 1006},
+					envelopes.Budget{Balance: 1006},
 				},
 			},
 			Expected: 1463,
@@ -81,14 +82,63 @@ func TestBudget_RecursiveTotal(t *testing.T) {
 func ExampleBudget_RecursiveBalance() {
 	subject := envelopes.Budget{
 		Balance: 431,
-		Children: []*envelopes.Budget{
-			&envelopes.Budget{Balance: 1296},
-			&envelopes.Budget{Balance: 2},
+		Children: []envelopes.Budget{
+			envelopes.Budget{Balance: 1296},
+			envelopes.Budget{Balance: 2},
 		},
 	}
 
 	fmt.Println(subject.RecursiveBalance())
 	// Output: 1729
+}
+
+func TestBudget_marshalJSON(t *testing.T) {
+	testCases := []struct {
+		envelopes.Budget
+		expected string
+	}{
+		{
+			envelopes.Budget{
+				Name:    "A",
+				Balance: 4523,
+			},
+			`{"name":"A","balance":4523}`,
+		},
+		{
+			envelopes.Budget{
+				Name:    "A",
+				Balance: 2330,
+				Children: []envelopes.Budget{
+					envelopes.Budget{
+						Name:    "B",
+						Balance: 1234,
+					},
+					envelopes.Budget{
+						Name:    "C",
+						Balance: 9800,
+					},
+				},
+			},
+			`{"name":"A","balance":2330,"children":[{"name":"B","balance":1234},{"name":"C","balance":9800}]}`,
+		},
+		{
+			envelopes.Budget{},
+			`{"name":"","balance":0}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run("", func(t *testing.T) {
+			results, err := json.Marshal(tc.Budget)
+			if err != nil {
+				t.Error(err)
+			}
+			if got := string(results); got != tc.expected {
+				t.Logf("\ngot:\n\t%s\nwant:\n\t%s", got, tc.expected)
+				t.Fail()
+			}
+		})
+	}
 }
 
 func TestBudget_String(t *testing.T) {
@@ -104,12 +154,12 @@ func TestBudget_String(t *testing.T) {
 			specimen: envelopes.Budget{
 				Name:    "Harry Potter",
 				Balance: 42576,
-				Children: []*envelopes.Budget{
-					&envelopes.Budget{
+				Children: []envelopes.Budget{
+					envelopes.Budget{
 						Name:    "Ron Weasley",
 						Balance: 02,
 					},
-					&envelopes.Budget{
+					envelopes.Budget{
 						Name:    "Hermione Granger",
 						Balance: 523471,
 					},
