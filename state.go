@@ -21,47 +21,29 @@ import (
 	"fmt"
 )
 
-// State captures the values of all Budgets and Accounts.
-type State struct {
-	Budget
-	Accounts []Account
-	ParentID [20]byte
+// ID is a SHA1 based on the JSON marshaling of a State object.
+type ID [20]byte
+
+// MarshalJSON creates a JSON string populated with the hex value of the identifier.
+func (id ID) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("\"%x\"", id)), nil
 }
 
-// MarshalJSON converts a State loaded in memory into a persistable/transmittable string in the form of a JSON object.
-func (s State) MarshalJSON() ([]byte, error) {
-	var err error
-	results := new(bytes.Buffer)
+// UnmarshalJSON retreives a 20-byte SHA1 hash from a JSON string.
+func (id *ID) UnmarshalJSON(contents []byte) error {
+	_, err := fmt.Fscanf(bytes.NewReader(contents), "\"%x\"", id)
+	return err
+}
 
-	results.WriteRune('{')
-
-	marshaledBudget, err := json.Marshal(s.Budget)
-	if err != nil {
-		return nil, err
-	}
-	fmt.Fprint(results, `"budget":`)
-	fmt.Fprint(results, string(marshaledBudget))
-	results.WriteRune(',')
-
-	marshaledAccounts, err := json.Marshal(s.Accounts)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Fprint(results, `"accounts":`)
-	fmt.Fprint(results, string(marshaledAccounts))
-	results.WriteRune(',')
-
-	fmt.Fprint(results, `"parent":`)
-	fmt.Fprintf(results, `"%x"`, s.ParentID)
-
-	results.WriteRune('}')
-
-	return results.Bytes(), nil
+// State captures the values of all Budgets and Accounts.
+type State struct {
+	Budget   `json:"budget"`
+	Accounts []Account `json:"accounts"`
+	Parent   ID        `json:"parent"`
 }
 
 // ID fetches the identifier associated with this `State`.
-func (s State) ID() [20]byte {
+func (s State) ID() ID {
 	message, err := json.Marshal(s)
 	if err != nil {
 		panic(err)
