@@ -15,24 +15,38 @@
 package envelopes
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"strconv"
 )
 
 // ID is a SHA1 based on the JSON marshaling of a State object.
 type ID [20]byte
 
-// MarshalJSON creates a JSON string populated with the hex value of the identifier.
-func (id ID) MarshalJSON() ([]byte, error) {
-	return []byte(fmt.Sprintf("\"%x\"", id)), nil
+// MarshalText creates a 40 character string populated with a 20-byte SHA1 hash.
+func (id ID) MarshalText() (marshaled []byte, err error) {
+	return []byte(fmt.Sprintf("%x", id)), nil
 }
 
-// UnmarshalJSON retreives a 20-byte SHA1 hash from a JSON string.
-func (id *ID) UnmarshalJSON(contents []byte) error {
-	_, err := fmt.Fscanf(bytes.NewReader(contents), "\"%x\"", id)
-	return err
+// UnmarshalText retreives a 20-byte SHA1 hash from it's textual representation.
+func (id *ID) UnmarshalText(contents []byte) (err error) {
+	cast := string(contents)
+
+	var contender ID
+
+	for i := 0; i < 10; i++ {
+		var parsed uint64
+		begin := i * 2
+		end := begin + 2
+		parsed, err = strconv.ParseUint(cast[begin:end], 16, 8)
+		contender[i] = byte(parsed)
+		if err != nil {
+			return
+		}
+	}
+	*id = contender
+	return
 }
 
 // State captures the values of all Budgets and Accounts.

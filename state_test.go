@@ -92,6 +92,8 @@ func TestState_ID(t *testing.T) {
 			if got := tc.ID(); got != tc.expected {
 				t.Logf("\ngot:  %x\nwant: %x", got, tc.expected)
 				t.Fail()
+			} else {
+				t.Logf("got %x as expected", got)
 			}
 		})
 	}
