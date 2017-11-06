@@ -22,159 +22,283 @@ import (
 	"github.com/marstr/envelopes"
 )
 
-func TestBudget_RecursiveTotal(t *testing.T) {
-	testCases := []struct {
-		*envelopes.Budget
-		Expected int64
-	}{
-		{
-			Budget:   &envelopes.Budget{Balance: 42},
-			Expected: 42,
-		},
-		{
-			Budget: &envelopes.Budget{
-				Balance: 42,
-				Children: []envelopes.Budget{
-					envelopes.Budget{Balance: 89},
-				},
-			},
-			Expected: 131,
-		},
-		{
-			Budget: &envelopes.Budget{
-				Balance: 42,
-				Children: []envelopes.Budget{
-					envelopes.Budget{Balance: 89},
-					envelopes.Budget{Balance: 1006},
-				},
-			},
-			Expected: 1137,
-		},
-		{
-			Budget: &envelopes.Budget{
-				Balance: 42,
-				Children: []envelopes.Budget{
-					envelopes.Budget{
-						Balance: 89,
-						Children: []envelopes.Budget{
-							envelopes.Budget{Balance: 99},
-							envelopes.Budget{Balance: 227},
-						},
-					},
-					envelopes.Budget{Balance: 1006},
-				},
-			},
-			Expected: 1463,
-		},
-	}
+func ExampleBudget_SetBalance() {
+	subject := envelopes.Budget{}
+	updated := subject.SetBalance(1729)
 
-	for _, tc := range testCases {
-		t.Run(tc.String(), func(t *testing.T) {
-			result := tc.RecursiveBalance()
-			if result != tc.Expected {
-				t.Logf("got: %d want: %d", result, tc.Expected)
-				t.Fail()
-			}
-		})
-	}
+	fmt.Println(subject.Balance())
+	fmt.Println(updated.Balance())
+	// Output:
+	// 0
+	// 1729
+}
+
+func ExampleBudget_AddBalance() {
+	subject := envelopes.Budget{}.SetBalance(100)
+	subject = subject.AddBalance(45)
+	fmt.Println(subject.Balance())
+	// Output: 145
+}
+
+func ExampleBudget_RemoveBalance() {
+	subject := envelopes.Budget{}.SetBalance(100)
+	subject = subject.RemoveBalance(99)
+	fmt.Println(subject.Balance())
+	// Output: 1
+}
+
+func ExampleBudget_AddChild() {
+	subject := envelopes.Budget{}.SetBalance(42)
+	updated, added := subject.AddChild("child1", envelopes.Budget{}.SetBalance(2))
+	fmt.Println(subject)
+	fmt.Println(updated)
+	fmt.Println(added)
+	// Output:
+	// {$0.42}
+	// {$0.42 [{child1:$0.02}]}
+	// true
 }
 
 func ExampleBudget_RecursiveBalance() {
-	subject := envelopes.Budget{
-		Balance: 431,
-		Children: []envelopes.Budget{
-			envelopes.Budget{Balance: 1296},
-			envelopes.Budget{Balance: 2},
-		},
-	}
+	subject := envelopes.Budget{}.SetBalance(431)
+	subject, _ = subject.AddChild("child1", envelopes.Budget{}.SetBalance(1296))
+	subject, _ = subject.AddChild("child2", envelopes.Budget{}.SetBalance(2))
 
 	fmt.Println(subject.RecursiveBalance())
 	// Output: 1729
 }
 
-func TestBudget_marshalJSON(t *testing.T) {
+func ExampleBudget_MarshalJSON() {
+	subject := envelopes.Budget{}.SetBalance(42)
+	subject, _ = subject.AddChild("child1", envelopes.Budget{}.SetBalance(9087))
+
+	output, _ := json.Marshal(subject)
+	fmt.Println(string(output))
+	// Output:
+	// {"balance":42,"children":{"child1":{"balance":9087}}}
+}
+
+func TestBudget_Equal(t *testing.T) {
 	testCases := []struct {
-		envelopes.Budget
-		expected string
+		a        envelopes.Budget
+		b        envelopes.Budget
+		expected bool
 	}{
 		{
-			envelopes.Budget{
-				Name:    "A",
-				Balance: 4523,
-			},
-			`{"name":"A","balance":4523}`,
-		},
-		{
-			envelopes.Budget{
-				Name:    "A",
-				Balance: 2330,
-				Children: []envelopes.Budget{
-					envelopes.Budget{
-						Name:    "B",
-						Balance: 1234,
-					},
-					envelopes.Budget{
-						Name:    "C",
-						Balance: 9800,
-					},
-				},
-			},
-			`{"name":"A","balance":2330,"children":[{"name":"B","balance":1234},{"name":"C","balance":9800}]}`,
-		},
-		{
 			envelopes.Budget{},
-			`{"name":"","balance":0}`,
+			envelopes.Budget{},
+			true,
+		},
+		{
+			envelopes.Budget{}.SetBalance(45),
+			envelopes.Budget{}.SetBalance(45),
+			true,
+		},
+		{
+			envelopes.Budget{}.SetBalance(39),
+			envelopes.Budget{}.SetBalance(90),
+			false,
+		},
+		{
+			envelopes.Budget{}.SetBalance(99),
+			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.SetBalance(99)}),
+			false,
+		},
+		{
+			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.SetBalance(99)}),
+			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child2": envelopes.Budget{}.SetBalance(99)}),
+			false,
+		},
+		{
+			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.SetBalance(99)}),
+			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.SetBalance(44)}),
+			false,
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
-			results, err := json.Marshal(tc.Budget)
-			if err != nil {
-				t.Error(err)
+		t.Run(fmt.Sprintf("%s %s", tc.a, tc.b), func(t *testing.T) {
+			if got := tc.a.Equal(tc.b); got != tc.expected {
+				t.Fail()
 			}
-			if got := string(results); got != tc.expected {
-				t.Logf("\ngot:\n\t%s\nwant:\n\t%s", got, tc.expected)
+
+			if got := tc.b.Equal(tc.a); got != tc.expected {
 				t.Fail()
 			}
 		})
 	}
 }
 
-func TestBudget_String(t *testing.T) {
+func TestBudget_UnmarshalJSON(t *testing.T) {
 	testCases := []struct {
-		specimen envelopes.Budget
-		expected string
+		string
+		expected envelopes.Budget
 	}{
 		{
-			specimen: envelopes.Budget{Name: "Dirty Harry", Balance: 900123},
-			expected: `{"Dirty Harry":$9001.23}`,
+			`{"balance":0}`,
+			envelopes.Budget{},
 		},
 		{
-			specimen: envelopes.Budget{
-				Name:    "Harry Potter",
-				Balance: 42576,
-				Children: []envelopes.Budget{
-					envelopes.Budget{
-						Name:    "Ron Weasley",
-						Balance: 02,
-					},
-					envelopes.Budget{
-						Name:    "Hermione Granger",
-						Balance: 523471,
-					},
-				},
-			},
-			expected: `{"Harry Potter":$425.76 [{"Ron Weasley":$0.02}, {"Hermione Granger":$5234.71}]}`,
+			`{"balance":1729}`,
+			envelopes.Budget{}.SetBalance(1729),
+		},
+		{
+			`{"balance":42,"children":{"child1":{"balance":2}}}`,
+			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.SetBalance(2),
+			}),
+		},
+		{
+			`{"balance":42,"children":{"child1":{"balance":2},"child2":{"balance":4}}}`,
+			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.SetBalance(2),
+				"child2": envelopes.Budget{}.SetBalance(4),
+			}),
+		},
+		{
+			`{"balance":42,"children":{"child2":{"balance":4},"child1":{"balance":2}}}`,
+			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.SetBalance(2),
+				"child2": envelopes.Budget{}.SetBalance(4),
+			}),
+		},
+		{
+			`{"children":{"child2":{"balance":4},"child1":{"balance":2}},"balance":42}`,
+			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.SetBalance(2),
+				"child2": envelopes.Budget{}.SetBalance(4),
+			}),
+		},
+		{
+			`{"balance":42,"children":{"child1":{"balance":2},"child2":{"balance":4,"children":{"child3":{"balance":99}}}}}`,
+			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.SetBalance(2),
+				"child2": envelopes.Budget{}.SetBalance(4).SetChildren(map[string]envelopes.Budget{
+					"child3": envelopes.Budget{}.SetBalance(99),
+				}),
+			}),
 		},
 	}
 
 	for _, tc := range testCases {
-		t.Run("", func(t *testing.T) {
-			result := tc.specimen.String()
+		t.Run(tc.string, func(t *testing.T) {
+			var got envelopes.Budget
+			err := json.Unmarshal([]byte(tc.string), &got)
+			if err != nil {
+				t.Error(err)
+			}
 
-			if result != tc.expected {
-				t.Logf("\ngot: \t%q\nwant:\t%q", result, tc.expected)
+			if !tc.expected.Equal(got) {
+				t.Logf("\ngot:  %q\nwant: %q", got, tc.expected)
+				t.Fail()
+			}
+		})
+	}
+}
+
+func TestBudget_MarshalJSON(t *testing.T) {
+	oneChild, _ := envelopes.Budget{}.SetBalance(42).AddChild("beta", envelopes.Budget{}.SetBalance(99))
+	twoChildren, _ := oneChild.AddChild("alpha", envelopes.Budget{}.SetBalance(56))
+
+	testCases := []struct {
+		envelopes.Budget
+		want string
+	}{
+		{
+			envelopes.Budget{},
+			`{"balance":0}`,
+		},
+		{
+			oneChild,
+			`{"balance":42,"children":{"beta":{"balance":99}}}`,
+		},
+		{
+			twoChildren,
+			`{"balance":42,"children":{"alpha":{"balance":56},"beta":{"balance":99}}}`,
+		},
+		{
+			envelopes.Budget{}.SetBalance(-98).SetChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.SetBalance(87),
+				"child2": envelopes.Budget{}.SetBalance(11),
+			}),
+			`{"balance":-98,"children":{"child1":{"balance":87},"child2":{"balance":11}}}`,
+		},
+	}
+
+	for _, tc := range testCases {
+		got, err := json.Marshal(tc.Budget)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if string(got) != tc.want {
+			t.Logf("\ngot:  \t%s\nwant: \t%s", got, tc.want)
+			t.Fail()
+		}
+	}
+}
+
+func TestBudget_ID_Deterministic(t *testing.T) {
+	testCases := []envelopes.Budget{
+		envelopes.Budget{},
+		envelopes.Budget{}.SetBalance(1729),
+		envelopes.Budget{}.SetChildren(map[string]envelopes.Budget{
+			"child1":     envelopes.Budget{}.SetBalance(99),
+			"alphaChild": envelopes.Budget{}.SetBalance(44),
+		}),
+	}
+
+	for _, tc := range testCases {
+		initial := tc.ID()
+		t.Run(fmt.Sprintf("%x", initial), func(t *testing.T) {
+			for i := 0; i < 30; i++ {
+				subsequent := tc.ID()
+
+				for j, entry := range initial {
+					if subsequent[j] != entry {
+						t.Logf("Subsequent: %x", subsequent)
+						t.FailNow()
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestBudget_JSONRoundTrip(t *testing.T) {
+	testCases := []envelopes.Budget{
+		envelopes.Budget{},
+		envelopes.Budget{}.SetBalance(42),
+		envelopes.Budget{}.SetBalance(1729).SetChildren(map[string]envelopes.Budget{
+			"child1": envelopes.Budget{}.SetBalance(99),
+			"child2": envelopes.Budget{}.SetBalance(1),
+		}),
+		envelopes.Budget{}.SetBalance(1729).SetChildren(map[string]envelopes.Budget{
+			"child1": envelopes.Budget{}.SetBalance(99).SetChildren(map[string]envelopes.Budget{
+				"child2": envelopes.Budget{}.SetBalance(1),
+			}),
+		}),
+		envelopes.Budget{}.SetBalance(1729).SetChildren(map[string]envelopes.Budget{
+			"child1": envelopes.Budget{}.SetBalance(-1007).SetChildren(map[string]envelopes.Budget{
+				"child2": envelopes.Budget{}.SetBalance(1),
+			}),
+		}),
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.String(), func(t *testing.T) {
+			marshaled, err := json.Marshal(tc)
+			if err != nil {
+				t.Error(err)
+			}
+
+			var unmarshaled envelopes.Budget
+			err = json.Unmarshal(marshaled, &unmarshaled)
+			if err != nil {
+				t.Error(err)
+			}
+
+			if !tc.Equal(unmarshaled) {
 				t.Fail()
 			}
 		})

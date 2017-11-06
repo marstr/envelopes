@@ -20,8 +20,55 @@ import (
 
 // Transaction represents one exchange of funds and how it impacted budgets.
 type Transaction struct {
-	time.Time
-	*Account
-	Amount   int64
-	Merchant string
+	state    ID
+	time     time.Time
+	amount   int64
+	merchant string
+	comment  string
+	parent   ID
+}
+
+// Comment fetches any text supplied by an end user that they would like to associate
+// with this transaction.
+func (t Transaction) Comment() string {
+	return t.comment
+}
+
+// SetComment creates a copy of this Transaction that has the updated comment.
+func (t Transaction) SetComment(val string) Transaction {
+	t.comment = val
+	return t
+}
+
+// Merchant fetches the name of the party receiving funds.
+func (t Transaction) Merchant() string {
+	return t.merchant
+}
+
+// SetMerchant creates a copy of this Transaction that has the updated Merchant.
+func (t Transaction) SetMerchant(val string) Transaction {
+	t.merchant = val
+	return t
+}
+
+// State points to the State of the Budget and all related items
+// after the Transaction has taken effect.
+func (t Transaction) State() ID {
+	return t.state
+}
+
+// SetState
+func (t Transaction) SetState(val ID) Transaction {
+	t.state = val
+	return t
+}
+
+// Time fetches the moment that this transaction occured.
+func (t Transaction) Time() time.Time {
+	return t.time
+}
+
+func (t Transaction) SetTime(val time.Time) Transaction {
+	t.time = val
+	return t
 }

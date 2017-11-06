@@ -27,7 +27,11 @@ package envelopes
 
 import (
 	"bytes"
+	"crypto/sha1"
+	"encoding/json"
 	"fmt"
+	"sort"
+	"strconv"
 )
 
 // Budget encapsulates a single category of spending.
@@ -38,16 +42,239 @@ import (
 // out the balances of all non-rollover budgets and places it in a designated
 // savings budget.
 type Budget struct {
-	Name     string   `json:"name"`
-	Balance  int64    `json:"balance"`
-	Children []Budget `json:"children,omitempty"`
+	balance  int64
+	children map[string]Budget
+}
+
+func (b Budget) deepCopy() (updated Budget) {
+	updated.balance = b.balance
+	if len(b.children) > 0 {
+		updated.children = make(map[string]Budget, len(b.children))
+		for name, child := range b.children {
+			updated.children[name] = child
+		}
+	}
+	return
+}
+
+// ID fetches the Unique Identifier associated with this Budget.
+func (b Budget) ID() ID {
+	marshaled, err := json.Marshal(b)
+	if err != nil {
+		return ID{}
+	}
+
+	return sha1.Sum(marshaled)
+}
+
+// Equal determines whether or not two instances of Budget share the same balance and
+// have children that are all equal and have the same name.
+func (b Budget) Equal(other Budget) bool {
+	if b.Balance() != other.Balance() {
+		return false
+	}
+
+	if len(b.children) != len(other.children) {
+		return false
+	}
+
+	for name, child := range b.children {
+		if otherChild, ok := other.children[name]; !(ok && child.Equal(otherChild)) {
+			return false
+		}
+	}
+	return true
+}
+
+// Balance retrieves the amount of funds directly available in this `Budget
+// but none of its children.
+//
+// See Also:
+// 	Budget.RecursiveBalance
+func (b Budget) Balance() int64 {
+	return b.balance
 }
 
 // RecursiveBalance finds the balance of a `Budget` and all of its children.
+//
+// See Also:
+// 	Budget.Balance
 func (b Budget) RecursiveBalance() (sum int64) {
-	sum = b.Balance
-	for _, child := range b.Children {
+	sum = b.Balance()
+	for _, child := range b.Children() {
 		sum += child.RecursiveBalance()
+	}
+	return
+}
+
+// SetBalance creates a copy of a Budget but with the updated Balance.
+//
+// See Also:
+// 	Budget.AddBalance
+// 	Budget.RemoveBalance
+func (b Budget) SetBalance(val int64) (updated Budget) {
+	updated = b.deepCopy()
+	updated.balance = val
+	return
+}
+
+// AddBalance creates a copy of a Budget but with the Balance credited by the
+// specified amount.
+//
+// See Also:
+// 	Budget.SetBalance
+// 	Budget.RemoveBalance
+func (b Budget) AddBalance(credit int64) Budget {
+	return b.SetBalance(b.Balance() + credit)
+}
+
+// RemoveBalance creates a copy of a Budget but with the Balance debited by the
+// specified amount.
+//
+// See Also:
+// 	Budget.SetBalance
+// 	Budget.AddBalance
+func (b Budget) RemoveBalance(debit int64) Budget {
+	return b.SetBalance(b.Balance() - debit)
+}
+
+// AddChild creates a copy of a Budget but with one addiotional child, should
+// there not already have been a child with that name.
+//
+// See Also:
+// 	Budget.RemoveChild
+// 	Budget.SetChildren
+func (b Budget) AddChild(name string, child Budget) (updated Budget, added bool) {
+	if _, ok := b.children[name]; ok {
+		updated = b
+		return
+	}
+
+	updated = b.deepCopy()
+	if updated.children == nil {
+		updated.children = make(map[string]Budget, 1)
+	}
+	updated.children[name] = child
+	added = true
+	return
+}
+
+// RemoveChild creates a copy of a Budget, but with one fewer children, should
+// it have had a child with the specified name.
+//
+// See Also:
+// 	Budget.AddChild
+// 	Budget.SetChildren
+func (b Budget) RemoveChild(name string) (updated Budget, removed bool) {
+	if _, ok := b.children[name]; !ok {
+		updated = b
+		return
+	}
+
+	updated = b.deepCopy()
+	delete(updated.children, name)
+	if len(updated.children) <= 0 {
+		updated.children = nil
+	}
+	removed = true
+	return
+}
+
+// Child retrieves the Budget that is a child of this Budget with the specified
+// name.
+func (b Budget) Child(name string) (child Budget, present bool) {
+	child, present = b.children[name]
+	return
+}
+
+// Children retrieves all child instances of Budget for a given Budget.
+func (b Budget) Children() (results map[string]Budget) {
+	results = make(map[string]Budget, len(b.children))
+
+	for name, child := range b.children {
+		results[name] = child
+	}
+	return
+}
+
+// SetChildren creates a copy of a Budget with an updated list of children.
+//
+// See Also:
+// 	Budget.AddChild
+// 	Budget.RemoveChild
+func (b Budget) SetChildren(children map[string]Budget) (updated Budget) {
+	updated.balance = b.balance
+	updated.children = make(map[string]Budget, len(children))
+	for name, child := range children {
+		updated.children[name] = child
+	}
+	return updated
+}
+
+// MarshalJSON converts an in memory Budget to a JSON string.
+func (b Budget) MarshalJSON() ([]byte, error) {
+	builder := new(bytes.Buffer)
+
+	var helper func(Budget)
+
+	helper = func(b Budget) {
+		builder.WriteRune('{')
+		fmt.Fprintf(builder, "\"balance\":%d", b.Balance())
+		if len(b.children) > 0 {
+			builder.WriteString(`,"children":{`)
+			children := b.Children()
+
+			orderedChildren := make([]string, 0, len(children))
+			for name := range children {
+				orderedChildren = append(orderedChildren, name)
+			}
+			sort.Slice(orderedChildren, func(i, j int) bool { return orderedChildren[i] < orderedChildren[j] })
+
+			for _, name := range orderedChildren {
+				fmt.Fprintf(builder, "\"%s\":", name)
+				helper(children[name])
+				builder.WriteRune(',')
+			}
+			builder.Truncate(builder.Len() - 1)
+			builder.WriteRune('}')
+		}
+		builder.WriteRune('}')
+	}
+
+	helper(b)
+	return builder.Bytes(), nil
+}
+
+// UnmarshalJSON converts a series of bytes into an in memory Budget.
+func (b *Budget) UnmarshalJSON(content []byte) (err error) {
+	var intermediate map[string]json.RawMessage
+
+	err = json.Unmarshal(content, &intermediate)
+	if err != nil {
+		return
+	}
+
+	b.balance, err = strconv.ParseInt(string(intermediate["balance"]), 10, 64)
+	if err != nil {
+		return
+	}
+	if _, ok := intermediate["children"]; ok {
+		children := make(map[string]json.RawMessage)
+		b.children = make(map[string]Budget)
+		err = json.Unmarshal(intermediate["children"], &children)
+		if err != nil {
+			return
+		}
+
+		for name, childText := range children {
+			var current Budget
+			err = json.Unmarshal([]byte(childText), &current)
+			if err != nil {
+				return
+			}
+
+			b.children[name] = current
+		}
 	}
 	return
 }
@@ -57,7 +284,7 @@ func (b Budget) String() string {
 
 	// In order to use a lambda recursively, a symbol must be defined for it
 	// externally.
-	var helper func(Budget)
+	var helper func(string, Budget)
 
 	// Because `String` shouldn't really be a performance throttling operation,
 	// it is more readable to recursively examine the children. Having
@@ -66,22 +293,30 @@ func (b Budget) String() string {
 	// strings. Saving the expensive string allocations, and the resulting GC
 	// hits, should help mitigate any performance concerns associated with the
 	// recursive nature of this function.
-	helper = func(b Budget) {
-		fmt.Fprintf(builder, "{%q:$%0.2f", b.Name, float64(b.Balance)/100)
+	helper = func(currentName string, b Budget) {
+		currentBalance := float64(b.Balance()) / 100
+		builder.WriteRune('{')
 
-		if len(b.Children) > 0 {
-			fmt.Fprint(builder, " [")
-			for _, child := range b.Children {
-				helper(child)
-				fmt.Fprint(builder, ", ")
-			}
-			builder.Truncate(builder.Len() - 2)
-			fmt.Fprint(builder, "]")
+		if currentName != "" {
+			builder.WriteString(currentName)
+			builder.WriteRune(':')
 		}
-		fmt.Fprint(builder, "}")
+		fmt.Fprintf(builder, "$%0.2f", currentBalance)
+
+		if len(b.Children()) > 0 {
+			const childSuffix = ", "
+			builder.WriteString(" [")
+			for childName, child := range b.Children() {
+				helper(childName, child)
+				builder.WriteString(childSuffix)
+			}
+			builder.Truncate(builder.Len() - len(childSuffix))
+			builder.WriteRune(']')
+		}
+		builder.WriteRune('}')
 	}
 
-	helper(b)
+	helper("", b)
 
 	return builder.String()
 }

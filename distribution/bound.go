@@ -44,7 +44,7 @@ type LowerBound UpperBound
 // than or equal to the amount it would take to bring the target budget up to
 // the desired balance, the entire amount will be allocated to that budget.
 func (ub UpperBound) Distribute(amount int64) (result envelopes.Effect) {
-	remaining := ub.SoughtBalance - ub.Target.Balance
+	remaining := ub.SoughtBalance - ub.Target.Balance()
 
 	if remaining <= 0 {
 		result = ub.Overflow.Distribute(amount)
@@ -60,7 +60,7 @@ func (ub UpperBound) Distribute(amount int64) (result envelopes.Effect) {
 // Distribute reduces a budget to a particular balance, then retreives any
 // further funds from another Distributer.
 func (lb LowerBound) Distribute(amount int64) (result envelopes.Effect) {
-	available := lb.Target.Balance - lb.SoughtBalance
+	available := lb.Target.Balance() - lb.SoughtBalance
 
 	if split := available + amount; split >= 0 {
 		result = (*Identity)(lb.Target).Distribute(amount)

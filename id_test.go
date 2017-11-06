@@ -12,22 +12,34 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package distribution_test
+package envelopes_test
 
 import (
 	"fmt"
+	"testing"
 
 	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/distribution"
 )
 
-func ExampleIdentity_Distribute() {
-	subject := (*distribution.Identity)(&envelopes.Budget{
-		Name:    "Grocery",
-		Balance: 7843,
-	})
+func TestID_MarshalText(t *testing.T) {
+	testCases := []struct {
+		envelopes.ID
+		expected string
+	}{
+		{envelopes.ID{}, "0000000000000000000000000000000000000000"},
+	}
 
-	eff := subject.Distribute(1241)
-	fmt.Println(eff)
-	// Output: ["Grocery":$12.41]
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%x", tc.ID), func(t *testing.T) {
+			got, err := tc.ID.MarshalText()
+			if err != nil {
+				t.Error(err)
+			}
+
+			if string(got) != tc.expected {
+				t.Logf("\ngot:  %q\nwant: %q", string(got), tc.expected)
+				t.Fail()
+			}
+		})
+	}
 }

@@ -15,52 +15,103 @@
 package envelopes
 
 import (
+	"bytes"
 	"crypto/sha1"
 	"encoding/json"
-	"fmt"
-	"strconv"
 )
-
-// ID is a SHA1 based on the JSON marshaling of a State object.
-type ID [20]byte
-
-// MarshalText creates a 40 character string populated with a 20-byte SHA1 hash.
-func (id ID) MarshalText() (marshaled []byte, err error) {
-	return []byte(fmt.Sprintf("%x", id)), nil
-}
-
-// UnmarshalText retreives a 20-byte SHA1 hash from it's textual representation.
-func (id *ID) UnmarshalText(contents []byte) (err error) {
-	cast := string(contents)
-
-	var contender ID
-
-	for i := 0; i < 10; i++ {
-		var parsed uint64
-		begin := i * 2
-		end := begin + 2
-		parsed, err = strconv.ParseUint(cast[begin:end], 16, 8)
-		contender[i] = byte(parsed)
-		if err != nil {
-			return
-		}
-	}
-	*id = contender
-	return
-}
 
 // State captures the values of all Budgets and Accounts.
 type State struct {
-	Budget   `json:"budget"`
-	Accounts []Account `json:"accounts"`
-	Parent   ID        `json:"parent"`
+	budget   ID
+	accounts ID
 }
 
-// ID fetches the identifier associated with this `State`.
-func (s State) ID() ID {
-	message, err := json.Marshal(s)
+// ID calculates the SHA1 hash of this object.
+func (s State) ID() (calculated ID) {
+	marshaled, err := json.Marshal(s)
 	if err != nil {
-		panic(err)
+		return
 	}
-	return sha1.Sum(message)
+	calculated = sha1.Sum(marshaled)
+	return
+}
+
+// Budget fetches the instance of `envelopes.Budget` associated with this
+// State.
+func (s State) Budget() ID {
+	return s.budget
+}
+
+// SetBudget creates a copy of the State with the updated Budget.
+func (s State) SetBudget(id ID) State {
+	s.budget = id
+	return s
+}
+
+// Accounts fetches a list of each Account and its balance that is associated
+// with this State.
+func (s State) Accounts() ID {
+	return s.accounts
+}
+
+// SetAccounts creates a copy of the Stae with the updated Accounts.
+func (s State) SetAccounts(id ID) State {
+	s.accounts = id
+	return s
+}
+
+// MarshalJSON creates a JSON representation of this State.
+func (s State) MarshalJSON() ([]byte, error) {
+	var err error
+
+	marshaledAccountID, err := json.Marshal(s.Accounts())
+	if err != nil {
+		return nil, err
+	}
+
+	marshaledBudgetID, err := json.Marshal(s.Budget())
+	if err != nil {
+		return nil, err
+	}
+
+	builder := bytes.Buffer{}
+
+	builder.WriteRune('{')
+
+	builder.WriteString(`"accounts":`)
+	builder.Write(marshaledAccountID)
+
+	builder.WriteRune(',')
+
+	builder.WriteString(`"budget":`)
+	builder.Write(marshaledBudgetID)
+
+	builder.WriteRune('}')
+
+	return builder.Bytes(), nil
+}
+
+// UnmarshalJSON populates a State as marked up by the JSON object provided.
+func (s *State) UnmarshalJSON(content []byte) (err error) {
+	var intermediate map[string]json.RawMessage
+
+	var contender State
+
+	err = json.Unmarshal(content, &intermediate)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(intermediate["accounts"], &contender.accounts)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(intermediate["budget"], &contender.budget)
+	if err != nil {
+		return
+	}
+
+	*s = contender
+	return
 }

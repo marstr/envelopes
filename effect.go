@@ -14,13 +14,6 @@
 
 package envelopes
 
-import (
-	"bytes"
-	"fmt"
-	"math"
-	"sort"
-)
-
 // Effect is a collection of amounts that Budgets will be impacted.
 type Effect map[*Budget]int64
 
@@ -81,38 +74,4 @@ func (e Effect) Negate() (result Effect) {
 	}
 
 	return
-}
-
-func (e Effect) String() string {
-	budgets := make([]*Budget, 0, len(e))
-
-	for k := range e {
-		budgets = append(budgets, k)
-	}
-
-	sort.Slice(budgets, func(i, j int) bool {
-		return math.Abs(float64(e[budgets[i]])) >= math.Abs(float64(e[budgets[j]]))
-	})
-
-	results := new(bytes.Buffer)
-
-	results.WriteRune('[')
-
-	for i, budg := range budgets {
-		if i >= 15 {
-			results.WriteString("... ")
-			break
-		} else if impact := float64(e[budg]) / 100; budg == nil {
-			fmt.Fprintf(results, "nil:$%0.2f ", impact)
-		} else {
-			fmt.Fprintf(results, "%q:$%0.2f ", budg.Name, impact)
-		}
-	}
-
-	if results.Len() > 1 {
-		results.Truncate(results.Len() - 1)
-	}
-
-	results.WriteRune(']')
-	return results.String()
 }

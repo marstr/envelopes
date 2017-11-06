@@ -15,8 +15,6 @@
 package distribution
 
 import (
-	"fmt"
-
 	env "github.com/marstr/envelopes"
 )
 
@@ -29,8 +27,4 @@ func (id *Identity) Distribute(amount int64) env.Effect {
 	return env.Effect{
 		(*env.Budget)(id): amount,
 	}
-}
-
-func (id Identity) String() string {
-	return fmt.Sprintf("{%s}", id.Name)
 }
