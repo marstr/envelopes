@@ -2,7 +2,6 @@ package persist
 
 import (
 	"encoding/json"
-	"io/ioutil"
 
 	"github.com/marstr/envelopes"
 )
@@ -20,12 +19,7 @@ type DefaultLoader struct {
 }
 
 func (dl DefaultLoader) load(id envelopes.ID, target interface{}) (err error) {
-	reader, err := dl.Fetch(id)
-	if err != nil {
-		return
-	}
-
-	contents, err := ioutil.ReadAll(reader)
+	contents, err := dl.Fetch(id)
 	if err != nil {
 		return
 	}

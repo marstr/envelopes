@@ -2,7 +2,7 @@ package persist
 
 import (
 	"encoding/json"
-	"io"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -16,9 +16,8 @@ type FileSystem struct {
 	Root string
 }
 
-func (fs FileSystem) Fetch(id envelopes.ID) (handle io.Reader, err error) {
-	handle, err = os.Open(fs.path(id))
-	return
+func (fs FileSystem) Fetch(id envelopes.ID) ([]byte, error) {
+	return ioutil.ReadFile(fs.path(id))
 }
 
 func (fs FileSystem) write(target envelopes.IDer) (err error) {

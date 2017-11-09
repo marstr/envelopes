@@ -3,7 +3,6 @@ package persist_test
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -54,13 +53,7 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 				t.FailNow()
 			}
 
-			reader, err := subject.Fetch(tc.ID())
-			if err != nil {
-				t.Error(err)
-				t.FailNow()
-			}
-
-			got, err := ioutil.ReadAll(reader)
+			got, err := subject.Fetch(tc.ID())
 			if err != nil {
 				t.Error(err)
 				t.FailNow()
