@@ -40,6 +40,11 @@ func NewAccounts(accs map[string]int64) (created Accounts) {
 	return
 }
 
+func (accs Accounts) ID() (id ID) {
+	id, _ = NewID(accs)
+	return
+}
+
 func (accs Accounts) AddAccount(name string, balance int64) (updated Accounts, added bool) {
 	if _, ok := accs.underlyer[name]; ok {
 		updated = accs

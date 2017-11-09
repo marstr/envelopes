@@ -15,7 +15,9 @@
 package envelopes
 
 import (
+	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 )
 
 // ID is a 20 byte array containing a SHA1 hash of an object.
@@ -34,6 +36,19 @@ func (id ID) Equal(other ID) bool {
 		}
 	}
 	return true
+}
+
+func NewID(target json.Marshaler) (ID, error) {
+	marshaled, err := json.Marshal(target)
+	if err != nil {
+		return ID{}, err
+	}
+	return sha1.Sum(marshaled), nil
+}
+
+func (id ID) String() string {
+	marshaled, _ := id.MarshalText()
+	return string(marshaled)
 }
 
 // MarshalText produces a 20-byte hexadecimal text representation

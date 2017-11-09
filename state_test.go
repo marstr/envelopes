@@ -29,13 +29,13 @@ func TestState_ID_Deterministic(t *testing.T) {
 		marshaled, _ := json.Marshal(tc)
 		t.Run(string(marshaled), func(t *testing.T) {
 			first := tc.ID()
-			t.Logf("First ID: %x", first)
+			t.Logf("First ID: %s", first)
 			for i := 0; i < 30; i++ {
 				subsequent := tc.ID()
 
 				for j := 0; j < len(first); j++ {
 					if first[j] != subsequent[j] {
-						t.Logf("Subsequent ID: %x", subsequent)
+						t.Logf("Subsequent ID: %s", subsequent)
 						t.FailNow()
 					}
 				}

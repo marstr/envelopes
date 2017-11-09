@@ -15,7 +15,6 @@
 package envelopes_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/marstr/envelopes"
@@ -30,7 +29,7 @@ func TestID_MarshalText(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%x", tc.ID), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			got, err := tc.ID.MarshalText()
 			if err != nil {
 				t.Error(err)

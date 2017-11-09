@@ -16,7 +16,6 @@ package envelopes
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"encoding/json"
 )
 
@@ -27,12 +26,8 @@ type State struct {
 }
 
 // ID calculates the SHA1 hash of this object.
-func (s State) ID() (calculated ID) {
-	marshaled, err := json.Marshal(s)
-	if err != nil {
-		return
-	}
-	calculated = sha1.Sum(marshaled)
+func (s State) ID() (id ID) {
+	id, _ = NewID(s)
 	return
 }
 

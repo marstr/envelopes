@@ -15,6 +15,9 @@
 package envelopes
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"time"
 )
 
@@ -28,14 +31,28 @@ type Transaction struct {
 	parent   ID
 }
 
+func (t Transaction) ID() (id ID) {
+	id, _ = NewID(t)
+	return
+}
+
+func (t Transaction) Amount() int64 {
+	return t.amount
+}
+
+func (t Transaction) WithAmount(val int64) Transaction {
+	t.amount = val
+	return t
+}
+
 // Comment fetches any text supplied by an end user that they would like to associate
 // with this transaction.
 func (t Transaction) Comment() string {
 	return t.comment
 }
 
-// SetComment creates a copy of this Transaction that has the updated comment.
-func (t Transaction) SetComment(val string) Transaction {
+// WithComment creates a copy of this Transaction that has the updated comment.
+func (t Transaction) WithComment(val string) Transaction {
 	t.comment = val
 	return t
 }
@@ -45,9 +62,20 @@ func (t Transaction) Merchant() string {
 	return t.merchant
 }
 
-// SetMerchant creates a copy of this Transaction that has the updated Merchant.
-func (t Transaction) SetMerchant(val string) Transaction {
+// WithMerchant creates a copy of this Transaction that has the updated Merchant.
+func (t Transaction) WithMerchant(val string) Transaction {
 	t.merchant = val
+	return t
+}
+
+// Parent fetches the ID of the Transaction that immediately precedes this one logically.
+func (t Transaction) Parent() ID {
+	return t.parent
+}
+
+// WithParent creates a copy of this Transaction with the specifed Parent.
+func (t Transaction) WithParent(pid ID) Transaction {
+	t.parent = pid
 	return t
 }
 
@@ -57,8 +85,8 @@ func (t Transaction) State() ID {
 	return t.state
 }
 
-// SetState
-func (t Transaction) SetState(val ID) Transaction {
+// WithState creates a copy of this Transaction with the specified State.
+func (t Transaction) WithState(val ID) Transaction {
 	t.state = val
 	return t
 }
@@ -68,7 +96,72 @@ func (t Transaction) Time() time.Time {
 	return t.time
 }
 
-func (t Transaction) SetTime(val time.Time) Transaction {
+// WithTime creates a copy of this Transaction with a given time.
+func (t Transaction) WithTime(val time.Time) Transaction {
 	t.time = val
 	return t
+}
+
+func (t Transaction) MarshalJSON() ([]byte, error) {
+	var err error
+	marshaledState, err := json.Marshal(t.State())
+	if err != nil {
+		return nil, err
+	}
+
+	marshaledParent, err := json.Marshal(t.Parent())
+	if err != nil {
+		return nil, err
+	}
+
+	marshaledComment, err := json.Marshal(t.Comment())
+	if err != nil {
+		return nil, err
+	}
+
+	marshaledTime, err := json.Marshal(t.Time())
+	if err != nil {
+		return nil, err
+	}
+
+	marshaledMerchant, err := json.Marshal(t.Merchant())
+	if err != nil {
+		return nil, err
+	}
+
+	builder := new(bytes.Buffer)
+
+	// It is important that fixed width items come first. This allows for
+	// persistance strategies that use JSON written to disk to not fully
+	// unmarshal items to get the IDs of child items such as the parent and
+	// state associated with this transaction. (They can do this by reading into
+	// a []byte and then index on the known positions of state and parent IDs.)
+	builder.WriteRune('{')
+
+	builder.WriteString(`"state":`)
+	builder.Write(marshaledState)
+	builder.WriteRune(',')
+
+	builder.WriteString(`"parent":`)
+	builder.Write(marshaledParent)
+	builder.WriteRune(',')
+
+	builder.WriteString(`"amount":`)
+	fmt.Fprint(builder, t.Amount())
+	builder.WriteRune(',')
+
+	builder.WriteString(`"comment":`)
+	builder.Write(marshaledComment)
+	builder.WriteRune(',')
+
+	builder.WriteString(`"time":`)
+	builder.Write(marshaledTime)
+	builder.WriteRune(',')
+
+	builder.WriteString(`"merchant":`)
+	builder.Write(marshaledMerchant)
+
+	builder.WriteRune('}')
+
+	return builder.Bytes(), nil
 }

@@ -27,7 +27,6 @@ package envelopes
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -58,13 +57,9 @@ func (b Budget) deepCopy() (updated Budget) {
 }
 
 // ID fetches the Unique Identifier associated with this Budget.
-func (b Budget) ID() ID {
-	marshaled, err := json.Marshal(b)
-	if err != nil {
-		return ID{}
-	}
-
-	return sha1.Sum(marshaled)
+func (b Budget) ID() (id ID) {
+	id, _ = NewID(b)
+	return
 }
 
 // Equal determines whether or not two instances of Budget share the same balance and
