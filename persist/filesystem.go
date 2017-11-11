@@ -26,10 +26,13 @@ import (
 
 const objectsDir = "objects"
 
+// FileSystem allows an easy mechanism for reading and writing Budget related
+// objects to and from a hard drive.
 type FileSystem struct {
 	Root string
 }
 
+// Fetch is able to read into memory the marshaled form of a Budget related object.
 func (fs FileSystem) Fetch(id envelopes.ID) ([]byte, error) {
 	return ioutil.ReadFile(fs.path(id))
 }
@@ -52,14 +55,17 @@ func (fs FileSystem) write(target envelopes.IDer) (err error) {
 	return
 }
 
+// WriteBudget saves to disk an instance of an `envelopes.Budget`.
 func (fs FileSystem) WriteBudget(target envelopes.Budget) error {
 	return fs.write(target)
 }
 
+// WriteState saves to disk an instance of an `envelopes.State`.
 func (fs FileSystem) WriteState(target envelopes.State) error {
 	return fs.write(target)
 }
 
+// WriteTransaction saves to disk an instance of an `envelopes.Transaction`.
 func (fs FileSystem) WriteTransaction(target envelopes.Transaction) error {
 	return fs.write(target)
 }

@@ -18,8 +18,13 @@ import (
 	"github.com/marstr/envelopes"
 )
 
+// Writer defines a contract that allows an object to express that it knows how to persist
+// an object so that it can be recalled using an instance of an object that satisfies `persist.Fetch`.
 type Writer interface {
+	// WriteBudget must persist a budget in a means that it is fetchable using a `persist.Fetch`.
 	WriteBudget(envelopes.Budget) error
+	// WriteState must persist a budget in a means that it is fetchable using a `persist.Fetch`.
 	WriteState(envelopes.State) error
+	// WriteTransaction must persist a budget in a means that it is fetchable using a `persist.Fetch`.
 	WriteTransaction(envelopes.Transaction) error
 }
