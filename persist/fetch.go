@@ -15,10 +15,12 @@
 package persist
 
 import (
+	"context"
+
 	"github.com/marstr/envelopes"
 )
 
 // Fetcher can grab the marshaled form of an Object given an ID.
 type Fetcher interface {
-	Fetch(envelopes.ID) ([]byte, error)
+	Fetch(context.Context, envelopes.ID) ([]byte, error)
 }

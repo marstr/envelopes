@@ -18,6 +18,7 @@
 package persist
 
 import (
+	"context"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -36,11 +37,11 @@ type FileSystem struct {
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
-func (fs FileSystem) Fetch(id envelopes.ID) ([]byte, error) {
+func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error) {
 	return ioutil.ReadFile(fs.path(id))
 }
 
-func (fs FileSystem) write(target envelopes.IDer) (err error) {
+func (fs FileSystem) write(ctx context.Context, target envelopes.IDer) (err error) {
 	loc := fs.path(target.ID())
 	os.MkdirAll(path.Dir(loc), os.ModePerm)
 	handle, err := os.Create(loc)
@@ -59,18 +60,18 @@ func (fs FileSystem) write(target envelopes.IDer) (err error) {
 }
 
 // WriteBudget saves to disk an instance of an `envelopes.Budget`.
-func (fs FileSystem) WriteBudget(target envelopes.Budget) error {
-	return fs.write(target)
+func (fs FileSystem) WriteBudget(ctx context.Context, target envelopes.Budget) error {
+	return fs.write(ctx, target)
 }
 
 // WriteState saves to disk an instance of an `envelopes.State`.
-func (fs FileSystem) WriteState(target envelopes.State) error {
-	return fs.write(target)
+func (fs FileSystem) WriteState(ctx context.Context, target envelopes.State) error {
+	return fs.write(ctx, target)
 }
 
 // WriteTransaction saves to disk an instance of an `envelopes.Transaction`.
-func (fs FileSystem) WriteTransaction(target envelopes.Transaction) error {
-	return fs.write(target)
+func (fs FileSystem) WriteTransaction(ctx context.Context, target envelopes.Transaction) error {
+	return fs.write(ctx, target)
 }
 
 func (fs FileSystem) path(id envelopes.ID) string {

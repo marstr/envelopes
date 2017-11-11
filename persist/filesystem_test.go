@@ -15,6 +15,7 @@
 package persist_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -56,18 +57,18 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 			var err error
 			switch tc.(type) {
 			case envelopes.Budget:
-				err = subject.WriteBudget(tc.(envelopes.Budget))
+				err = subject.WriteBudget(context.Background(), tc.(envelopes.Budget))
 			case envelopes.State:
-				err = subject.WriteState(tc.(envelopes.State))
+				err = subject.WriteState(context.Background(), tc.(envelopes.State))
 			case envelopes.Transaction:
-				err = subject.WriteTransaction(tc.(envelopes.Transaction))
+				err = subject.WriteTransaction(context.Background(), tc.(envelopes.Transaction))
 			}
 			if err != nil {
 				t.Error(err)
 				t.FailNow()
 			}
 
-			got, err := subject.Fetch(tc.ID())
+			got, err := subject.Fetch(context.Background(), tc.ID())
 			if err != nil {
 				t.Error(err)
 				t.FailNow()
@@ -100,8 +101,8 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		currentBudget := envelopes.Budget{}.WithBalance(int64(i))
-		subject.WriteBudget(currentBudget)
-		subject.Fetch(currentBudget.ID())
+		subject.WriteBudget(context.Background(), currentBudget)
+		subject.Fetch(context.Background(), currentBudget.ID())
 	}
 	b.StopTimer()
 }
