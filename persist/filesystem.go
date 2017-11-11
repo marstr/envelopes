@@ -12,6 +12,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+// Package persist defines the basic requirements that the object model expects
+// in order to save and load state. The object model expects to be spun up
+// and down frequently
 package persist
 
 import (
