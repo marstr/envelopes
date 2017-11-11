@@ -22,7 +22,7 @@ func TestState_ID_Deterministic(t *testing.T) {
 
 	testCases := []envelopes.State{
 		envelopes.State{},
-		envelopes.State{}.SetBudget(envelopes.Budget{}.SetBalance(1729).ID()),
+		envelopes.State{}.WithBudget(envelopes.Budget{}.WithBalance(1729).ID()),
 	}
 
 	for _, tc := range testCases {

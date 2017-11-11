@@ -102,12 +102,12 @@ func (b Budget) RecursiveBalance() (sum int64) {
 	return
 }
 
-// SetBalance creates a copy of a Budget but with the updated Balance.
+// WithBalance creates a copy of a Budget but with the updated Balance.
 //
 // See Also:
 // 	Budget.AddBalance
 // 	Budget.RemoveBalance
-func (b Budget) SetBalance(val int64) (updated Budget) {
+func (b Budget) WithBalance(val int64) (updated Budget) {
 	updated = b.deepCopy()
 	updated.balance = val
 	return
@@ -120,7 +120,7 @@ func (b Budget) SetBalance(val int64) (updated Budget) {
 // 	Budget.SetBalance
 // 	Budget.RemoveBalance
 func (b Budget) AddBalance(credit int64) Budget {
-	return b.SetBalance(b.Balance() + credit)
+	return b.WithBalance(b.Balance() + credit)
 }
 
 // RemoveBalance creates a copy of a Budget but with the Balance debited by the
@@ -130,7 +130,7 @@ func (b Budget) AddBalance(credit int64) Budget {
 // 	Budget.SetBalance
 // 	Budget.AddBalance
 func (b Budget) RemoveBalance(debit int64) Budget {
-	return b.SetBalance(b.Balance() - debit)
+	return b.WithBalance(b.Balance() - debit)
 }
 
 // AddChild creates a copy of a Budget but with one addiotional child, should
@@ -192,12 +192,12 @@ func (b Budget) Children() (results map[string]Budget) {
 	return
 }
 
-// SetChildren creates a copy of a Budget with an updated list of children.
+// WithChildren creates a copy of a Budget with an updated list of children.
 //
 // See Also:
 // 	Budget.AddChild
 // 	Budget.RemoveChild
-func (b Budget) SetChildren(children map[string]Budget) (updated Budget) {
+func (b Budget) WithChildren(children map[string]Budget) (updated Budget) {
 	updated.balance = b.balance
 	updated.children = make(map[string]Budget, len(children))
 	for name, child := range children {

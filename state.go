@@ -37,8 +37,8 @@ func (s State) Budget() ID {
 	return s.budget
 }
 
-// SetBudget creates a copy of the State with the updated Budget.
-func (s State) SetBudget(id ID) State {
+// WithBudget creates a copy of the State with the updated Budget.
+func (s State) WithBudget(id ID) State {
 	s.budget = id
 	return s
 }
@@ -49,8 +49,8 @@ func (s State) Accounts() ID {
 	return s.accounts
 }
 
-// SetAccounts creates a copy of the Stae with the updated Accounts.
-func (s State) SetAccounts(id ID) State {
+// WithAccounts creates a copy of the Stae with the updated Accounts.
+func (s State) WithAccounts(id ID) State {
 	s.accounts = id
 	return s
 }

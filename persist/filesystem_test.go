@@ -30,7 +30,7 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 		envelopes.Budget{},
 		envelopes.State{},
 		envelopes.Transaction{},
-		envelopes.Budget{}.SetBalance(42),
+		envelopes.Budget{}.WithBalance(42),
 		envelopes.Transaction{}.WithComment("This is only a test"),
 	}
 
@@ -99,7 +99,7 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		currentBudget := envelopes.Budget{}.SetBalance(int64(i))
+		currentBudget := envelopes.Budget{}.WithBalance(int64(i))
 		subject.WriteBudget(currentBudget)
 		subject.Fetch(currentBudget.ID())
 	}

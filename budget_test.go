@@ -24,7 +24,7 @@ import (
 
 func ExampleBudget_SetBalance() {
 	subject := envelopes.Budget{}
-	updated := subject.SetBalance(1729)
+	updated := subject.WithBalance(1729)
 
 	fmt.Println(subject.Balance())
 	fmt.Println(updated.Balance())
@@ -34,22 +34,22 @@ func ExampleBudget_SetBalance() {
 }
 
 func ExampleBudget_AddBalance() {
-	subject := envelopes.Budget{}.SetBalance(100)
+	subject := envelopes.Budget{}.WithBalance(100)
 	subject = subject.AddBalance(45)
 	fmt.Println(subject.Balance())
 	// Output: 145
 }
 
 func ExampleBudget_RemoveBalance() {
-	subject := envelopes.Budget{}.SetBalance(100)
+	subject := envelopes.Budget{}.WithBalance(100)
 	subject = subject.RemoveBalance(99)
 	fmt.Println(subject.Balance())
 	// Output: 1
 }
 
 func ExampleBudget_AddChild() {
-	subject := envelopes.Budget{}.SetBalance(42)
-	updated, added := subject.AddChild("child1", envelopes.Budget{}.SetBalance(2))
+	subject := envelopes.Budget{}.WithBalance(42)
+	updated, added := subject.AddChild("child1", envelopes.Budget{}.WithBalance(2))
 	fmt.Println(subject)
 	fmt.Println(updated)
 	fmt.Println(added)
@@ -60,17 +60,17 @@ func ExampleBudget_AddChild() {
 }
 
 func ExampleBudget_RecursiveBalance() {
-	subject := envelopes.Budget{}.SetBalance(431)
-	subject, _ = subject.AddChild("child1", envelopes.Budget{}.SetBalance(1296))
-	subject, _ = subject.AddChild("child2", envelopes.Budget{}.SetBalance(2))
+	subject := envelopes.Budget{}.WithBalance(431)
+	subject, _ = subject.AddChild("child1", envelopes.Budget{}.WithBalance(1296))
+	subject, _ = subject.AddChild("child2", envelopes.Budget{}.WithBalance(2))
 
 	fmt.Println(subject.RecursiveBalance())
 	// Output: 1729
 }
 
 func ExampleBudget_MarshalJSON() {
-	subject := envelopes.Budget{}.SetBalance(42)
-	subject, _ = subject.AddChild("child1", envelopes.Budget{}.SetBalance(9087))
+	subject := envelopes.Budget{}.WithBalance(42)
+	subject, _ = subject.AddChild("child1", envelopes.Budget{}.WithBalance(9087))
 
 	output, _ := json.Marshal(subject)
 	fmt.Println(string(output))
@@ -90,28 +90,28 @@ func TestBudget_Equal(t *testing.T) {
 			true,
 		},
 		{
-			envelopes.Budget{}.SetBalance(45),
-			envelopes.Budget{}.SetBalance(45),
+			envelopes.Budget{}.WithBalance(45),
+			envelopes.Budget{}.WithBalance(45),
 			true,
 		},
 		{
-			envelopes.Budget{}.SetBalance(39),
-			envelopes.Budget{}.SetBalance(90),
+			envelopes.Budget{}.WithBalance(39),
+			envelopes.Budget{}.WithBalance(90),
 			false,
 		},
 		{
-			envelopes.Budget{}.SetBalance(99),
-			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.SetBalance(99)}),
+			envelopes.Budget{}.WithBalance(99),
+			envelopes.Budget{}.WithBalance(0).WithChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.WithBalance(99)}),
 			false,
 		},
 		{
-			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.SetBalance(99)}),
-			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child2": envelopes.Budget{}.SetBalance(99)}),
+			envelopes.Budget{}.WithBalance(0).WithChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.WithBalance(99)}),
+			envelopes.Budget{}.WithBalance(0).WithChildren(map[string]envelopes.Budget{"child2": envelopes.Budget{}.WithBalance(99)}),
 			false,
 		},
 		{
-			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.SetBalance(99)}),
-			envelopes.Budget{}.SetBalance(0).SetChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.SetBalance(44)}),
+			envelopes.Budget{}.WithBalance(0).WithChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.WithBalance(99)}),
+			envelopes.Budget{}.WithBalance(0).WithChildren(map[string]envelopes.Budget{"child1": envelopes.Budget{}.WithBalance(44)}),
 			false,
 		},
 	}
@@ -140,41 +140,41 @@ func TestBudget_UnmarshalJSON(t *testing.T) {
 		},
 		{
 			`{"balance":1729}`,
-			envelopes.Budget{}.SetBalance(1729),
+			envelopes.Budget{}.WithBalance(1729),
 		},
 		{
 			`{"balance":42,"children":{"child1":{"balance":2}}}`,
-			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
-				"child1": envelopes.Budget{}.SetBalance(2),
+			envelopes.Budget{}.WithBalance(42).WithChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.WithBalance(2),
 			}),
 		},
 		{
 			`{"balance":42,"children":{"child1":{"balance":2},"child2":{"balance":4}}}`,
-			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
-				"child1": envelopes.Budget{}.SetBalance(2),
-				"child2": envelopes.Budget{}.SetBalance(4),
+			envelopes.Budget{}.WithBalance(42).WithChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.WithBalance(2),
+				"child2": envelopes.Budget{}.WithBalance(4),
 			}),
 		},
 		{
 			`{"balance":42,"children":{"child2":{"balance":4},"child1":{"balance":2}}}`,
-			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
-				"child1": envelopes.Budget{}.SetBalance(2),
-				"child2": envelopes.Budget{}.SetBalance(4),
+			envelopes.Budget{}.WithBalance(42).WithChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.WithBalance(2),
+				"child2": envelopes.Budget{}.WithBalance(4),
 			}),
 		},
 		{
 			`{"children":{"child2":{"balance":4},"child1":{"balance":2}},"balance":42}`,
-			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
-				"child1": envelopes.Budget{}.SetBalance(2),
-				"child2": envelopes.Budget{}.SetBalance(4),
+			envelopes.Budget{}.WithBalance(42).WithChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.WithBalance(2),
+				"child2": envelopes.Budget{}.WithBalance(4),
 			}),
 		},
 		{
 			`{"balance":42,"children":{"child1":{"balance":2},"child2":{"balance":4,"children":{"child3":{"balance":99}}}}}`,
-			envelopes.Budget{}.SetBalance(42).SetChildren(map[string]envelopes.Budget{
-				"child1": envelopes.Budget{}.SetBalance(2),
-				"child2": envelopes.Budget{}.SetBalance(4).SetChildren(map[string]envelopes.Budget{
-					"child3": envelopes.Budget{}.SetBalance(99),
+			envelopes.Budget{}.WithBalance(42).WithChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.WithBalance(2),
+				"child2": envelopes.Budget{}.WithBalance(4).WithChildren(map[string]envelopes.Budget{
+					"child3": envelopes.Budget{}.WithBalance(99),
 				}),
 			}),
 		},
@@ -197,8 +197,8 @@ func TestBudget_UnmarshalJSON(t *testing.T) {
 }
 
 func TestBudget_MarshalJSON(t *testing.T) {
-	oneChild, _ := envelopes.Budget{}.SetBalance(42).AddChild("beta", envelopes.Budget{}.SetBalance(99))
-	twoChildren, _ := oneChild.AddChild("alpha", envelopes.Budget{}.SetBalance(56))
+	oneChild, _ := envelopes.Budget{}.WithBalance(42).AddChild("beta", envelopes.Budget{}.WithBalance(99))
+	twoChildren, _ := oneChild.AddChild("alpha", envelopes.Budget{}.WithBalance(56))
 
 	testCases := []struct {
 		envelopes.Budget
@@ -217,9 +217,9 @@ func TestBudget_MarshalJSON(t *testing.T) {
 			`{"balance":42,"children":{"alpha":{"balance":56},"beta":{"balance":99}}}`,
 		},
 		{
-			envelopes.Budget{}.SetBalance(-98).SetChildren(map[string]envelopes.Budget{
-				"child1": envelopes.Budget{}.SetBalance(87),
-				"child2": envelopes.Budget{}.SetBalance(11),
+			envelopes.Budget{}.WithBalance(-98).WithChildren(map[string]envelopes.Budget{
+				"child1": envelopes.Budget{}.WithBalance(87),
+				"child2": envelopes.Budget{}.WithBalance(11),
 			}),
 			`{"balance":-98,"children":{"child1":{"balance":87},"child2":{"balance":11}}}`,
 		},
@@ -241,10 +241,10 @@ func TestBudget_MarshalJSON(t *testing.T) {
 func TestBudget_ID_Deterministic(t *testing.T) {
 	testCases := []envelopes.Budget{
 		envelopes.Budget{},
-		envelopes.Budget{}.SetBalance(1729),
-		envelopes.Budget{}.SetChildren(map[string]envelopes.Budget{
-			"child1":     envelopes.Budget{}.SetBalance(99),
-			"alphaChild": envelopes.Budget{}.SetBalance(44),
+		envelopes.Budget{}.WithBalance(1729),
+		envelopes.Budget{}.WithChildren(map[string]envelopes.Budget{
+			"child1":     envelopes.Budget{}.WithBalance(99),
+			"alphaChild": envelopes.Budget{}.WithBalance(44),
 		}),
 	}
 
@@ -268,19 +268,19 @@ func TestBudget_ID_Deterministic(t *testing.T) {
 func TestBudget_JSONRoundTrip(t *testing.T) {
 	testCases := []envelopes.Budget{
 		envelopes.Budget{},
-		envelopes.Budget{}.SetBalance(42),
-		envelopes.Budget{}.SetBalance(1729).SetChildren(map[string]envelopes.Budget{
-			"child1": envelopes.Budget{}.SetBalance(99),
-			"child2": envelopes.Budget{}.SetBalance(1),
+		envelopes.Budget{}.WithBalance(42),
+		envelopes.Budget{}.WithBalance(1729).WithChildren(map[string]envelopes.Budget{
+			"child1": envelopes.Budget{}.WithBalance(99),
+			"child2": envelopes.Budget{}.WithBalance(1),
 		}),
-		envelopes.Budget{}.SetBalance(1729).SetChildren(map[string]envelopes.Budget{
-			"child1": envelopes.Budget{}.SetBalance(99).SetChildren(map[string]envelopes.Budget{
-				"child2": envelopes.Budget{}.SetBalance(1),
+		envelopes.Budget{}.WithBalance(1729).WithChildren(map[string]envelopes.Budget{
+			"child1": envelopes.Budget{}.WithBalance(99).WithChildren(map[string]envelopes.Budget{
+				"child2": envelopes.Budget{}.WithBalance(1),
 			}),
 		}),
-		envelopes.Budget{}.SetBalance(1729).SetChildren(map[string]envelopes.Budget{
-			"child1": envelopes.Budget{}.SetBalance(-1007).SetChildren(map[string]envelopes.Budget{
-				"child2": envelopes.Budget{}.SetBalance(1),
+		envelopes.Budget{}.WithBalance(1729).WithChildren(map[string]envelopes.Budget{
+			"child1": envelopes.Budget{}.WithBalance(-1007).WithChildren(map[string]envelopes.Budget{
+				"child2": envelopes.Budget{}.WithBalance(1),
 			}),
 		}),
 	}
