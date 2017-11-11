@@ -31,15 +31,27 @@ type Transaction struct {
 	parent   ID
 }
 
+// ID fetches a SHA1 hash of this object that qill uniquely identify it.
 func (t Transaction) ID() (id ID) {
 	id, _ = NewID(t)
 	return
 }
 
+// Amount is a non-semantic magnitude associated with the transaction.
+//
+// For most transactions, this amount will match the sum of all diffetences
+// in state between each budget in this Transaction's State. However, in the
+// case of transfers between two envelopes for the user's own accounting
+// purposes, the magnitude of the transfer will always net out as a zero
+// impact on the Budgets. Paying off a credit card balance, or just transferring
+// money between two envelopes, the magnitude of the transfer is important
+// but has zero-sum impact.
 func (t Transaction) Amount() int64 {
 	return t.amount
 }
 
+// WithAmount creates a new Transaction identical in every way to `t` except
+// that it will return a different value when `envelopes.Amount()` is called on it.
 func (t Transaction) WithAmount(val int64) Transaction {
 	t.amount = val
 	return t
@@ -102,6 +114,8 @@ func (t Transaction) WithTime(val time.Time) Transaction {
 	return t
 }
 
+// MarshalJSON creates a deterministic JSON object that has the same
+// values as `t`.
 func (t Transaction) MarshalJSON() ([]byte, error) {
 	var err error
 	marshaledState, err := json.Marshal(t.State())
