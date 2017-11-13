@@ -23,7 +23,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 
 	"github.com/marstr/envelopes"
 )
@@ -125,9 +124,9 @@ func (fs FileSystem) WriteTransaction(ctx context.Context, target envelopes.Tran
 }
 
 func (fs FileSystem) currentPath() string {
-	return filepath.Join(fs.Root, "current.txt")
+	return path.Join(fs.Root, "current.txt")
 }
 
 func (fs FileSystem) path(id envelopes.ID) string {
-	return filepath.Join(fs.Root, objectsDir, id.String()+".json")
+	return path.Join(fs.Root, objectsDir, id.String()+".json")
 }
