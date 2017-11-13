@@ -23,6 +23,7 @@ import (
 
 // Loader can instantiate core envelopes objects given just an ID.
 type Loader interface {
+	LoadAccounts(context.Context, envelopes.ID) (envelopes.Accounts, error)
 	LoadBudget(context.Context, envelopes.ID) (envelopes.Budget, error)
 	LoadState(context.Context, envelopes.ID) (envelopes.State, error)
 	LoadTransaction(context.Context, envelopes.ID) (envelopes.Transaction, error)
@@ -40,6 +41,12 @@ func (dl DefaultLoader) load(ctx context.Context, id envelopes.ID, target interf
 	}
 
 	err = json.Unmarshal(contents, target)
+	return
+}
+
+// LoadAccounts fetches a list of Accounts in its marshaled form, then unmarshals it into an Accounts object.
+func (dl DefaultLoader) LoadAccounts(ctx context.Context, id envelopes.ID) (loaded envelopes.Accounts, err error) {
+	err = dl.load(ctx, id, &loaded)
 	return
 }
 
