@@ -179,3 +179,40 @@ func (t Transaction) MarshalJSON() ([]byte, error) {
 
 	return builder.Bytes(), nil
 }
+
+func (t *Transaction) UnmarshalJSON(content []byte) (err error) {
+	var intermediate map[string]json.RawMessage
+
+	err = json.Unmarshal(content, &intermediate)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(intermediate["comment"], &t.comment)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(intermediate["time"], &t.time)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(intermediate["parent"], &t.parent)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(intermediate["state"], &t.state)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(intermediate["amount"], &t.amount)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal(intermediate["merchant"], &t.merchant)
+	return
+}

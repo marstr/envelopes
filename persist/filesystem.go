@@ -14,7 +14,7 @@
 
 // Package persist defines the basic requirements that the object model expects
 // in order to save and load state. The object model expects to be spun up
-// and down frequently
+// and down frequently.
 package persist
 
 import (
@@ -34,6 +34,51 @@ const objectsDir = "objects"
 // objects to and from a hard drive.
 type FileSystem struct {
 	Root string
+}
+
+// LoadCurrent finds the ID of the most recent transaction.
+func (fs FileSystem) LoadCurrent(ctx context.Context) (*envelopes.ID, error) {
+	raw, err := ioutil.ReadFile(fs.currentPath())
+	if err != nil {
+		return nil, err
+	}
+
+	result := &envelopes.ID{}
+
+	err = result.UnmarshalText(raw)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// WriteCurrent makes note of the most recent ID of transaction.
+func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transaction) (err error) {
+	writeErr := make(chan error, 1)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		defer close(writeErr)
+		transformed, err := current.ID().MarshalText()
+		if err != nil {
+			writeErr <- err
+			return
+		}
+
+		err = ioutil.WriteFile(fs.currentPath(), transformed, os.ModePerm)
+		if err != nil {
+			writeErr <- err
+			return
+		}
+	}()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-done:
+		return <-writeErr
+	}
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
@@ -59,6 +104,11 @@ func (fs FileSystem) write(ctx context.Context, target envelopes.IDer) (err erro
 	return
 }
 
+// WriteAccounts saves to disk an instance of an `enveloeps.Accounts`.
+func (fs FileSystem) WriteAccounts(ctx context.Context, target envelopes.Accounts) error {
+	return fs.write(ctx, target)
+}
+
 // WriteBudget saves to disk an instance of an `envelopes.Budget`.
 func (fs FileSystem) WriteBudget(ctx context.Context, target envelopes.Budget) error {
 	return fs.write(ctx, target)
@@ -72,6 +122,10 @@ func (fs FileSystem) WriteState(ctx context.Context, target envelopes.State) err
 // WriteTransaction saves to disk an instance of an `envelopes.Transaction`.
 func (fs FileSystem) WriteTransaction(ctx context.Context, target envelopes.Transaction) error {
 	return fs.write(ctx, target)
+}
+
+func (fs FileSystem) currentPath() string {
+	return filepath.Join(fs.Root, "current.txt")
 }
 
 func (fs FileSystem) path(id envelopes.ID) string {

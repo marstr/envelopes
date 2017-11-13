@@ -26,6 +26,51 @@ import (
 	"github.com/marstr/envelopes/persist"
 )
 
+func TestFileSystem_RoundTrip_Current(t *testing.T) {
+	testLocation := path.Join("testdata", "test", "roundtrip", "current")
+	err := os.MkdirAll(testLocation, os.ModePerm)
+	if err != nil {
+		t.Error(err)
+		t.FailNow()
+	}
+
+	defer func() {
+		err := os.RemoveAll(testLocation)
+		if err != nil {
+			t.Logf("failed to cleanup, directory %q still exists.", testLocation)
+		}
+	}()
+
+	testCases := []envelopes.Transaction{
+		envelopes.Transaction{},
+		envelopes.Transaction{}.WithComment(`"the time has come", the walrus said, "to speak of many things."`),
+		envelopes.Transaction{}.WithAmount(1729),
+	}
+
+	subject := persist.FileSystem{Root: testLocation}
+
+	for _, tc := range testCases {
+		t.Run("", func(t *testing.T) {
+			err := subject.WriteCurrent(context.Background(), &tc)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			got, err := subject.LoadCurrent(context.Background())
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if want := tc.ID(); !got.Equal(want) {
+				t.Logf("got:  %q\nwant: %q", got.String(), want.String())
+				t.Fail()
+			}
+		})
+	}
+}
+
 func TestFileSystem_RoundTrip(t *testing.T) {
 	testCases := []envelopes.IDer{
 		envelopes.Budget{},
