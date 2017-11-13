@@ -51,7 +51,7 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			err := subject.WriteCurrent(context.Background(), &tc)
+			err := subject.WriteCurrent(context.Background(), tc)
 			if err != nil {
 				t.Error(err)
 				return
