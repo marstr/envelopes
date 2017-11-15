@@ -44,6 +44,34 @@ func (dl DefaultLoader) load(ctx context.Context, id envelopes.ID, target interf
 	return
 }
 
+func LoadAll(ctx context.Context, loader Loader, id envelopes.ID) (envelopes.Transaction, envelopes.State, envelopes.Accounts, envelopes.Budget, error) {
+	loadedTransaction, err := loader.LoadTransaction(ctx, id)
+	if err != nil {
+		return envelopes.Transaction{}, envelopes.State{}, envelopes.Accounts{}, envelopes.Budget{}, err
+	}
+
+	loadedState, err := loader.LoadState(ctx, loadedTransaction.State())
+	if err != nil {
+		return envelopes.Transaction{}, envelopes.State{}, envelopes.Accounts{}, envelopes.Budget{}, err
+	}
+
+	loadedAccounts, err := loader.LoadAccounts(ctx, loadedState.Accounts())
+	if err != nil {
+		return envelopes.Transaction{}, envelopes.State{}, envelopes.Accounts{}, envelopes.Budget{}, err
+	}
+
+	loadedBudget, err := loader.LoadBudget(ctx, loadedState.Budget())
+	if err != nil {
+		return envelopes.Transaction{}, envelopes.State{}, envelopes.Accounts{}, envelopes.Budget{}, err
+	}
+
+	return loadedTransaction, loadedState, loadedAccounts, loadedBudget, nil
+}
+
+func (dl DefaultLoader) LoadAll(ctx context.Context, id envelopes.ID) (envelopes.Transaction, envelopes.State, envelopes.Accounts, envelopes.Budget, error) {
+	return LoadAll(ctx, dl, id)
+}
+
 // LoadAccounts fetches a list of Accounts in its marshaled form, then unmarshals it into an Accounts object.
 func (dl DefaultLoader) LoadAccounts(ctx context.Context, id envelopes.ID) (loaded envelopes.Accounts, err error) {
 	err = dl.load(ctx, id, &loaded)

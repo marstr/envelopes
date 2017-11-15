@@ -36,20 +36,18 @@ type FileSystem struct {
 }
 
 // LoadCurrent finds the ID of the most recent transaction.
-func (fs FileSystem) LoadCurrent(ctx context.Context) (*envelopes.ID, error) {
+func (fs FileSystem) LoadCurrent(ctx context.Context) (result envelopes.ID, err error) {
 	raw, err := ioutil.ReadFile(fs.currentPath())
 	if err != nil {
-		return nil, err
+		return
 	}
-
-	result := &envelopes.ID{}
 
 	err = result.UnmarshalText(raw)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return result, nil
+	return
 }
 
 // WriteCurrent makes note of the most recent ID of transaction.
