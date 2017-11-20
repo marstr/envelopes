@@ -25,6 +25,7 @@ import (
 	"path"
 
 	"github.com/marstr/envelopes"
+	homedir "github.com/mitchellh/go-homedir"
 )
 
 const objectsDir = "objects"
@@ -37,7 +38,12 @@ type FileSystem struct {
 
 // LoadCurrent finds the ID of the most recent transaction.
 func (fs FileSystem) LoadCurrent(ctx context.Context) (result envelopes.ID, err error) {
-	raw, err := ioutil.ReadFile(fs.currentPath())
+	p, err := fs.currentPath()
+	if err != nil {
+		return
+	}
+
+	raw, err := ioutil.ReadFile(p)
 	if err != nil {
 		return
 	}
@@ -63,7 +69,13 @@ func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transac
 			return
 		}
 
-		err = ioutil.WriteFile(fs.currentPath(), transformed, os.ModePerm)
+		cp, err := fs.currentPath()
+		if err != nil {
+			writeErr <- err
+			return
+		}
+
+		err = ioutil.WriteFile(cp, transformed, os.ModePerm)
 		if err != nil {
 			writeErr <- err
 			return
@@ -80,11 +92,19 @@ func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transac
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
 func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error) {
-	return ioutil.ReadFile(fs.path(id))
+	p, err := fs.path(id)
+	if err != nil {
+		return nil, err
+	}
+	return ioutil.ReadFile(p)
 }
 
 func (fs FileSystem) write(ctx context.Context, target envelopes.IDer) (err error) {
-	loc := fs.path(target.ID())
+	loc, err := fs.path(target.ID())
+	if err != nil {
+		return
+	}
+
 	os.MkdirAll(path.Dir(loc), os.ModePerm)
 	handle, err := os.Create(loc)
 	if err != nil {
@@ -121,10 +141,18 @@ func (fs FileSystem) WriteTransaction(ctx context.Context, target envelopes.Tran
 	return fs.write(ctx, target)
 }
 
-func (fs FileSystem) currentPath() string {
-	return path.Join(fs.Root, "current.txt")
+func (fs FileSystem) currentPath() (result string, err error) {
+	exp, err := homedir.Expand(fs.Root)
+	if err != nil {
+		return
+	}
+	return path.Join(exp, "current.txt"), nil
 }
 
-func (fs FileSystem) path(id envelopes.ID) string {
-	return path.Join(fs.Root, objectsDir, id.String()+".json")
+func (fs FileSystem) path(id envelopes.ID) (string, error) {
+	exp, err := homedir.Expand(fs.Root)
+	if err != nil {
+		return "", err
+	}
+	return path.Join(exp, objectsDir, id.String()+".json"), nil
 }
