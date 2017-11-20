@@ -105,32 +105,38 @@ func (b Budget) RecursiveBalance() (sum int64) {
 // WithBalance creates a copy of a Budget but with the updated Balance.
 //
 // See Also:
-// 	Budget.AddBalance
-// 	Budget.RemoveBalance
+// 	Budget.IncreaseBalance
+// 	Budget.DecreaseBalance
 func (b Budget) WithBalance(val int64) (updated Budget) {
 	updated = b.deepCopy()
 	updated.balance = val
 	return
 }
 
-// AddBalance creates a copy of a Budget but with the Balance credited by the
+// IncreaseBalance creates a copy of a Budget but with the Balance credited by the
 // specified amount.
 //
 // See Also:
-// 	Budget.SetBalance
-// 	Budget.RemoveBalance
-func (b Budget) AddBalance(credit int64) Budget {
+// 	Budget.WithBalance
+// 	Budget.DecreaseBalance
+func (b Budget) IncreaseBalance(credit int64) Budget {
 	return b.WithBalance(b.Balance() + credit)
 }
 
-// RemoveBalance creates a copy of a Budget but with the Balance debited by the
+// DecreaseBalance creates a copy of a Budget but with the Balance debited by the
 // specified amount.
 //
 // See Also:
-// 	Budget.SetBalance
-// 	Budget.AddBalance
-func (b Budget) RemoveBalance(debit int64) Budget {
+// 	Budget.WithBalance
+// 	Budget.IncreaseBalance
+func (b Budget) DecreaseBalance(debit int64) Budget {
 	return b.WithBalance(b.Balance() - debit)
+}
+
+// ApplyEffect creates a Budget that is identical to the current one, but with
+// the specified adjustments to the balance of each Budget.
+func (b Budget) ApplyEffect(e Effect) (result Budget, err error) {
+	panic("code not written")
 }
 
 // AddChild creates a copy of a Budget but with one addiotional child, should
@@ -253,6 +259,7 @@ func (b *Budget) UnmarshalJSON(content []byte) (err error) {
 	if err != nil {
 		return
 	}
+
 	if _, ok := intermediate["children"]; ok {
 		children := make(map[string]json.RawMessage)
 		b.children = make(map[string]Budget)

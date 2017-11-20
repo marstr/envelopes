@@ -58,6 +58,30 @@ func (accs Accounts) AddAccount(name string, balance int64) (updated Accounts, a
 	return
 }
 
+func (accs Accounts) WithBalance(name string, balance int64) (updated Accounts, ok bool) {
+	if _, ok = accs.underlyer[name]; !ok {
+		updated = accs
+		return
+	}
+
+	updated = accs.deepCopy()
+	updated.underlyer[name] = balance
+
+	return
+}
+
+func (accs Accounts) AdjustBalance(name string, impact int64) (updated Accounts, ok bool) {
+	var previousBalance int64
+	if previousBalance, ok = accs.underlyer[name]; !ok {
+		updated = accs
+		return
+	}
+
+	updated = accs.deepCopy()
+	updated.underlyer[name] = previousBalance + impact
+	return
+}
+
 func (accs Accounts) RemoveAccount(name string) (updated Accounts, removed bool) {
 	if _, ok := accs.underlyer[name]; !ok {
 		updated = accs
@@ -69,6 +93,10 @@ func (accs Accounts) RemoveAccount(name string) (updated Accounts, removed bool)
 	delete(updated.underlyer, name)
 	removed = true
 	return
+}
+
+func (accs Accounts) AsMap() map[string]int64 {
+	return accs.deepCopy().underlyer
 }
 
 func (accs Accounts) MarshalJSON() ([]byte, error) {
