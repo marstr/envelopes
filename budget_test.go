@@ -33,16 +33,16 @@ func ExampleBudget_SetBalance() {
 	// 1729
 }
 
-func ExampleBudget_AddBalance() {
+func ExampleBudget_IncreaseBalance() {
 	subject := envelopes.Budget{}.WithBalance(100)
-	subject = subject.AddBalance(45)
+	subject = subject.IncreaseBalance(45)
 	fmt.Println(subject.Balance())
 	// Output: 145
 }
 
-func ExampleBudget_RemoveBalance() {
+func ExampleBudget_DecreaseBalance() {
 	subject := envelopes.Budget{}.WithBalance(100)
-	subject = subject.RemoveBalance(99)
+	subject = subject.DecreaseBalance(99)
 	fmt.Println(subject.Balance())
 	// Output: 1
 }
