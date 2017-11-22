@@ -82,6 +82,11 @@ func (accs Accounts) AdjustBalance(name string, impact int64) (updated Accounts,
 	return
 }
 
+func (accs Accounts) HasAccount(name string) (ok bool) {
+	_, ok = accs.underlyer[name]
+	return
+}
+
 func (accs Accounts) RemoveAccount(name string) (updated Accounts, removed bool) {
 	if _, ok := accs.underlyer[name]; !ok {
 		updated = accs
