@@ -18,6 +18,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -35,6 +37,31 @@ type Transaction struct {
 func (t Transaction) ID() (id ID) {
 	id, _ = NewID(t)
 	return
+}
+
+// ParseAmount converts between a string representation of an amount of dollars
+// into an int64 number of cents.
+func ParseAmount(raw string) (result int64, err error) {
+	raw = strings.TrimPrefix(raw, "$")
+	raw = strings.Replace(raw, ",", "", -1)
+	parsed, err := strconv.ParseFloat(raw, 64)
+	if err != nil {
+		return
+	}
+
+	if parsed >= 0 {
+		result = int64(parsed*100 + .5)
+	} else {
+		result = int64(parsed*100 - .5)
+	}
+	return
+}
+
+// FormatAmount converts an int64 number of cents into a string representation of a number of dollars.
+// It is the inverse function of `ParseAmount`
+func FormatAmount(amount int64) (result string) {
+	transformed := float64(amount) / 100
+	return fmt.Sprintf("$%0.2f", transformed)
 }
 
 // Amount is a non-semantic magnitude associated with the transaction.
