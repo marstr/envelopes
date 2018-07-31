@@ -50,16 +50,17 @@ func Execute() {
 }
 
 func init() {
+	const locationConfigName = "location"
 	cobra.OnInitialize(initConfig)
 
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file (default is $HOME/.ledger.yaml)")
-	RootCmd.PersistentFlags().StringP("location", "l", ".", "path to the ledger to be operated on. (default is \".\")")
-	viper.BindPFlag("location", RootCmd.PersistentFlags().Lookup("location"))
+	RootCmd.PersistentFlags().StringP(locationConfigName, locationConfigName[:1], ".", "path to the ledger to be operated on. (default is \".\")")
+	viper.BindPFlag(locationConfigName, RootCmd.PersistentFlags().Lookup(locationConfigName))
 
-	viper.SetDefault("location", ".")
+	viper.SetDefault(locationConfigName, ".")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -86,4 +87,9 @@ func initConfig() {
 	}
 	viper.SetEnvPrefix("ledger")
 	viper.AutomaticEnv() // read in environment variables that match
+
+	// If a config file is found, read it in.
+	if err := viper.ReadInConfig(); err != nil {
+
+	}
 }

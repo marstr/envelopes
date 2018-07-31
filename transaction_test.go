@@ -73,7 +73,6 @@ func Test_ParseAmount(t *testing.T) {
 				t.Logf("got: %d want: %d", got, tc.expected)
 				t.Fail()
 			}
-
 		})
 	}
 }

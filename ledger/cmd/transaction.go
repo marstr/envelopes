@@ -18,8 +18,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/mitchellh/go-homedir"
@@ -52,7 +50,7 @@ to quickly create a Cobra application.`,
 			return fmt.Errorf("unexpected number of arguments %d", n)
 		}
 
-		if _, err = parseAmount(args[0]); err != nil {
+		if _, err = envelopes.ParseAmount(args[0]); err != nil {
 			return fmt.Errorf("unable to find an amount in %q", args[0])
 		}
 
@@ -97,7 +95,7 @@ to quickly create a Cobra application.`,
 			os.Exit(exitStatus)
 		}()
 
-		amount, err := parseAmount(args[0])
+		amount, err := envelopes.ParseAmount(args[0])
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "unable to find an amount in %q\n", args[0])
 			return
@@ -159,16 +157,6 @@ to quickly create a Cobra application.`,
 		}
 		exitStatus = 0
 	},
-}
-
-func parseAmount(raw string) (result int64, err error) {
-	raw = strings.TrimPrefix(raw, "$")
-	parsed, err := strconv.ParseFloat(raw, 64)
-	if err != nil {
-		return
-	}
-	result = int64(parsed*100 + .5)
-	return
 }
 
 func init() {

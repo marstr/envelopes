@@ -36,8 +36,8 @@ type FileSystem struct {
 	Root string
 }
 
-// LoadCurrent finds the ID of the most recent transaction.
-func (fs FileSystem) LoadCurrent(ctx context.Context) (result envelopes.ID, err error) {
+// Current finds the ID of the most recent transaction.
+func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err error) {
 	p, err := fs.currentPath()
 	if err != nil {
 		return

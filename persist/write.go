@@ -29,6 +29,8 @@ type Writer interface {
 	WriteAccounts(context.Context, envelopes.Accounts) error
 	// WriteBudget must persist a budget in a means that it is fetchable using a `persist.Fetch`.
 	WriteBudget(context.Context, envelopes.Budget) error
+	// WriteCurrent stores the ID of the Transaction that should be considered the most up-to-date one.
+	WriteCurrent(context.Context, envelopes.Transaction) error
 	// WriteState must persist a budget in a means that it is fetchable using a `persist.Fetch`.
 	WriteState(context.Context, envelopes.State) error
 	// WriteTransaction must persist a budget in a means that it is fetchable using a `persist.Fetch`.
@@ -38,7 +40,7 @@ type Writer interface {
 func WriteAll(ctx context.Context, writer Writer, t envelopes.Transaction, s envelopes.State, a envelopes.Accounts, b envelopes.Budget) (err error) {
 	encounteredErrs := new(bytes.Buffer)
 	if got := a.ID(); !s.Accounts().Equal(got) {
-		fmt.Fprintf(encounteredErrs, "expected State to have ID %q\n", got)
+		fmt.Fprintf(encounteredErrs, "expected Account to have ID %q\n", got)
 	}
 
 	if got := b.ID(); !s.Budget().Equal(got) {
