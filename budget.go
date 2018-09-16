@@ -33,6 +33,8 @@ import (
 	"strconv"
 )
 
+type Balance int64
+
 // Budget encapsulates a single category of spending.
 //
 // Unlike some budgeting systems, these budgets are based on a debit/credit
@@ -41,7 +43,7 @@ import (
 // out the balances of all non-rollover budgets and places it in a designated
 // savings budget.
 type Budget struct {
-	balance  int64
+	balance Balance
 	children map[string]Budget
 }
 
@@ -62,10 +64,11 @@ func (b Budget) ID() (id ID) {
 	return
 }
 
+
 // Equal determines whether or not two instances of Budget share the same balance and
 // have children that are all equal and have the same name.
 func (b Budget) Equal(other Budget) bool {
-	if b.Balance() != other.Balance() {
+	if b.balance != other.balance {
 		return false
 	}
 
@@ -81,12 +84,11 @@ func (b Budget) Equal(other Budget) bool {
 	return true
 }
 
-// Balance retrieves the amount of funds directly available in this `Budget
-// but none of its children.
+// Balance fetches the available funds in this immediate category of spending.
 //
 // See Also:
-// 	Budget.RecursiveBalance
-func (b Budget) Balance() int64 {
+// Budget.RecursiveBalance
+func (b Budget) Balance() Balance {
 	return b.balance
 }
 
@@ -94,7 +96,7 @@ func (b Budget) Balance() int64 {
 //
 // See Also:
 // 	Budget.Balance
-func (b Budget) RecursiveBalance() (sum int64) {
+func (b Budget) RecursiveBalance() (sum Balance) {
 	sum = b.Balance()
 	for _, child := range b.Children() {
 		sum += child.RecursiveBalance()
@@ -107,7 +109,7 @@ func (b Budget) RecursiveBalance() (sum int64) {
 // See Also:
 // 	Budget.IncreaseBalance
 // 	Budget.DecreaseBalance
-func (b Budget) WithBalance(val int64) (updated Budget) {
+func (b Budget) WithBalance(val Balance) (updated Budget) {
 	updated = b.deepCopy()
 	updated.balance = val
 	return
@@ -119,8 +121,8 @@ func (b Budget) WithBalance(val int64) (updated Budget) {
 // See Also:
 // 	Budget.WithBalance
 // 	Budget.DecreaseBalance
-func (b Budget) IncreaseBalance(credit int64) Budget {
-	return b.WithBalance(b.Balance() + credit)
+func (b Budget) IncreaseBalance(credit Balance) Budget {
+	return b.WithBalance(b.balance + credit)
 }
 
 // DecreaseBalance creates a copy of a Budget but with the Balance debited by the
@@ -129,8 +131,8 @@ func (b Budget) IncreaseBalance(credit int64) Budget {
 // See Also:
 // 	Budget.WithBalance
 // 	Budget.IncreaseBalance
-func (b Budget) DecreaseBalance(debit int64) Budget {
-	return b.WithBalance(b.Balance() - debit)
+func (b Budget) DecreaseBalance(debit Balance) Budget {
+	return b.WithBalance(b.balance - debit)
 }
 
 // ApplyEffect creates a Budget that is identical to the current one, but with
@@ -255,7 +257,13 @@ func (b *Budget) UnmarshalJSON(content []byte) (err error) {
 		return
 	}
 
-	b.balance, err = strconv.ParseInt(string(intermediate["balance"]), 10, 64)
+	parsed, err := strconv.ParseInt(string(intermediate["balance"]), 10, 64)
+	if err != nil {
+		return
+	}
+
+	b.balance = Balance(parsed)
+
 	if err != nil {
 		return
 	}

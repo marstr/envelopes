@@ -15,3 +15,7 @@
 
 # Build dependencies
 vendor/
+
+# Project Configuration
+.idea/
+.vscode/

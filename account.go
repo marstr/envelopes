@@ -22,11 +22,11 @@ import (
 )
 
 type Accounts struct {
-	underlyer map[string]int64
+	underlyer map[string]Balance
 }
 
 func (accs Accounts) deepCopy() (updated Accounts) {
-	updated.underlyer = make(map[string]int64, len(accs.underlyer))
+	updated.underlyer = make(map[string]Balance, len(accs.underlyer))
 
 	for name, balance := range accs.underlyer {
 		updated.underlyer[name] = balance
@@ -34,7 +34,7 @@ func (accs Accounts) deepCopy() (updated Accounts) {
 	return
 }
 
-func NewAccounts(accs map[string]int64) (created Accounts) {
+func NewAccounts(accs map[string]Balance) (created Accounts) {
 	created.underlyer = accs
 	created = created.deepCopy()
 	return
@@ -45,7 +45,7 @@ func (accs Accounts) ID() (id ID) {
 	return
 }
 
-func (accs Accounts) AddAccount(name string, balance int64) (updated Accounts, added bool) {
+func (accs Accounts) AddAccount(name string, balance Balance) (updated Accounts, added bool) {
 	if _, ok := accs.underlyer[name]; ok {
 		updated = accs
 		added = false
@@ -58,7 +58,7 @@ func (accs Accounts) AddAccount(name string, balance int64) (updated Accounts, a
 	return
 }
 
-func (accs Accounts) WithBalance(name string, balance int64) (updated Accounts, ok bool) {
+func (accs Accounts) WithBalance(name string, balance Balance) (updated Accounts, ok bool) {
 	if _, ok = accs.underlyer[name]; !ok {
 		updated = accs
 		return
@@ -70,8 +70,8 @@ func (accs Accounts) WithBalance(name string, balance int64) (updated Accounts, 
 	return
 }
 
-func (accs Accounts) AdjustBalance(name string, impact int64) (updated Accounts, ok bool) {
-	var previousBalance int64
+func (accs Accounts) AdjustBalance(name string, impact Balance) (updated Accounts, ok bool) {
+	var previousBalance Balance
 	if previousBalance, ok = accs.underlyer[name]; !ok {
 		updated = accs
 		return
@@ -100,7 +100,7 @@ func (accs Accounts) RemoveAccount(name string) (updated Accounts, removed bool)
 	return
 }
 
-func (accs Accounts) AsMap() map[string]int64 {
+func (accs Accounts) AsMap() map[string]Balance {
 	return accs.deepCopy().underlyer
 }
 

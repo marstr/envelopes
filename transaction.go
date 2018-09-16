@@ -27,7 +27,7 @@ import (
 type Transaction struct {
 	state    ID
 	time     time.Time
-	amount   int64
+	amount   Balance
 	merchant string
 	comment  string
 	parent   ID
@@ -73,13 +73,13 @@ func FormatAmount(amount int64) (result string) {
 // impact on the Budgets. Paying off a credit card balance, or just transferring
 // money between two envelopes, the magnitude of the transfer is important
 // but has zero-sum impact.
-func (t Transaction) Amount() int64 {
+func (t Transaction) Amount() Balance {
 	return t.amount
 }
 
 // WithAmount creates a new Transaction identical in every way to `t` except
 // that it will return a different value when `envelopes.Amount()` is called on it.
-func (t Transaction) WithAmount(val int64) Transaction {
+func (t Transaction) WithAmount(val Balance) Transaction {
 	t.amount = val
 	return t
 }

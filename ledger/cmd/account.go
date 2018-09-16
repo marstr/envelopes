@@ -17,6 +17,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"github.com/marstr/envelopes"
 	"os"
 	"time"
 
@@ -43,7 +44,7 @@ var accountCmd = &cobra.Command{
 			os.Exit(exitStatus)
 		}()
 
-		roundedAmount := int64(initialBalance*100 + .5)
+		roundedAmount := envelopes.Balance(initialBalance*100 + .5)
 
 		name := args[0]
 		if name == "" {

@@ -145,7 +145,7 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		currentBudget := envelopes.Budget{}.WithBalance(int64(i))
+		currentBudget := envelopes.Budget{}.WithBalance(envelopes.Balance(i))
 		subject.WriteBudget(context.Background(), currentBudget)
 		subject.Fetch(context.Background(), currentBudget.ID())
 	}
