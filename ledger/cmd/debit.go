@@ -1,4 +1,4 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
+// Copyright © 2017 Martin Strobel
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,12 +19,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/marstr/envelopes/persist"
-	"github.com/spf13/viper"
-
 	"github.com/marstr/envelopes"
-
+	"github.com/marstr/envelopes/persist"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // debitCmd represents the debit command

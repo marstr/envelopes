@@ -1,4 +1,4 @@
-// Copyright © 2017 NAME HERE <EMAIL ADDRESS>
+// Copyright © 2017 Martin Strobel
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,13 +23,7 @@ import (
 // creditCmd represents the credit command
 var creditCmd = &cobra.Command{
 	Use:   "credit",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Adds funds to an account and budget.",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("credit called")
 	},
