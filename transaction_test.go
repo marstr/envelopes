@@ -21,7 +21,7 @@ func ExampleFormatAmount() {
 
 func TestFormatAmount(t *testing.T) {
 	testCases := []struct {
-		int64
+		envelopes.Balance
 		expected string
 	}{
 		{0, "$0.00"},
@@ -31,8 +31,8 @@ func TestFormatAmount(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprint(tc.int64), func(t *testing.T) {
-			if got := envelopes.FormatAmount(tc.int64); got != tc.expected {
+		t.Run(fmt.Sprint(tc.Balance), func(t *testing.T) {
+			if got := envelopes.FormatAmount(tc.Balance); got != tc.expected {
 				t.Logf("got:\n\t%qwant:\n\t%q", got, tc.expected)
 				t.Fail()
 			}
@@ -43,7 +43,7 @@ func TestFormatAmount(t *testing.T) {
 func Test_ParseAmount(t *testing.T) {
 	testCases := []struct {
 		string
-		expected int64
+		expected envelopes.Balance
 	}{
 		{"$0.00", 0},
 		{"0", 0},
