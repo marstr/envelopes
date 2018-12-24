@@ -87,6 +87,20 @@ func (accs Accounts) AdjustBalance(name string, impact Balance) (updated Account
 	return
 }
 
+func (accs Accounts) Size() int {
+	return len(accs.underlyer)
+}
+
+func (accs Accounts) Names() (names []string) {
+	names = make([]string, 0, len(accs.underlyer))
+
+	for name := range accs.underlyer {
+		names = append(names, name)
+	}
+
+	return
+}
+
 // RenameAccount changes the name associated with an account. If the new name already exists in this collection of
 // accounts, nothing happens and this function return the original object and false.
 func (accs Accounts) RenameAccount(old, new string) (updated Accounts, ok bool) {
