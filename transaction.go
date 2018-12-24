@@ -42,6 +42,7 @@ func (t Transaction) ID() (id ID) {
 // ParseAmount converts between a string representation of an amount of dollars
 // into an int64 number of cents.
 func ParseAmount(raw string) (result Balance, err error) {
+	raw = strings.TrimSpace(raw)
 	raw = strings.TrimPrefix(raw, "$")
 	raw = strings.Replace(raw, ",", "", -1)
 	parsed, err := strconv.ParseFloat(raw, 64)

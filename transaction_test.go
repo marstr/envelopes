@@ -62,6 +62,7 @@ func Test_ParseAmount(t *testing.T) {
 		{"$5", 500},
 		{"$-5", -500},
 		{"$0800", 80000},
+		{" $10.98\n", 1098},
 	}
 
 	for _, tc := range testCases {
