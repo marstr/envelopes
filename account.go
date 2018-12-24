@@ -58,6 +58,11 @@ func (accs Accounts) AddAccount(name string, balance Balance) (updated Accounts,
 	return
 }
 
+func (accs Accounts) Balance(name string) (bal Balance, ok bool) {
+	bal, ok = accs.underlyer[name]
+	return
+}
+
 func (accs Accounts) WithBalance(name string, balance Balance) (updated Accounts, ok bool) {
 	if _, ok = accs.underlyer[name]; !ok {
 		updated = accs
