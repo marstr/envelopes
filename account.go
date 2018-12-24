@@ -82,6 +82,21 @@ func (accs Accounts) AdjustBalance(name string, impact Balance) (updated Account
 	return
 }
 
+// RenameAccount changes the name associated with an account. If the new name already exists in this collection of
+// accounts, nothing happens and this function return the original object and false.
+func (accs Accounts) RenameAccount(old, new string) (updated Accounts, ok bool) {
+	_, ok = accs.underlyer[new]
+	if !ok {
+		updated = accs
+		return
+	}
+
+	updated = accs.deepCopy()
+	updated.underlyer[new] = updated.underlyer[old]
+	delete(accs.underlyer, old)
+	return
+}
+
 func (accs Accounts) HasAccount(name string) (ok bool) {
 	_, ok = accs.underlyer[name]
 	return
