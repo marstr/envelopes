@@ -26,6 +26,31 @@ import (
 	"github.com/marstr/envelopes/persist"
 )
 
+func TestFileSystem_Current(t *testing.T) {
+	testCases := []string{
+		"./testdata/test1",
+		"./testdata/test2",
+	}
+
+	for _, tc := range testCases {
+		t.Run("", func(t *testing.T) {
+			subject := persist.FileSystem{Root: tc}
+			id, err := subject.Current(context.Background())
+			if err != nil {
+				t.Error(err)
+			}
+
+			for i := range id {
+				if id[i] != 0 {
+					t.Logf("got: %X want: %X", id, envelopes.ID{})
+					t.Fail()
+					break
+				}
+			}
+		})
+	}
+}
+
 func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	testLocation := path.Join("testdata", "test", "roundtrip", "current")
 	err := os.MkdirAll(testLocation, os.ModePerm)

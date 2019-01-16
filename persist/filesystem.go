@@ -20,12 +20,12 @@ package persist
 import (
 	"context"
 	"encoding/json"
+	"github.com/marstr/envelopes"
+	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
 	"os"
 	"path"
-
-	"github.com/marstr/envelopes"
-	homedir "github.com/mitchellh/go-homedir"
+	"strings"
 )
 
 const objectsDir = "objects"
@@ -47,6 +47,9 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 	if err != nil {
 		return
 	}
+
+	trimmed := strings.TrimSpace(string(raw))
+	raw = []byte(trimmed)
 
 	err = result.UnmarshalText(raw)
 	if err != nil {
