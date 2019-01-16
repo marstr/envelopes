@@ -60,37 +60,18 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 }
 
 // WriteCurrent makes note of the most recent ID of transaction.
-func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transaction) (err error) {
-	writeErr := make(chan error, 1)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		defer close(writeErr)
+func (fs FileSystem) WriteCurrent(_ context.Context, current envelopes.Transaction) error {
 		transformed, err := current.ID().MarshalText()
 		if err != nil {
-			writeErr <- err
-			return
+			return err
 		}
 
 		cp, err := fs.CurrentPath()
 		if err != nil {
-			writeErr <- err
-			return
+			return err
 		}
 
-		err = ioutil.WriteFile(cp, transformed, os.ModePerm)
-		if err != nil {
-			writeErr <- err
-			return
-		}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-done:
-		return <-writeErr
-	}
+		return ioutil.WriteFile(cp, transformed, os.ModePerm)
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
@@ -102,46 +83,26 @@ func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error)
 	return ioutil.ReadFile(p)
 }
 
-func (fs FileSystem) write(ctx context.Context, target envelopes.IDer) (err error) {
+func (fs FileSystem) Write(ctx context.Context, target envelopes.IDer) error {
 	loc, err := fs.path(target.ID())
 	if err != nil {
-		return
+		return err
 	}
 
 	os.MkdirAll(path.Dir(loc), os.ModePerm)
 	handle, err := os.Create(loc)
 	if err != nil {
-		return
+		return err
 	}
 	defer handle.Close()
 
 	marshaled, err := json.Marshal(target)
 	if err != nil {
-		return
+		return err
 	}
 
 	_, err = handle.Write(marshaled)
-	return
-}
-
-// WriteAccounts saves to disk an instance of an `enveloeps.Accounts`.
-func (fs FileSystem) WriteAccounts(ctx context.Context, target envelopes.Accounts) error {
-	return fs.write(ctx, target)
-}
-
-// WriteBudget saves to disk an instance of an `envelopes.Budget`.
-func (fs FileSystem) WriteBudget(ctx context.Context, target envelopes.Budget) error {
-	return fs.write(ctx, target)
-}
-
-// WriteState saves to disk an instance of an `envelopes.State`.
-func (fs FileSystem) WriteState(ctx context.Context, target envelopes.State) error {
-	return fs.write(ctx, target)
-}
-
-// WriteTransaction saves to disk an instance of an `envelopes.Transaction`.
-func (fs FileSystem) WriteTransaction(ctx context.Context, target envelopes.Transaction) error {
-	return fs.write(ctx, target)
+	return err
 }
 
 func (fs FileSystem) CurrentPath() (result string, err error) {

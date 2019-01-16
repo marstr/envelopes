@@ -109,7 +109,7 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 	err := os.MkdirAll(testDir, os.ModePerm)
 	if err != nil {
 		t.Error(err)
-		t.FailNow()
+		return
 	}
 	defer func() {
 		err := os.RemoveAll(testDir)
@@ -124,15 +124,7 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%T/%s", tc, tc.ID()), func(t *testing.T) {
-			var err error
-			switch tc.(type) {
-			case envelopes.Budget:
-				err = subject.WriteBudget(context.Background(), tc.(envelopes.Budget))
-			case envelopes.State:
-				err = subject.WriteState(context.Background(), tc.(envelopes.State))
-			case envelopes.Transaction:
-				err = subject.WriteTransaction(context.Background(), tc.(envelopes.Transaction))
-			}
+			err := subject.Write(context.Background(), tc)
 			if err != nil {
 				t.Error(err)
 				t.FailNow()
@@ -141,7 +133,7 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 			got, err := subject.Fetch(context.Background(), tc.ID())
 			if err != nil {
 				t.Error(err)
-				t.FailNow()
+				return
 			}
 
 			expected, err := json.Marshal(tc)
@@ -171,7 +163,7 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		currentBudget := envelopes.Budget{}.WithBalance(envelopes.Balance(i))
-		subject.WriteBudget(context.Background(), currentBudget)
+		subject.Write(context.Background(), currentBudget)
 		subject.Fetch(context.Background(), currentBudget.ID())
 	}
 	b.StopTimer()
