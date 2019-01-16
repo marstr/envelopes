@@ -57,7 +57,7 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 				return
 			}
 
-			got, err := subject.LoadCurrent(context.Background())
+			got, err := subject.Current(context.Background())
 			if err != nil {
 				t.Error(err)
 				return

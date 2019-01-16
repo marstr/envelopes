@@ -38,7 +38,7 @@ type FileSystem struct {
 
 // Current finds the ID of the most recent transaction.
 func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err error) {
-	p, err := fs.currentPath()
+	p, err := fs.CurrentPath()
 	if err != nil {
 		return
 	}
@@ -69,7 +69,7 @@ func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transac
 			return
 		}
 
-		cp, err := fs.currentPath()
+		cp, err := fs.CurrentPath()
 		if err != nil {
 			writeErr <- err
 			return
@@ -141,7 +141,7 @@ func (fs FileSystem) WriteTransaction(ctx context.Context, target envelopes.Tran
 	return fs.write(ctx, target)
 }
 
-func (fs FileSystem) currentPath() (result string, err error) {
+func (fs FileSystem) CurrentPath() (result string, err error) {
 	exp, err := homedir.Expand(fs.Root)
 	if err != nil {
 		return
