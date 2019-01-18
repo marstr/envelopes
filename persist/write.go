@@ -16,12 +16,28 @@ package persist
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/marstr/envelopes"
 )
 
 // Writer defines a contract that allows an object to express that it knows how to persist
 // an object so that it can be recalled using an instance of an object that satisfies `persist.Fetch`.
 type Writer interface {
-	// Write persists an object in durable storage where it can be retreived later.
+	// Write persists an object in durable storage where it can be retrieved later.
 	Write(ctx context.Context, subject envelopes.IDer) error
+}
+
+// DefaultWriter knows how to navigate the envelopes object model and stash each individual component of an object.
+type DefaultWriter struct {
+	Stasher
+}
+
+func (dw DefaultWriter) Write(ctx context.Context, subject envelopes.IDer) error {
+	marshaled, err := json.Marshal(subject)
+	if err != nil {
+		return err
+	}
+
+	id := subject.ID()
+	return dw.Stasher.Stash(ctx, id, marshaled)
 }

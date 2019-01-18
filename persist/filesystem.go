@@ -19,7 +19,6 @@ package persist
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/marstr/envelopes"
 	"github.com/mitchellh/go-homedir"
 	"io/ioutil"
@@ -83,8 +82,8 @@ func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error)
 	return ioutil.ReadFile(p)
 }
 
-func (fs FileSystem) Write(ctx context.Context, target envelopes.IDer) error {
-	loc, err := fs.path(target.ID())
+func (fs FileSystem) Stash(ctx context.Context, id envelopes.ID, payload []byte) error {
+	loc, err := fs.path(id)
 	if err != nil {
 		return err
 	}
@@ -96,12 +95,7 @@ func (fs FileSystem) Write(ctx context.Context, target envelopes.IDer) error {
 	}
 	defer handle.Close()
 
-	marshaled, err := json.Marshal(target)
-	if err != nil {
-		return err
-	}
-
-	_, err = handle.Write(marshaled)
+	_, err = handle.Write(payload)
 	return err
 }
 
