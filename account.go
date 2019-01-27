@@ -21,8 +21,10 @@ import (
 	"sort"
 )
 
+// Accounts collects all pools of money that can be spent or deposited to.
 type Accounts map[string]Balance
 
+// ID fetches a hash of this combinations of accounts with their balances.
 func (accs Accounts) ID() ID {
 	accountNames := accs.Names()
 

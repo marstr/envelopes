@@ -53,6 +53,7 @@ func (b Budget) ID() ID {
 	return sha1.Sum(marshaled)
 }
 
+// MarshalText computes a deterministic string that uniquely represents this Budget.
 func (b Budget) MarshalText() ([]byte, error) {
 	// To make deterministic text, the names must be in a predictable,
 	// reproducible order. Therefor, instead of reading directly from the

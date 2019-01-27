@@ -33,6 +33,7 @@ type DefaultLoader struct {
 	Fetcher
 }
 
+// ErrUnloadableType indicates that a Loader is unable to recognize the specified type.
 type ErrUnloadableType string
 
 func (err ErrUnloadableType) Error() string {
@@ -45,6 +46,10 @@ func NewErrUnloadableType(subject interface{}) ErrUnloadableType {
 	return ErrUnloadableType(reflect.TypeOf(subject).Name())
 }
 
+// Load fetches and parses all objects necessary to fully rehydrate `destination` from wherever it was stashed.
+//
+// See Also:
+// - DefaultWriter.Write
 func (dl DefaultLoader) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
 	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
 	// Must have default clause to prevent blocking.

@@ -31,7 +31,7 @@ type Transaction struct {
 	Parent   ID
 }
 
-// ID fetches a SHA1 hash of this object that qill uniquely identify it.
+// ID fetches a SHA1 hash of this object that will uniquely identify it.
 func (t Transaction) ID() (id ID) {
 	marshaled, err := t.MarshalText()
 	if err != nil {
@@ -41,14 +41,15 @@ func (t Transaction) ID() (id ID) {
 }
 
 func (t Transaction) String() string {
-	bytes, err := t.MarshalText()
+	marshaled, err := t.MarshalText()
 	if err != nil {
 		return ""
 	}
 
-	return string(bytes)
+	return string(marshaled)
 }
 
+// MarshalText computes a string which uniquely represents this Transaction.
 func (t Transaction) MarshalText() ([]byte, error) {
 	identityBuilder := identityBuilders.Get().(*bytes.Buffer)
 	identityBuilder.Reset()

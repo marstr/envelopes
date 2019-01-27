@@ -35,6 +35,7 @@ func (s State) ID() (id ID) {
 	return sha1.Sum(marshaled)
 }
 
+// MarshalText computes a deterministic string that uniquely represents this State.
 func (s State) MarshalText() ([]byte, error) {
 
 	identityBuilder := identityBuilders.Get().(*bytes.Buffer)

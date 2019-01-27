@@ -6,6 +6,7 @@ import (
 	"strings"
 )
 
+// Balance captures an amount of USD pennies.
 type Balance int64
 
 func (b Balance) String() string {

@@ -74,6 +74,9 @@ func (fs FileSystem) WriteCurrent(_ context.Context, current *envelopes.Transact
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
+//
+// See Also:
+// - FileSystem.Stash
 func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error) {
 	p, err := fs.path(id)
 	if err != nil {
@@ -82,6 +85,10 @@ func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error)
 	return ioutil.ReadFile(p)
 }
 
+// Stash commits the provided payload to disk at a place that it can retreive again if asked for the ID specified here.
+//
+// See Also:
+// - FileSystem.Fetch
 func (fs FileSystem) Stash(ctx context.Context, id envelopes.ID, payload []byte) error {
 	loc, err := fs.path(id)
 	if err != nil {
@@ -99,6 +106,7 @@ func (fs FileSystem) Stash(ctx context.Context, id envelopes.ID, payload []byte)
 	return err
 }
 
+// CurrentPath fetches the name of the file containing the ID to the most up-to-date Transaction.
 func (fs FileSystem) CurrentPath() (result string, err error) {
 	exp, err := homedir.Expand(fs.Root)
 	if err != nil {

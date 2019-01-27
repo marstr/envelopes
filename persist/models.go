@@ -27,6 +27,4 @@ type (
 		Budget   envelopes.ID
 		Accounts envelopes.ID
 	}
-
-	Accounts map[string]envelopes.Balance
 )
