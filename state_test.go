@@ -14,20 +14,20 @@
 
 package envelopes_test
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 import "github.com/marstr/envelopes"
-import "encoding/json"
 
 func TestState_ID_Deterministic(t *testing.T) {
-
 	testCases := []envelopes.State{
-		envelopes.State{},
-		envelopes.State{}.WithBudget(envelopes.Budget{}.WithBalance(1729).ID()),
+		{},
+		{Budget: &envelopes.Budget{Balance: 1729}},
 	}
 
 	for _, tc := range testCases {
-		marshaled, _ := json.Marshal(tc)
-		t.Run(string(marshaled), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%x", tc.ID()), func(t *testing.T) {
 			first := tc.ID()
 			t.Logf("First ID: %s", first)
 			for i := 0; i < 30; i++ {

@@ -17,6 +17,8 @@ package persist
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"reflect"
 
 	"github.com/marstr/envelopes"
 )
@@ -31,11 +33,114 @@ type DefaultLoader struct {
 	Fetcher
 }
 
-func (dl DefaultLoader) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) (err error) {
-	contents, err := dl.Fetch(ctx, id)
-	if err != nil {
-		return
+// ErrUnloadableType indicates that a Loader is unable to recognize the specified type.
+type ErrUnloadableType string
+
+func (err ErrUnloadableType) Error() string {
+	return fmt.Sprintf("could not load type %q", string(err))
+}
+
+// NewErrUnloadableType indicates that a persist.Loader was unable to identify the given object as something it knows
+// how to Load.
+func NewErrUnloadableType(subject interface{}) ErrUnloadableType {
+	return ErrUnloadableType(reflect.TypeOf(subject).Name())
+}
+
+// Load fetches and parses all objects necessary to fully rehydrate `destination` from wherever it was stashed.
+//
+// See Also:
+// - DefaultWriter.Write
+func (dl DefaultLoader) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
+	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
+	// Must have default clause to prevent blocking.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		// Intentionally Left Blank
 	}
 
-	return json.Unmarshal(contents, destination)
+	contents, err := dl.Fetch(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	switch destination.(type) {
+	case *envelopes.Transaction:
+		return dl.loadTransaction(ctx, contents, destination.(*envelopes.Transaction))
+	case *envelopes.Budget:
+		return dl.loadBudget(ctx, contents, destination.(*envelopes.Budget))
+	case *envelopes.State:
+		return dl.loadState(ctx, contents, destination.(*envelopes.State))
+	case *envelopes.Accounts:
+		return json.Unmarshal(contents, destination)
+	default:
+		return NewErrUnloadableType(destination)
+	}
+}
+
+func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, toLoad *envelopes.Transaction) error {
+	var unmarshaled Transaction
+	err := json.Unmarshal(marshaled, &unmarshaled)
+	if err != nil {
+		return err
+	}
+
+	var state envelopes.State
+	err = dl.Load(ctx, unmarshaled.State, &state)
+	if err != nil {
+		return err
+	}
+
+	toLoad.State = &state
+	toLoad.Comment = unmarshaled.Comment
+	toLoad.Merchant = unmarshaled.Merchant
+	toLoad.Time = unmarshaled.Time
+	toLoad.Parent = unmarshaled.Parent
+	toLoad.Amount = unmarshaled.Amount
+
+	return nil
+}
+
+func (dl DefaultLoader) loadState(ctx context.Context, marshaled []byte, toLoad *envelopes.State) error {
+	var unmarshaled State
+	err := json.Unmarshal(marshaled, &unmarshaled)
+	if err != nil {
+		return err
+	}
+
+	var budget envelopes.Budget
+	err = dl.Load(ctx, unmarshaled.Budget, &budget)
+	if err != nil {
+		return err
+	}
+
+	err = dl.Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
+	if err != nil {
+		return err
+	}
+
+	toLoad.Budget = &budget
+	return nil
+}
+
+func (dl DefaultLoader) loadBudget(ctx context.Context, marshaled []byte, toLoad *envelopes.Budget) error {
+	var unmarshaled Budget
+	err := json.Unmarshal(marshaled, &unmarshaled)
+	if err != nil {
+		return err
+	}
+
+	toLoad.Balance = unmarshaled.Balance
+	toLoad.Children = make(map[string]*envelopes.Budget, len(unmarshaled.Children))
+	for name, childID := range unmarshaled.Children {
+		var child envelopes.Budget
+		err = dl.Load(ctx, childID, &child)
+		if err != nil {
+			return err
+		}
+		toLoad.Children[name] = &child
+	}
+
+	return nil
 }
