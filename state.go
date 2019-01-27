@@ -16,97 +16,46 @@ package envelopes
 
 import (
 	"bytes"
-	"encoding/json"
+	"crypto/sha1"
+	"fmt"
 )
 
 // State captures the values of all Budgets and Accounts.
 type State struct {
-	budget   ID
-	accounts ID
+	Budget   *Budget
+	Accounts Accounts
 }
 
 // ID calculates the SHA1 hash of this object.
 func (s State) ID() (id ID) {
-	id, _ = NewID(s)
-	return
+	marshaled, err := s.MarshalText()
+	if err != nil {
+		return ID{}
+	}
+	return sha1.Sum(marshaled)
 }
 
-// Budget fetches the instance of `envelopes.Budget` associated with this
-// State.
-func (s State) Budget() ID {
-	return s.budget
-}
+func (s State) MarshalText() ([]byte, error) {
 
-// WithBudget creates a copy of the State with the updated Budget.
-func (s State) WithBudget(id ID) State {
-	s.budget = id
-	return s
-}
+	identityBuilder := identityBuilders.Get().(*bytes.Buffer)
+	identityBuilder.Reset()
+	defer identityBuilders.Put(identityBuilder)
 
-// Accounts fetches a list of each Account and its balance that is associated
-// with this State.
-func (s State) Accounts() ID {
-	return s.accounts
-}
-
-// WithAccounts creates a copy of the Stae with the updated Accounts.
-func (s State) WithAccounts(id ID) State {
-	s.accounts = id
-	return s
-}
-
-// MarshalJSON creates a JSON representation of this State.
-func (s State) MarshalJSON() ([]byte, error) {
-	var err error
-
-	marshaledAccountID, err := json.Marshal(s.Accounts())
+	if s.Budget == nil {
+		s.Budget = &Budget{}
+	}
+	_, err := fmt.Fprintf(identityBuilder, "budget %s\n", s.Budget.ID())
 	if err != nil {
 		return nil, err
 	}
 
-	marshaledBudgetID, err := json.Marshal(s.Budget())
+	if s.Accounts == nil {
+		s.Accounts = make(Accounts, 0)
+	}
+	_, err = fmt.Fprintf(identityBuilder, "accounts %s\n", s.Accounts.ID())
 	if err != nil {
 		return nil, err
 	}
 
-	builder := bytes.Buffer{}
-
-	builder.WriteRune('{')
-
-	builder.WriteString(`"accounts":`)
-	builder.Write(marshaledAccountID)
-
-	builder.WriteRune(',')
-
-	builder.WriteString(`"budget":`)
-	builder.Write(marshaledBudgetID)
-
-	builder.WriteRune('}')
-
-	return builder.Bytes(), nil
-}
-
-// UnmarshalJSON populates a State as marked up by the JSON object provided.
-func (s *State) UnmarshalJSON(content []byte) (err error) {
-	var intermediate map[string]json.RawMessage
-
-	var contender State
-
-	err = json.Unmarshal(content, &intermediate)
-	if err != nil {
-		return
-	}
-
-	err = json.Unmarshal(intermediate["accounts"], &contender.accounts)
-	if err != nil {
-		return
-	}
-
-	err = json.Unmarshal(intermediate["budget"], &contender.budget)
-	if err != nil {
-		return
-	}
-
-	*s = contender
-	return
+	return identityBuilder.Bytes(), nil
 }

@@ -59,18 +59,18 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 }
 
 // WriteCurrent makes note of the most recent ID of transaction.
-func (fs FileSystem) WriteCurrent(_ context.Context, current envelopes.Transaction) error {
-		transformed, err := current.ID().MarshalText()
-		if err != nil {
-			return err
-		}
+func (fs FileSystem) WriteCurrent(_ context.Context, current *envelopes.Transaction) error {
+	transformed, err := current.ID().MarshalText()
+	if err != nil {
+		return err
+	}
 
-		cp, err := fs.CurrentPath()
-		if err != nil {
-			return err
-		}
+	cp, err := fs.CurrentPath()
+	if err != nil {
+		return err
+	}
 
-		return ioutil.WriteFile(cp, transformed, os.ModePerm)
+	return ioutil.WriteFile(cp, transformed, os.ModePerm)
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.

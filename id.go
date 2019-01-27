@@ -15,10 +15,16 @@
 package envelopes
 
 import (
-	"crypto/sha1"
+	"bytes"
 	"encoding/hex"
-	"encoding/json"
+	"sync"
 )
+
+var identityBuilders = &sync.Pool{
+	New: func() interface{} {
+		return &bytes.Buffer{}
+	},
+}
 
 // ID is a 20 byte array containing a SHA1 hash of an object.
 type ID [20]byte
@@ -36,14 +42,6 @@ func (id ID) Equal(other ID) bool {
 		}
 	}
 	return true
-}
-
-func NewID(target json.Marshaler) (ID, error) {
-	marshaled, err := json.Marshal(target)
-	if err != nil {
-		return ID{}, err
-	}
-	return sha1.Sum(marshaled), nil
 }
 
 func (id ID) String() string {

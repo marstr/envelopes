@@ -16,14 +16,12 @@ package persist_test
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"github.com/marstr/envelopes"
+	"github.com/marstr/envelopes/persist"
 	"os"
 	"path"
 	"testing"
-
-	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/persist"
 )
 
 func TestFileSystem_Current(t *testing.T) {
@@ -67,16 +65,16 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	}()
 
 	testCases := []envelopes.Transaction{
-		envelopes.Transaction{},
-		envelopes.Transaction{}.WithComment(`"the time has come", the walrus said, "to speak of many things."`),
-		envelopes.Transaction{}.WithAmount(1729),
+		{},
+		{Comment: `"the time has come", the walrus said, "to speak of many things."`},
+		{Amount: 1729},
 	}
 
 	subject := persist.FileSystem{Root: testLocation}
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			err := subject.WriteCurrent(context.Background(), tc)
+			err := subject.WriteCurrent(context.Background(), &tc)
 			if err != nil {
 				t.Error(err)
 				return
@@ -97,12 +95,27 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 }
 
 func TestFileSystem_RoundTrip(t *testing.T) {
-	testCases := []envelopes.IDer{
-		envelopes.Budget{},
-		envelopes.State{},
-		envelopes.Transaction{},
-		envelopes.Budget{}.WithBalance(42),
-		envelopes.Transaction{}.WithComment("This is only a test"),
+	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	// defer cancel()
+	ctx := context.Background()
+
+	testCases := []envelopes.Transaction{
+		{},
+		{
+			State: &envelopes.State{
+				Budget: &envelopes.Budget{
+					Balance: 100,
+					Children: map[string]*envelopes.Budget{
+						"groceries": {
+							Balance: 15000,
+						},
+					},
+				},
+				Accounts: envelopes.Accounts{
+					"checking": 15100,
+				},
+			},
+		},
 	}
 
 	testDir := path.Join("testdata", "test", "filesystem", "roundtrip")
@@ -118,27 +131,30 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 		}
 	}()
 
-	subject := persist.FileSystem{
-		Root: testDir,
-	}
+	subject := persist.FileSystem{Root: testDir}
+	writer := persist.DefaultWriter{Stasher: subject}
+	reader := persist.DefaultLoader{Fetcher: subject}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%T/%s", tc, tc.ID()), func(t *testing.T) {
-			err := subject.Write(context.Background(), tc)
-			if err != nil {
-				t.Error(err)
-				t.FailNow()
-			}
 
-			got, err := subject.Fetch(context.Background(), tc.ID())
+			err := writer.Write(ctx, tc)
 			if err != nil {
 				t.Error(err)
 				return
 			}
 
-			expected, err := json.Marshal(tc)
-			if string(got) != string(expected) {
-				t.Logf("\ngot:  %q\nwant: %q", string(got), string(expected))
+			var loaded envelopes.Transaction
+			err = reader.Load(ctx, tc.ID(), &loaded)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			got := loaded.ID()
+			want := tc.ID()
+			if got != want {
+				t.Logf("\ngot: %q\nwant: %q", got, want)
 				t.Fail()
 			}
 		})
@@ -148,6 +164,8 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 	benchDir := path.Join("testdata", "bench", "filesystem", "roundtrip")
 	subject := persist.FileSystem{Root: benchDir}
+	writer := persist.DefaultWriter{Stasher: subject}
+	reader := persist.DefaultLoader{Fetcher: subject}
 	err := os.MkdirAll(benchDir, os.ModePerm)
 	if err != nil {
 		b.Log(err)
@@ -162,9 +180,18 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		currentBudget := envelopes.Budget{}.WithBalance(envelopes.Balance(i))
-		subject.Write(context.Background(), currentBudget)
-		subject.Fetch(context.Background(), currentBudget.ID())
+		currentBudget := envelopes.Budget{Balance: envelopes.Balance(i)}
+		err = writer.Write(context.Background(), currentBudget)
+		if err != nil {
+			b.Error(err)
+			return
+		}
+		var loaded envelopes.Budget
+		err = reader.Load(context.Background(), currentBudget.ID(), &loaded)
+		if err != nil {
+			b.Error(err)
+			return
+		}
 	}
 	b.StopTimer()
 }

@@ -7,32 +7,32 @@ import (
 	"github.com/marstr/envelopes"
 )
 
-func ExampleParseAmount() {
-	fmt.Println(envelopes.ParseAmount("$99.88"))
+func ExampleParseBalance() {
+	fmt.Println(envelopes.ParseBalance("$99.88"))
 	// Output:
-	// 9988 <nil>
+	// USD 99.88 <nil>
 }
 
-func ExampleFormatAmount() {
-	fmt.Println(envelopes.FormatAmount(9999))
+func ExampleBalance_String() {
+	fmt.Println(envelopes.Balance(9999))
 	// Output:
-	// $99.99
+	// USD 99.99
 }
 
-func TestFormatAmount(t *testing.T) {
+func TestBalance_String(t *testing.T) {
 	testCases := []struct {
 		envelopes.Balance
 		expected string
 	}{
-		{0, "$0.00"},
-		{1, "$0.01"},
-		{-1, "$-0.01"},
-		{100000, "$1000.00"},
+		{0, "USD 0.00"},
+		{1, "USD 0.01"},
+		{-1, "USD -0.01"},
+		{100000, "USD 1000.00"},
 	}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprint(tc.Balance), func(t *testing.T) {
-			if got := envelopes.FormatAmount(tc.Balance); got != tc.expected {
+			if got := tc.Balance.String(); got != tc.expected {
 				t.Logf("got:\n\t%qwant:\n\t%q", got, tc.expected)
 				t.Fail()
 			}
@@ -40,7 +40,7 @@ func TestFormatAmount(t *testing.T) {
 	}
 }
 
-func Test_ParseAmount(t *testing.T) {
+func Test_ParseBalance(t *testing.T) {
 	testCases := []struct {
 		string
 		expected envelopes.Balance
@@ -67,7 +67,7 @@ func Test_ParseAmount(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.string, func(t *testing.T) {
-			if got, err := envelopes.ParseAmount(tc.string); err != nil {
+			if got, err := envelopes.ParseBalance(tc.string); err != nil {
 				t.Error(err)
 				return
 			} else if got != tc.expected {
