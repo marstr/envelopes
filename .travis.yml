@@ -1,7 +1,5 @@
 language: go
 
-go:
-  - 1.8 # First version where sort.Slice is available, required for compilation
-  - 1.9
-  - 1.10
+go: # only use versions of Go that support `.mod` files.
+  - 1.10.x
   - 1.11.x
