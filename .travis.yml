@@ -1,5 +1,8 @@
 language: go
 
+env:
+  - GO111MODULE=on
+
 go: # only use versions of Go that support `.mod` files.
   - 1.10.x
   - 1.11.x
