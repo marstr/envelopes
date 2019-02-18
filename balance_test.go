@@ -31,12 +31,10 @@ func TestBalance_String(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprint(tc.Balance), func(t *testing.T) {
-			if got := tc.Balance.String(); got != tc.expected {
-				t.Logf("got:\n\t%qwant:\n\t%q", got, tc.expected)
-				t.Fail()
-			}
-		})
+		if got := tc.Balance.String(); got != tc.expected {
+			t.Logf("got:\n\t%qwant:\n\t%q", got, tc.expected)
+			t.Fail()
+		}
 	}
 }
 
@@ -66,14 +64,12 @@ func Test_ParseBalance(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.string, func(t *testing.T) {
-			if got, err := envelopes.ParseBalance(tc.string); err != nil {
-				t.Error(err)
-				return
-			} else if got != tc.expected {
-				t.Logf("got: %d want: %d", got, tc.expected)
-				t.Fail()
-			}
-		})
+		if got, err := envelopes.ParseBalance(tc.string); err != nil {
+			t.Error(err)
+			continue
+		} else if got != tc.expected {
+			t.Logf("got: %d want: %d", got, tc.expected)
+			t.Fail()
+		}
 	}
 }

@@ -42,7 +42,7 @@ func (accs Accounts) ID() ID {
 	return sha1.Sum(identityBuilder.Bytes())
 }
 
-// Names fetches the distinct account names representedbu this structure.
+// Names fetches the distinct account names represented in this structure.
 func (accs Accounts) Names() (names []string) {
 	names = make([]string, 0, len(accs))
 
@@ -70,5 +70,13 @@ func (accs Accounts) RenameAccount(old, new string) bool {
 // HasAccount determines whether or not an account exists with the desired name.s
 func (accs Accounts) HasAccount(name string) (ok bool) {
 	_, ok = accs[name]
+	return
+}
+
+// Balance finds the total balance of all accounts in this collection.
+func (accs Accounts) Balance() (sum Balance) {
+	for _, bal := range accs {
+		sum += bal
+	}
 	return
 }

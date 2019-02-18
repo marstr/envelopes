@@ -18,8 +18,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/marstr/envelopes"
 	"reflect"
+
+	"github.com/marstr/envelopes"
 )
 
 type (

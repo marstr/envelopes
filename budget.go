@@ -44,6 +44,18 @@ type Budget struct {
 	Children map[string]*Budget
 }
 
+func (b Budget) deepCopy() Budget {
+	var clone Budget
+	clone.Balance = b.Balance
+	clone.Children = make(map[string]*Budget, len(b.Children))
+
+	for childName, child := range b.Children {
+		clonedChild := child.deepCopy()
+		clone.Children[childName] = &clonedChild
+	}
+	return clone
+}
+
 // ID fetches the Unique Identifier associated with this Budget.
 func (b Budget) ID() ID {
 	marshaled, err := b.MarshalText()
@@ -119,7 +131,7 @@ func (b Budget) RecursiveBalance() (sum Balance) {
 
 // ChildNames returns an alphabetically sorted list of the names of each of the chilren
 // of this budget.
-func (b *Budget) ChildNames() (results []string) {
+func (b Budget) ChildNames() (results []string) {
 	results = make([]string, 0, len(b.Children))
 
 	for name := range b.Children {
@@ -130,12 +142,12 @@ func (b *Budget) ChildNames() (results []string) {
 	return
 }
 
-func (b *Budget) String() string {
+func (b Budget) String() string {
 	builder := new(bytes.Buffer)
 
 	// In order to use a lambda recursively, a symbol must be defined for it
 	// externally.
-	var helper func(string, *Budget)
+	var helper func(string, Budget)
 
 	// Because `String` shouldn't really be a performance throttling operation,
 	// it is more readable to recursively examine the children. Having
@@ -144,7 +156,7 @@ func (b *Budget) String() string {
 	// strings. Saving the expensive string allocations, and the resulting GC
 	// hits, should help mitigate any performance concerns associated with the
 	// recursive nature of this function.
-	helper = func(currentName string, b *Budget) {
+	helper = func(currentName string, b Budget) {
 		currentBalance := float64(b.Balance) / 100
 		builder.WriteRune('{')
 
@@ -161,7 +173,7 @@ func (b *Budget) String() string {
 			const childSuffix = ", "
 			builder.WriteString(" [")
 			for childName, child := range b.Children {
-				helper(childName, child)
+				helper(childName, *child)
 				builder.WriteString(childSuffix)
 			}
 			builder.Truncate(builder.Len() - len(childSuffix))

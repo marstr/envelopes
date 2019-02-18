@@ -20,11 +20,16 @@ import (
 	"fmt"
 )
 
-// State captures the values of all Budgets and Accounts.
-type State struct {
-	Budget   *Budget
-	Accounts Accounts
-}
+type (
+	// State captures the values of all Budgets and Accounts.
+	State struct {
+		Budget   *Budget
+		Accounts Accounts
+	}
+
+	// Impact captures the difference between two States.
+	Impact State
+)
 
 // ID calculates the SHA1 hash of this object.
 func (s State) ID() (id ID) {
@@ -59,4 +64,126 @@ func (s State) MarshalText() ([]byte, error) {
 	}
 
 	return identityBuilder.Bytes(), nil
+}
+
+func (s State) String() string {
+	id := s.ID()
+	return string(id[:])
+}
+
+// Subtract removes the balances of another State, and returns what changed between the two.
+func (s State) Subtract(other State) Impact {
+	return Impact{
+		Accounts: s.subtractAccounts(other),
+		Budget:   s.subtractBudget(other),
+	}
+}
+
+func (s State) subtractAccounts(other State) Accounts {
+	modifiedAccounts := make(Accounts, len(s.Accounts))
+
+	unseen := make(Accounts, len(other.Accounts))
+	for otherName, otherBalance := range other.Accounts {
+		unseen[otherName] = otherBalance
+	}
+
+	for currentName, currentBalance := range s.Accounts {
+		if otherBalance, ok := other.Accounts[currentName]; ok {
+			modifiedAccounts[currentName] = currentBalance - otherBalance
+			delete(unseen, currentName)
+		} else {
+			modifiedAccounts[currentName] = currentBalance
+		}
+	}
+
+	for unseenName, unseenBalance := range unseen {
+		modifiedAccounts[unseenName] = -unseenBalance
+	}
+
+	return modifiedAccounts
+}
+
+func (s State) subtractBudget(other State) *Budget {
+	// negate reverses the balances of all balances in a budget recursively.
+	var negate func(*Budget)
+	negate = func(subject *Budget) {
+		subject.Balance = -subject.Balance
+		for _, child := range subject.Children {
+			negate(child)
+		}
+	}
+
+	// helper subtracts the right child-budget from the left child-budget. Should be called on children with matching
+	// names
+	var helper func(*Budget, *Budget) *Budget
+	helper = func(left, right *Budget) *Budget {
+		modifiedChildren := make(map[string]*Budget)
+
+		// mark all of the children on the right, so we can decide if any got deleted after tallying all of the children
+		// on the left.
+		removedChildren := make(map[string]*Budget, len(right.Children))
+		for childName, child := range right.Children {
+			removedChildren[childName] = child
+		}
+
+		// enumerate through all of the left's children, to find any discrepancies.
+		for childName, leftChild := range left.Children {
+			if rightChild, ok := right.Children[childName]; ok {
+				// see if there are any differences between the children, only if there are should the modified child
+				// be added.
+				subtracted := helper(leftChild, rightChild)
+				if subtracted != nil {
+					modifiedChildren[childName] = subtracted
+				}
+
+				// regardless of whether or not there are differences, both budgets had this child.
+				delete(removedChildren, childName)
+			} else {
+				modifiedChildren[childName] = leftChild
+			}
+		}
+
+		// make a note of all of the children who were removed.
+		for childName, child := range removedChildren {
+			childClone := child.deepCopy()
+			negate(&childClone)
+			modifiedChildren[childName] = &childClone
+		}
+
+		// finalize an object that represents the changes made, and send it up the stack.
+		var retval Budget
+
+		if len(modifiedChildren) > 0 {
+			retval.Children = modifiedChildren
+		}
+
+		if left.Balance == right.Balance && retval.Children == nil {
+			return nil
+		}
+
+		retval.Balance = left.Balance - right.Balance
+
+		return &retval
+	}
+
+	// If there are no budgets involved... do nothing and short-circuit.
+	if s.Budget == nil && other.Budget == nil {
+		return nil
+	}
+
+	// If this has a budget, but the other doesn't, just clone this budget. This budget has been added.
+	if other.Budget == nil {
+		cloned := s.Budget.deepCopy()
+		return &cloned
+	}
+
+	// If this doesn't have a budget, but the other does, clone and negate that budget. That budget has been removed.
+	if s.Budget == nil {
+		cloned := other.Budget.deepCopy()
+		negate(&cloned)
+		return &cloned
+	}
+
+	// Changes have been made to this budget. Call helper to get the differences figured out.
+	return helper(s.Budget, other.Budget)
 }
