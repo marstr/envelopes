@@ -89,8 +89,10 @@ func (s State) subtractAccounts(other State) Accounts {
 
 	for currentName, currentBalance := range s.Accounts {
 		if otherBalance, ok := other.Accounts[currentName]; ok {
-			modifiedAccounts[currentName] = currentBalance - otherBalance
 			delete(unseen, currentName)
+			if currentBalance != otherBalance {
+				modifiedAccounts[currentName] = currentBalance - otherBalance
+			}
 		} else {
 			modifiedAccounts[currentName] = currentBalance
 		}

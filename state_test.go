@@ -170,6 +170,26 @@ func TestState_Subtract(t *testing.T) {
 			},
 		},
 		{
+			Name: "unimpacted_accounts",
+			Subject: envelopes.State{
+				Accounts: envelopes.Accounts{
+					"checking": 15000,
+					"savings": 1000000,
+				},
+			},
+			Other: envelopes.State{
+				Accounts: envelopes.Accounts{
+					"checking": 10000,
+					"savings": 1000000,
+				},
+			},
+			Expected: envelopes.Impact{
+				Accounts: envelopes.Accounts{
+					"checking": 5000,
+				},
+			},
+		},
+		{
 			Name: "budget_only_simple_balance",
 			Subject: envelopes.State{
 				Budget: &envelopes.Budget{Balance: 5},
