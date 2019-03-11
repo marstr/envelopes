@@ -90,8 +90,8 @@ func (s State) subtractAccounts(other State) Accounts {
 	for currentName, currentBalance := range s.Accounts {
 		if otherBalance, ok := other.Accounts[currentName]; ok {
 			delete(unseen, currentName)
-			if currentBalance != otherBalance {
-				modifiedAccounts[currentName] = currentBalance - otherBalance
+			if !currentBalance.Equal(otherBalance) {
+				modifiedAccounts[currentName] = currentBalance.Sub(otherBalance)
 			}
 		} else {
 			modifiedAccounts[currentName] = currentBalance
@@ -99,7 +99,7 @@ func (s State) subtractAccounts(other State) Accounts {
 	}
 
 	for unseenName, unseenBalance := range unseen {
-		modifiedAccounts[unseenName] = -unseenBalance
+		modifiedAccounts[unseenName] = unseenBalance.Negate()
 	}
 
 	return modifiedAccounts
@@ -109,7 +109,7 @@ func (s State) subtractBudget(other State) *Budget {
 	// negate reverses the balances of all balances in a budget recursively.
 	var negate func(*Budget)
 	negate = func(subject *Budget) {
-		subject.Balance = -subject.Balance
+		subject.Balance = subject.Balance.Negate()
 		for _, child := range subject.Children {
 			negate(child)
 		}
@@ -159,11 +159,11 @@ func (s State) subtractBudget(other State) *Budget {
 			retval.Children = modifiedChildren
 		}
 
-		if left.Balance == right.Balance && retval.Children == nil {
+		if left.Balance.Equal(right.Balance) && retval.Children == nil {
 			return nil
 		}
 
-		retval.Balance = left.Balance - right.Balance
+		retval.Balance = left.Balance.Sub(right.Balance)
 
 		return &retval
 	}

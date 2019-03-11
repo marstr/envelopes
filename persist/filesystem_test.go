@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
+	"math/big"
 	"os"
 	"path"
 	"testing"
@@ -67,7 +68,7 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	testCases := []envelopes.Transaction{
 		{},
 		{Comment: `"the time has come", the walrus said, "to speak of many things."`},
-		{Amount: 1729},
+		{Amount: envelopes.Balance{"USD": big.NewRat(1729, 1)}},
 	}
 
 	subject := persist.FileSystem{Root: testLocation}
@@ -104,15 +105,15 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 		{
 			State: &envelopes.State{
 				Budget: &envelopes.Budget{
-					Balance: 100,
+					Balance: envelopes.Balance{"USD": big.NewRat(100, 1)},
 					Children: map[string]*envelopes.Budget{
 						"groceries": {
-							Balance: 15000,
+							Balance: envelopes.Balance{"USD": big.NewRat(15000, 1)},
 						},
 					},
 				},
 				Accounts: envelopes.Accounts{
-					"checking": 15100,
+					"checking": envelopes.Balance{"USD": big.NewRat(15100, 1)},
 				},
 			},
 		},
@@ -180,7 +181,7 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		currentBudget := envelopes.Budget{Balance: envelopes.Balance(i)}
+		currentBudget := envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(int64(i), 1)}}
 		err = writer.Write(context.Background(), currentBudget)
 		if err != nil {
 			b.Error(err)

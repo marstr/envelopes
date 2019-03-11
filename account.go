@@ -74,9 +74,10 @@ func (accs Accounts) HasAccount(name string) (ok bool) {
 }
 
 // Balance finds the total balance of all accounts in this collection.
-func (accs Accounts) Balance() (sum Balance) {
+func (accs Accounts) Balance() Balance {
+	sum := make(Balance)
 	for _, bal := range accs {
-		sum += bal
+		sum = sum.Add(bal)
 	}
-	return
+	return sum
 }

@@ -101,7 +101,7 @@ func (b Budget) MarshalText() ([]byte, error) {
 // Equal determines whether or not two instances of Budget share the same balance and
 // have children that are all equal and have the same name.
 func (b Budget) Equal(other Budget) bool {
-	if b.Balance != other.Balance {
+	if !b.Balance.Equal(other.Balance) {
 		return false
 	}
 
@@ -124,7 +124,7 @@ func (b Budget) Equal(other Budget) bool {
 func (b Budget) RecursiveBalance() (sum Balance) {
 	sum = b.Balance
 	for _, child := range b.Children {
-		sum += child.RecursiveBalance()
+		sum = sum.Add(child.RecursiveBalance())
 	}
 	return
 }
@@ -140,49 +140,4 @@ func (b Budget) ChildNames() (results []string) {
 
 	sort.Strings(results)
 	return
-}
-
-func (b Budget) String() string {
-	builder := new(bytes.Buffer)
-
-	// In order to use a lambda recursively, a symbol must be defined for it
-	// externally.
-	var helper func(string, Budget)
-
-	// Because `String` shouldn't really be a performance throttling operation,
-	// it is more readable to recursively examine the children. Having
-	// `builder` declared externally allows a closure to capture it, meaning
-	// that we can allocate only one buffer instead of stitching together many
-	// strings. Saving the expensive string allocations, and the resulting GC
-	// hits, should help mitigate any performance concerns associated with the
-	// recursive nature of this function.
-	helper = func(currentName string, b Budget) {
-		currentBalance := float64(b.Balance) / 100
-		builder.WriteRune('{')
-
-		if currentName != "" {
-			builder.WriteString(currentName)
-			builder.WriteRune(':')
-		}
-		_, err := fmt.Fprintf(builder, "$%0.2f", currentBalance)
-		if err != nil {
-			return
-		}
-
-		if len(b.Children) > 0 {
-			const childSuffix = ", "
-			builder.WriteString(" [")
-			for childName, child := range b.Children {
-				helper(childName, *child)
-				builder.WriteString(childSuffix)
-			}
-			builder.Truncate(builder.Len() - len(childSuffix))
-			builder.WriteRune(']')
-		}
-		builder.WriteRune('}')
-	}
-
-	helper("", b)
-
-	return builder.String()
 }

@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/marstr/envelopes/persist"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"testing"
 	"time"
@@ -36,7 +37,7 @@ func getTestStateIDDeterministic(ctx context.Context) func(*testing.T) {
 	return func(t *testing.T) {
 		testCases := []envelopes.State{
 			{},
-			{Budget: &envelopes.Budget{Balance: 1729}},
+			{Budget: &envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(1729, 100)}}},
 		}
 
 		for _, tc := range testCases {
@@ -68,34 +69,34 @@ func getTestStateIDRoundtrip(ctx context.Context) func(*testing.T) {
 			"empty": {},
 			"full": {
 				Accounts: envelopes.Accounts{
-					"checking": 4590,
-					"savings":  0001,
+					"checking": envelopes.Balance{"USD": big.NewRat(4590, 100)},
+					"savings":  envelopes.Balance{"USD": big.NewRat(1, 100)},
 				},
 				Budget: &envelopes.Budget{
 					Children: map[string]*envelopes.Budget{
 						"foo": {
-							Balance: 2291,
+							Balance: envelopes.Balance{"USD": big.NewRat(2291, 100)},
 						},
 						"bar": {
-							Balance: 2300,
+							Balance: envelopes.Balance{"USD": big.NewRat(23, 1)},
 						},
 					},
 				},
 			},
 			"accounts_only": {
 				Accounts: envelopes.Accounts{
-					"checking": 4590,
-					"savings":  0001,
+					"checking": envelopes.Balance{"USD": big.NewRat(4590, 100)},
+					"savings":  envelopes.Balance{"USD": big.NewRat(1, 100)},
 				},
 			},
 			"budget_only": {
 				Budget: &envelopes.Budget{
 					Children: map[string]*envelopes.Budget{
 						"foo": {
-							Balance: 2291,
+							Balance: envelopes.Balance{"USD": big.NewRat(2291, 100)},
 						},
 						"bar": {
-							Balance: 2300,
+							Balance: envelopes.Balance{"USD": big.NewRat(2300, 100)},
 						},
 					},
 				},
@@ -155,17 +156,17 @@ func TestState_Subtract(t *testing.T) {
 			Name: "accounts_only",
 			Subject: envelopes.State{
 				Accounts: envelopes.Accounts{
-					"checking": 15000,
+					"checking": envelopes.Balance{"USD": big.NewRat(150, 1)},
 				},
 			},
 			Other: envelopes.State{
 				Accounts: envelopes.Accounts{
-					"checking": 10000,
+					"checking": envelopes.Balance{"USD": big.NewRat(100, 1)},
 				},
 			},
 			Expected: envelopes.Impact{
 				Accounts: envelopes.Accounts{
-					"checking": 5000,
+					"checking": envelopes.Balance{"USD": big.NewRat(50, 1)},
 				},
 			},
 		},
@@ -173,45 +174,45 @@ func TestState_Subtract(t *testing.T) {
 			Name: "unimpacted_accounts",
 			Subject: envelopes.State{
 				Accounts: envelopes.Accounts{
-					"checking": 15000,
-					"savings": 1000000,
+					"checking": envelopes.Balance{"USD": big.NewRat(150, 1)},
+					"savings": envelopes.Balance{"USD": big.NewRat(10000, 1)},
 				},
 			},
 			Other: envelopes.State{
 				Accounts: envelopes.Accounts{
-					"checking": 10000,
-					"savings": 1000000,
+					"checking": envelopes.Balance{"USD": big.NewRat(100, 1)},
+					"savings": envelopes.Balance{"USD": big.NewRat(10000, 1)},
 				},
 			},
 			Expected: envelopes.Impact{
 				Accounts: envelopes.Accounts{
-					"checking": 5000,
+					"checking": envelopes.Balance{"USD": big.NewRat(50, 1)},
 				},
 			},
 		},
 		{
 			Name: "budget_only_simple_balance",
 			Subject: envelopes.State{
-				Budget: &envelopes.Budget{Balance: 5},
+				Budget: &envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(5, 100)}},
 			},
 			Other: envelopes.State{
-				Budget: &envelopes.Budget{Balance: 2},
+				Budget: &envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(2, 100)}},
 			},
 			Expected: envelopes.Impact{
-				Budget: &envelopes.Budget{Balance: 3},
+				Budget: &envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(3, 100)}},
 			},
 		},
 		{
 			Name: "budget_only_recursive_difference",
 			Subject: envelopes.State{
 				Budget: &envelopes.Budget{
-					Balance: 9999,
+					Balance: envelopes.Balance{"USD": big.NewRat(9999, 100)},
 					Children: map[string]*envelopes.Budget{
-						"entertainment": {Balance: 2200},
+						"entertainment": {Balance: envelopes.Balance{"USD": big.NewRat(22, 1)}},
 						"food": {
 							Children: map[string]*envelopes.Budget{
-								"restaurants": {Balance: 19003},
-								"groceries":   {Balance: 5307},
+								"restaurants": {Balance: envelopes.Balance{"USD": big.NewRat(19003, 100)}},
+								"groceries":   {Balance: envelopes.Balance{"USD": big.NewRat(5307, 100)}},
 							},
 						},
 					},
@@ -219,13 +220,13 @@ func TestState_Subtract(t *testing.T) {
 			},
 			Other: envelopes.State{
 				Budget: &envelopes.Budget{
-					Balance: 9999,
+					Balance: envelopes.Balance{"USD": big.NewRat(9999, 100)},
 					Children: map[string]*envelopes.Budget{
-						"entertainment": {Balance: 2200},
+						"entertainment": {Balance: envelopes.Balance{"USD": big.NewRat(22, 1)}},
 						"food": {
 							Children: map[string]*envelopes.Budget{
-								"restaurants": {Balance: 19003},
-								"groceries":   {Balance: 7807},
+								"restaurants": {Balance: envelopes.Balance{"USD": big.NewRat(19003, 100)}},
+								"groceries":   {Balance: envelopes.Balance{"USD": big.NewRat(7807, 100)}},
 							},
 						},
 					},
@@ -236,7 +237,7 @@ func TestState_Subtract(t *testing.T) {
 					Children: map[string]*envelopes.Budget{
 						"food": {
 							Children: map[string]*envelopes.Budget{
-								"groceries": {Balance: -2500},
+								"groceries": {Balance: envelopes.Balance{"USD": big.NewRat(-25, 1)}},
 							},
 						},
 					},
@@ -248,22 +249,22 @@ func TestState_Subtract(t *testing.T) {
 			Subject: envelopes.State{
 				Budget: &envelopes.Budget{
 					Children: map[string]*envelopes.Budget{
-						"foo": {Balance: 50},
+						"foo": {Balance: envelopes.Balance{"USD": big.NewRat(50, 100)}},
 					},
 				},
 			},
 			Other: envelopes.State{
 				Budget: &envelopes.Budget{
 					Children: map[string]*envelopes.Budget{
-						"bar": {Balance: 50},
+						"bar": {Balance: envelopes.Balance{"USD": big.NewRat(50, 100)}},
 					},
 				},
 			},
 			Expected: envelopes.Impact{
 				Budget: &envelopes.Budget{
 					Children: map[string]*envelopes.Budget{
-						"foo": {Balance: 50},
-						"bar": {Balance: -50},
+						"foo": {Balance: envelopes.Balance{"USD": big.NewRat(50, 100)}},
+						"bar": {Balance: envelopes.Balance{"USD": big.NewRat(-50, 100)}},
 					},
 				},
 			},

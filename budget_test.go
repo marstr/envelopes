@@ -16,6 +16,7 @@ package envelopes_test
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/marstr/envelopes"
@@ -23,10 +24,10 @@ import (
 
 func ExampleBudget_RecursiveBalance() {
 	subject := envelopes.Budget{
-		Balance: 431,
+		Balance: envelopes.Balance{"USD": big.NewRat(431, 100)},
 		Children: map[string]*envelopes.Budget{
-			"child1": {Balance: 1296},
-			"child2": {Balance: 2},
+			"child1": {Balance: envelopes.Balance{"USD": big.NewRat(1296, 100)}},
+			"child2": {Balance: envelopes.Balance{"USD": big.NewRat(2, 100)}},
 		},
 	}
 
@@ -41,28 +42,28 @@ func TestBudget_Equal(t *testing.T) {
 		expected bool
 	}{
 		{
-			envelopes.Budget{Balance: 45},
-			envelopes.Budget{Balance: 45},
+			envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(45, 100)}},
+			envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(45, 100)}},
 			true,
 		},
 		{
-			envelopes.Budget{Balance: 39},
-			envelopes.Budget{Balance: 90},
+			envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(39, 100)}},
+			envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(90, 100)}},
 			false,
 		},
 		{
-			envelopes.Budget{Balance: 99},
-			envelopes.Budget{Children: map[string]*envelopes.Budget{"child1": {Balance: 99}}},
+			envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(99, 100)}},
+			envelopes.Budget{Children: map[string]*envelopes.Budget{"child1": {Balance: envelopes.Balance{"USD": big.NewRat(99, 100)}}}},
 			false,
 		},
 		{
-			envelopes.Budget{Children: map[string]*envelopes.Budget{"child1": {Balance: 99}}},
-			envelopes.Budget{Children: map[string]*envelopes.Budget{"child2": {Balance: 99}}},
+			envelopes.Budget{Children: map[string]*envelopes.Budget{"child1": {Balance: envelopes.Balance{"USD": big.NewRat(99, 100)}}}},
+			envelopes.Budget{Children: map[string]*envelopes.Budget{"child2": {Balance: envelopes.Balance{"USD": big.NewRat(99, 100)}}}},
 			false,
 		},
 		{
-			envelopes.Budget{Children: map[string]*envelopes.Budget{"child1": {Balance: 99}}},
-			envelopes.Budget{Children: map[string]*envelopes.Budget{"child1": {Balance: 44}}},
+			envelopes.Budget{Children: map[string]*envelopes.Budget{"child1": {Balance: envelopes.Balance{"USD": big.NewRat(99, 100)}}}},
+			envelopes.Budget{Children: map[string]*envelopes.Budget{"child1": {Balance: envelopes.Balance{"USD": big.NewRat(44, 100)}}}},
 			false,
 		},
 	}
@@ -83,11 +84,11 @@ func TestBudget_Equal(t *testing.T) {
 func TestBudget_ID_Deterministic(t *testing.T) {
 	testCases := []*envelopes.Budget{
 		{},
-		{Balance: 1729},
+		{Balance: envelopes.Balance{"USD": big.NewRat(1729, 100)}},
 		{
 			Children: map[string]*envelopes.Budget{
-				"child1":     {Balance: 99},
-				"alphaChild": {Balance: 44},
+				"child1":     {Balance: envelopes.Balance{"USD": big.NewRat(99, 100)}},
+				"alphaChild": {Balance: envelopes.Balance{"USD": big.NewRat(44, 100)}},
 			},
 		},
 	}
@@ -115,13 +116,13 @@ func TestBudget_ID_Lock(t *testing.T) {
 	testCases := map[string]envelopes.Budget{
 		"788245b186cad464b7aa1e8e359eb19fbcf7b6e4": {},
 		"33e0af30c719e4d42b60bda9070da638d86edeaf": {
-			Balance: 1098,
+			Balance: envelopes.Balance{"USD": big.NewRat(1098, 100)},
 			Children: map[string]*envelopes.Budget{
 				"grocery": {
-					Balance: 4598,
+					Balance: envelopes.Balance{"USD": big.NewRat(4598, 100)},
 				},
 				"restaurants": {
-					Balance: 9978,
+					Balance: envelopes.Balance{"USD": big.NewRat(9978, 100)},
 				},
 			},
 		},
