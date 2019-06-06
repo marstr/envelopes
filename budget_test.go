@@ -69,7 +69,7 @@ func TestBudget_Equal(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%s %s", tc.a, tc.b), func(t *testing.T) {
+		t.Run("", func(t *testing.T) {
 			if got := tc.a.Equal(tc.b); got != tc.expected {
 				t.Fail()
 			}

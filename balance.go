@@ -131,7 +131,7 @@ func (b Balance) String() string {
 		buf := &bytes.Buffer{}
 
 		for i := range keys {
-			fmt.Fprintf(buf, "%s %s, ", keys[i], b[AssetType(keys[i])].FloatString(2))
+			fmt.Fprintf(buf, "%s %s, ", keys[i], b[AssetType(keys[i])].FloatString(3))
 		}
 
 		buf.Truncate(buf.Len() - 2)

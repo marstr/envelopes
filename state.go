@@ -40,6 +40,17 @@ func (s State) ID() (id ID) {
 	return sha1.Sum(marshaled)
 }
 
+func (s State) Equal(other State) bool {
+	result := s.Subtract(other)
+	if len(result.Accounts) > 0 {
+		return false
+	}
+
+	if result.Budget.Balance != 0 {
+		return false
+	}
+}
+
 // MarshalText computes a deterministic string that uniquely represents this State.
 func (s State) MarshalText() ([]byte, error) {
 
