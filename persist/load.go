@@ -144,3 +144,18 @@ func (dl DefaultLoader) loadBudget(ctx context.Context, marshaled []byte, toLoad
 
 	return nil
 }
+
+// LoadAncestor reads in and unmarshals a sequence of Transactions, until the main-line ancestor of the given number of
+// jumps is loaded.
+//
+// Note: Calling LoadAncestor with jumps=0 is equivalent to calling Loader.Load with a transaction, but is a hair slower.
+func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, jumps uint) (*envelopes.Transaction, error) {
+	var result envelopes.Transaction
+	for i := uint(0); i <= jumps; i++ {
+		if err := loader.Load(ctx, transaction, &result); err != nil {
+			return nil, err
+		}
+		transaction = result.Parent
+	}
+	return &result, nil
+}
