@@ -19,12 +19,15 @@ package persist
 
 import (
 	"context"
-	"github.com/marstr/envelopes"
-	"github.com/mitchellh/go-homedir"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
+
+	"github.com/marstr/envelopes"
 )
 
 const objectsDir = "objects"
@@ -48,9 +51,13 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 	}
 
 	trimmed := strings.TrimSpace(string(raw))
-	raw = []byte(trimmed)
 
-	err = result.UnmarshalText(raw)
+	result, err = fs.ReadBranch(ctx, trimmed)
+	if err == nil {
+		return
+	}
+
+	err = result.UnmarshalText([]byte(trimmed))
 	if err != nil {
 		return
 	}
@@ -121,4 +128,47 @@ func (fs FileSystem) path(id envelopes.ID) (string, error) {
 		return "", err
 	}
 	return path.Join(exp, objectsDir, id.String()+".json"), nil
+}
+
+func (fs FileSystem) branchPath(name string) string {
+	return path.Join(fs.Root, "refs", "heads", name)
+}
+
+// ReadBranch fetches the ID that a branch is pointing at.
+func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelopes.ID, err error) {
+	branchLoc := fs.branchPath(name)
+	handle, err := os.Open(branchLoc)
+	if err != nil {
+		return
+	}
+	var contents [2 * cap(retval)]byte
+	var n int
+	n, err = handle.Read(contents[:])
+	if err != nil {
+		return
+	}
+
+	if n != cap(contents) {
+		err = fmt.Errorf(
+			"%s was not long enough to be a candidate for pointing to a Transaction ID (want: %v got: %v)",
+			branchLoc,
+			cap(contents),
+			n)
+		return
+	}
+
+	err = retval.UnmarshalText(contents[:])
+	return
+}
+
+// WriteBranch sets a branch to be pointing at a particular ID.
+func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
+	branchLoc := fs.branchPath(name)
+	handle, err := os.Create(branchLoc)
+	if err != nil {
+		return err
+	}
+
+	_, err = handle.WriteString(id.String())
+	return err
 }
