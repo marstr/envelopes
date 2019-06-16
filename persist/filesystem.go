@@ -41,6 +41,7 @@ type FileSystem struct {
 // Current finds the ID of the most recent transaction.
 func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err error) {
 	p, err := fs.CurrentPath()
+
 	if err != nil {
 		return
 	}
@@ -65,19 +66,28 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 	return
 }
 
-// WriteCurrent makes note of the most recent ID of transaction.
-func (fs FileSystem) WriteCurrent(_ context.Context, current *envelopes.Transaction) error {
+// WriteCurrent makes note of the most recent ID of transaction. If current.txt currently contains a branch, this
+// operation defers to updating the branch file. Should the contents be anything else, the contents of current.txt are
+// replaced by the ID of the current Transaction.
+func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transaction) error {
 	transformed, err := current.ID().MarshalText()
 	if err != nil {
 		return err
 	}
 
-	cp, err := fs.CurrentPath()
+	p, err := fs.CurrentPath()
+	raw, err := ioutil.ReadFile(p)
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(cp, transformed, os.ModePerm)
+	trimmed := strings.TrimSpace(string(raw))
+	_, err = fs.ReadBranch(ctx, trimmed)
+	if os.IsNotExist(err) {
+		return ioutil.WriteFile(p, transformed, os.ModePerm)
+	}
+
+	return fs.WriteBranch(ctx, trimmed, current.ID())
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
