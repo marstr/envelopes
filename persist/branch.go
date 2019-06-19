@@ -30,3 +30,8 @@ type Brancher interface {
 	ReadBranch(ctx context.Context, name string) (envelopes.ID, error)
 	WriteBranch(ctx context.Context, name string, id envelopes.ID) error
 }
+
+// BranchListers are able to find all branches is a repository.
+type BranchLister interface {
+	ListBranches(ctx context.Context) <-chan string
+}

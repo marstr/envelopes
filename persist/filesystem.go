@@ -23,8 +23,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
+	"github.com/marstr/collection"
 	"github.com/mitchellh/go-homedir"
 
 	"github.com/marstr/envelopes"
@@ -183,4 +185,36 @@ func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID
 
 	_, err = handle.WriteString(id.String())
 	return err
+}
+
+func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
+	absRoot, err := filepath.Abs(path.Dir(fs.branchPath("any_branch_name")))
+	if err != nil {
+		return nil, err
+	}
+
+	dir := collection.Directory{
+		Location: absRoot,
+		Options:  collection.DirectoryOptionsExcludeDirectories | collection.DirectoryOptionsRecursive,
+	}
+
+	rawResults := dir.Enumerate(ctx.Done())
+
+	prefix := absRoot + "/"
+	castResults := make(chan string)
+	go func() {
+		defer close(castResults)
+
+		for entry := range rawResults {
+			trimmed := strings.TrimPrefix(entry.(string), prefix)
+			select {
+			case <-ctx.Done():
+				return
+			case castResults <- trimmed:
+				// Intentionally Left Blank
+			}
+		}
+	}()
+
+	return castResults, nil
 }

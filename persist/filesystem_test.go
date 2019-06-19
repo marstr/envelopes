@@ -17,11 +17,13 @@ package persist_test
 import (
 	"context"
 	"fmt"
-	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/persist"
 	"os"
 	"path"
 	"testing"
+	"time"
+
+	"github.com/marstr/envelopes"
+	"github.com/marstr/envelopes/persist"
 )
 
 func TestFileSystem_Current(t *testing.T) {
@@ -155,6 +157,58 @@ func TestFileSystem_RoundTrip(t *testing.T) {
 			want := tc.ID()
 			if got != want {
 				t.Logf("\ngot: %q\nwant: %q", got, want)
+				t.Fail()
+			}
+		})
+	}
+}
+
+func TestFileSystem_ListBranches(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	defer cancel()
+
+	testCases := []struct {
+		location string
+		expected []string
+	}{
+		{"./testdata/test4/.baronial", []string{"backup", "master"}},
+		{"./testdata/test3/.baronial", []string{}},
+	}
+
+	subject := &persist.FileSystem{}
+
+	for _, tc := range testCases {
+		t.Run(tc.location, func(t *testing.T) {
+			ctx2, cancel2 := context.WithTimeout(ctx, 100*time.Second)
+			defer cancel2()
+
+			subject.Root = tc.location
+
+			branches, err := subject.ListBranches(ctx2)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			i := 0
+			for got := range branches {
+
+				if i >= len(tc.expected) {
+					t.Logf("Too many elements encountered, example: %s", got)
+					t.Fail()
+					return
+				}
+
+				if got != tc.expected[i] {
+					t.Logf("\n\tat position %d\n\tgot:  %q\n\twant: %q", i, got, tc.expected[i])
+					t.Fail()
+					return
+				}
+				i++
+			}
+
+			if i != len(tc.expected) {
+				t.Logf("Too few results, got %d want %d", i, len(tc.expected))
 				t.Fail()
 			}
 		})
