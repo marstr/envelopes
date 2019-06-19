@@ -33,5 +33,5 @@ type Brancher interface {
 
 // BranchListers are able to find all branches is a repository.
 type BranchLister interface {
-	ListBranches(ctx context.Context) <-chan string
+	ListBranches(ctx context.Context) (<-chan string, error)
 }
