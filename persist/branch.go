@@ -20,6 +20,10 @@ import (
 	"github.com/marstr/envelopes"
 )
 
+const (
+	DefaultBranch = "master"
+)
+
 // Brancher defines the requirements for a type to be able to provide the functionality
 // required to manage branches.
 type Brancher interface {

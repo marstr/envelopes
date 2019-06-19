@@ -70,20 +70,22 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 // operation defers to updating the branch file. Should the contents be anything else, the contents of current.txt are
 // replaced by the ID of the current Transaction.
 func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transaction) error {
-	transformed, err := current.ID().MarshalText()
-	if err != nil {
-		return err
-	}
-
 	p, err := fs.CurrentPath()
 	raw, err := ioutil.ReadFile(p)
-	if err != nil {
+	if os.IsNotExist(err) {
+		raw = []byte(DefaultBranch)
+	} else if err != nil {
 		return err
 	}
 
 	trimmed := strings.TrimSpace(string(raw))
 	_, err = fs.ReadBranch(ctx, trimmed)
 	if os.IsNotExist(err) {
+		transformed, err := current.ID().MarshalText()
+		if err != nil {
+			return err
+		}
+
 		return ioutil.WriteFile(p, transformed, os.ModePerm)
 	}
 
