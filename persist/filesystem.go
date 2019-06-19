@@ -19,12 +19,15 @@ package persist
 
 import (
 	"context"
-	"github.com/marstr/envelopes"
-	"github.com/mitchellh/go-homedir"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
+
+	"github.com/marstr/envelopes"
 )
 
 const objectsDir = "objects"
@@ -38,6 +41,7 @@ type FileSystem struct {
 // Current finds the ID of the most recent transaction.
 func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err error) {
 	p, err := fs.CurrentPath()
+
 	if err != nil {
 		return
 	}
@@ -48,9 +52,13 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 	}
 
 	trimmed := strings.TrimSpace(string(raw))
-	raw = []byte(trimmed)
 
-	err = result.UnmarshalText(raw)
+	result, err = fs.ReadBranch(ctx, trimmed)
+	if err == nil {
+		return
+	}
+
+	err = result.UnmarshalText([]byte(trimmed))
 	if err != nil {
 		return
 	}
@@ -58,19 +66,30 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 	return
 }
 
-// WriteCurrent makes note of the most recent ID of transaction.
-func (fs FileSystem) WriteCurrent(_ context.Context, current *envelopes.Transaction) error {
-	transformed, err := current.ID().MarshalText()
-	if err != nil {
+// WriteCurrent makes note of the most recent ID of transaction. If current.txt currently contains a branch, this
+// operation defers to updating the branch file. Should the contents be anything else, the contents of current.txt are
+// replaced by the ID of the current Transaction.
+func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transaction) error {
+	p, err := fs.CurrentPath()
+	raw, err := ioutil.ReadFile(p)
+	if os.IsNotExist(err) {
+		raw = []byte(DefaultBranch)
+	} else if err != nil {
 		return err
 	}
 
-	cp, err := fs.CurrentPath()
-	if err != nil {
-		return err
+	trimmed := strings.TrimSpace(string(raw))
+	_, err = fs.ReadBranch(ctx, trimmed)
+	if os.IsNotExist(err) {
+		transformed, err := current.ID().MarshalText()
+		if err != nil {
+			return err
+		}
+
+		return ioutil.WriteFile(p, transformed, os.ModePerm)
 	}
 
-	return ioutil.WriteFile(cp, transformed, os.ModePerm)
+	return fs.WriteBranch(ctx, trimmed, current.ID())
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
@@ -121,4 +140,47 @@ func (fs FileSystem) path(id envelopes.ID) (string, error) {
 		return "", err
 	}
 	return path.Join(exp, objectsDir, id.String()+".json"), nil
+}
+
+func (fs FileSystem) branchPath(name string) string {
+	return path.Join(fs.Root, "refs", "heads", name)
+}
+
+// ReadBranch fetches the ID that a branch is pointing at.
+func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelopes.ID, err error) {
+	branchLoc := fs.branchPath(name)
+	handle, err := os.Open(branchLoc)
+	if err != nil {
+		return
+	}
+	var contents [2 * cap(retval)]byte
+	var n int
+	n, err = handle.Read(contents[:])
+	if err != nil {
+		return
+	}
+
+	if n != cap(contents) {
+		err = fmt.Errorf(
+			"%s was not long enough to be a candidate for pointing to a Transaction ID (want: %v got: %v)",
+			branchLoc,
+			cap(contents),
+			n)
+		return
+	}
+
+	err = retval.UnmarshalText(contents[:])
+	return
+}
+
+// WriteBranch sets a branch to be pointing at a particular ID.
+func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
+	branchLoc := fs.branchPath(name)
+	handle, err := os.Create(branchLoc)
+	if err != nil {
+		return err
+	}
+
+	_, err = handle.WriteString(id.String())
+	return err
 }
