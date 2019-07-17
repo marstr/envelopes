@@ -21,12 +21,16 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/devigned/tab"
+
 	"github.com/marstr/envelopes"
 )
 
 const (
 	MostRecentTransactionAlias = "HEAD"
 )
+
+const refSpecResolverOperationPrefix = persistOperationPrefix + ".RefSpecResolver"
 
 type (
 	// RefSpec exposes operations on a string that is attempting to specify a particular Transaction ID.
@@ -56,6 +60,12 @@ var (
 
 // Resolve interprets a RefSpec that is provided to the Transaction ID it is referring to.
 func (resolver RefSpecResolver) Resolve(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+	var span tab.Spanner
+	const operationName = refSpecResolverOperationPrefix + ".Resolve"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	span.AddAttributes(tab.StringAttribute("subject", string(subject)))
+	defer span.End()
+
 	resolved, err := resolver.resolveTransactionRefSpec(ctx, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
@@ -81,28 +91,46 @@ func (resolver RefSpecResolver) Resolve(ctx context.Context, subject RefSpec) (e
 		return resolved, err
 	}
 
-	return envelopes.ID{}, ErrNoRefSpec(subject)
+	err = ErrNoRefSpec(subject)
+	span.Logger().Error(err)
+	return envelopes.ID{}, err
 }
 
 // resolveBranchRefSpec find the ID of the Transaction a branch is pointing to.
 func (resolver RefSpecResolver) resolveBranchRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+	var span tab.Spanner
+	const operationName = refSpecResolverOperationPrefix + ".resolveBranchRefSpec"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	span.AddAttributes(tab.StringAttribute("subject", string(subject)))
+	defer span.End()
+
 	return resolver.ReadBranch(ctx, string(subject))
 }
 
 // resolveCaretRefSpec finds the parent ID of the most recent Transaction.
 func (resolver RefSpecResolver) resolveCaretRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+	var span tab.Spanner
+	const operationName = refSpecResolverOperationPrefix + ".resolveCaretRefSpec"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	span.AddAttributes(tab.StringAttribute("subject", string(subject)))
+	defer span.End()
+
 	matches := caretPattern().FindStringSubmatch(string(subject))
 	if len(matches) < 2 {
-		return envelopes.ID{}, ErrNoRefSpec(subject)
+		err := ErrNoRefSpec(subject)
+		span.Logger().Error(err)
+		return envelopes.ID{}, err
 	}
 
 	target, err := resolver.Resolve(ctx, RefSpec(matches[1]))
 	if err != nil {
+		span.Logger().Error(err)
 		return envelopes.ID{}, err
 	}
 
 	loaded, err := LoadAncestor(ctx, resolver, target, 1)
 	if err != nil {
+		span.Logger().Error(err)
 		return envelopes.ID{}, err
 	}
 	return loaded.ID(), nil
@@ -110,8 +138,16 @@ func (resolver RefSpecResolver) resolveCaretRefSpec(ctx context.Context, subject
 
 // resolveMostRecentRefSpec finds the most recent Transaction ID.
 func (resolver RefSpecResolver) resolveMostRecentRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+	var span tab.Spanner
+	const operationName = refSpecResolverOperationPrefix + ".resolveMostRecentRefSpec"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	span.AddAttributes(tab.StringAttribute("subject", string(subject)))
+	defer span.End()
+
 	if subject != MostRecentTransactionAlias {
-		return envelopes.ID{}, ErrNoRefSpec(subject)
+		err := ErrNoRefSpec(subject)
+		span.Logger().Error(err)
+		return envelopes.ID{}, err
 	}
 
 	return resolver.Current(ctx)
@@ -120,23 +156,34 @@ func (resolver RefSpecResolver) resolveMostRecentRefSpec(ctx context.Context, su
 // resolveTildeRefSpec scrapes a count of transactions off the end of a RefSpec, resolves the left-hand side, then
 // traverses the direct descendents of the specified transactions the number of specified jumps.
 func (resolver RefSpecResolver) resolveTildeRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+	var span tab.Spanner
+	const operationName = refSpecResolverOperationPrefix + ".resolveTildeRefSpec"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	span.AddAttributes(tab.StringAttribute("subject", string(subject)))
+	defer span.End()
+
 	matches := tildePattern().FindStringSubmatch(string(subject))
 	if len(matches) < 3 {
-		return envelopes.ID{}, ErrNoRefSpec(subject)
+		err := ErrNoRefSpec(subject)
+		span.Logger().Error(err)
+		return envelopes.ID{}, err
 	}
 
 	jumps, err := strconv.ParseUint(matches[2], 10, 32)
 	if err != nil {
+		span.Logger().Error(err)
 		return envelopes.ID{}, err
 	}
 
 	target, err := resolver.Resolve(ctx, RefSpec(matches[1]))
 	if err != nil {
+		span.Logger().Error(err)
 		return envelopes.ID{}, err
 	}
 
 	loaded, err := LoadAncestor(ctx, resolver, target, uint(jumps))
 	if err != nil {
+		span.Logger().Error(err)
 		return envelopes.ID{}, err
 	}
 	return loaded.ID(), nil
@@ -144,19 +191,29 @@ func (resolver RefSpecResolver) resolveTildeRefSpec(ctx context.Context, subject
 
 // resolveTransactionRefSpec parses a RefSpec which directly specifies a Transaction via text into a binary ID.
 func (resolver RefSpecResolver) resolveTransactionRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+	var span tab.Spanner
+	const operationName = refSpecResolverOperationPrefix + ".resolveTransactionRefSpec"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	span.AddAttributes(tab.StringAttribute("subject", string(subject)))
+	defer span.End()
+
 	if !commitPattern().MatchString(string(subject)) {
-		return envelopes.ID{}, ErrNoRefSpec(subject)
+		err := ErrNoRefSpec(subject)
+		span.Logger().Error(err)
+		return envelopes.ID{}, err
 	}
 
 	var result envelopes.ID
 	err := result.UnmarshalText([]byte(subject))
 	if err != nil {
+		span.Logger().Error(err)
 		return envelopes.ID{}, err
 	}
 
 	var target envelopes.Transaction
 	err = resolver.Load(ctx, result, &target)
 	if err != nil {
+		span.Logger().Error(err)
 		return envelopes.ID{}, err
 	}
 

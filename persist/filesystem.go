@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/devigned/tab"
 	"github.com/marstr/collection"
 	"github.com/mitchellh/go-homedir"
 
@@ -40,16 +41,24 @@ type FileSystem struct {
 	Root string
 }
 
+const fileSystemOperationPrefix = persistOperationPrefix + ".FileSystem"
+
 // Current finds the ID of the most recent transaction.
 func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err error) {
-	p, err := fs.CurrentPath()
+	var span tab.Spanner
+	const operationName = fileSystemOperationPrefix + ".Current"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
 
+	p, err := fs.CurrentPath()
 	if err != nil {
+		span.Logger().Error(err)
 		return
 	}
 
 	raw, err := ioutil.ReadFile(p)
 	if err != nil {
+		span.Logger().Error(err)
 		return
 	}
 
@@ -57,11 +66,13 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 
 	result, err = fs.ReadBranch(ctx, trimmed)
 	if err == nil {
+		span.Logger().Error(err)
 		return
 	}
 
 	err = result.UnmarshalText([]byte(trimmed))
 	if err != nil {
+		span.Logger().Error(err)
 		return
 	}
 
@@ -72,11 +83,24 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 // operation defers to updating the branch file. Should the contents be anything else, the contents of current.txt are
 // replaced by the ID of the current Transaction.
 func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transaction) error {
+	var span tab.Spanner
+	const operationName = fileSystemOperationPrefix + ".WriteCurrent"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
 	p, err := fs.CurrentPath()
+	if err != nil {
+		span.Logger().Error(err)
+		return err
+	}
+
 	raw, err := ioutil.ReadFile(p)
 	if os.IsNotExist(err) {
+		const missMessage = "read miss, using default branch (" + DefaultBranch + ")"
 		raw = []byte(DefaultBranch)
+		span.Logger().Debug(missMessage)
 	} else if err != nil {
+		span.Logger().Error(err)
 		return err
 	}
 
@@ -85,6 +109,7 @@ func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transa
 	if os.IsNotExist(err) {
 		transformed, err := current.ID().MarshalText()
 		if err != nil {
+			span.Logger().Error(err)
 			return err
 		}
 
@@ -99,10 +124,18 @@ func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transa
 // See Also:
 // - FileSystem.Stash
 func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error) {
+	var span tab.Spanner
+	const operationName = fileSystemOperationPrefix + ".Fetch"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
 	p, err := fs.path(id)
 	if err != nil {
+		span.Logger().Error(err)
 		return nil, err
 	}
+	span.AddAttributes(tab.StringAttribute("fileLocation", p))
+
 	return ioutil.ReadFile(p)
 }
 
@@ -111,20 +144,32 @@ func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error)
 // See Also:
 // - FileSystem.Fetch
 func (fs FileSystem) Stash(ctx context.Context, id envelopes.ID, payload []byte) error {
+	var span tab.Spanner
+	const operationName = fileSystemOperationPrefix + ".Stash"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
 	loc, err := fs.path(id)
 	if err != nil {
+		span.Logger().Error(err)
 		return err
 	}
+	span.AddAttributes(tab.StringAttribute("fileLocation", loc))
 
 	os.MkdirAll(path.Dir(loc), os.ModePerm)
 	handle, err := os.Create(loc)
 	if err != nil {
+		span.Logger().Error(err)
 		return err
 	}
 	defer handle.Close()
 
 	_, err = handle.Write(payload)
-	return err
+	if err != nil {
+		span.Logger().Error(err)
+		return err
+	}
+	return nil
 }
 
 // CurrentPath fetches the name of the file containing the ID to the most up-to-date Transaction.
@@ -149,16 +194,26 @@ func (fs FileSystem) branchPath(name string) string {
 }
 
 // ReadBranch fetches the ID that a branch is pointing at.
-func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelopes.ID, err error) {
+func (fs FileSystem) ReadBranch(ctx context.Context, name string) (retval envelopes.ID, err error) {
+	var span tab.Spanner
+	const operationName = fileSystemOperationPrefix + ".ReadBranch"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
+	span.AddAttributes(tab.StringAttribute("branchName", name))
+
 	branchLoc := fs.branchPath(name)
 	handle, err := os.Open(branchLoc)
 	if err != nil {
+		span.Logger().Error(err)
 		return
 	}
 	var contents [2 * cap(retval)]byte
 	var n int
 	n, err = handle.Read(contents[:])
+	span.Logger().Debug(fmt.Sprintf("read %d bytes", n))
 	if err != nil {
+		span.Logger().Error(err)
 		return
 	}
 
@@ -168,15 +223,28 @@ func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelope
 			branchLoc,
 			cap(contents),
 			n)
+		span.Logger().Error(err)
 		return
 	}
 
 	err = retval.UnmarshalText(contents[:])
+	if err != nil {
+		span.Logger().Error(err)
+		return
+	}
+
 	return
 }
 
 // WriteBranch sets a branch to be pointing at a particular ID.
-func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
+func (fs FileSystem) WriteBranch(ctx context.Context, name string, id envelopes.ID) error {
+	var span tab.Spanner
+	const operationName = fileSystemOperationPrefix + ".WriteBranch"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
+	span.AddAttributes(tab.StringAttribute("branchName", name))
+
 	branchLoc := fs.branchPath(name)
 	handle, err := os.Create(branchLoc)
 	if err != nil {
@@ -188,6 +256,11 @@ func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID
 }
 
 func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
+	var span tab.Spanner
+	const operationName = fileSystemOperationPrefix + ".ListBranches"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
 	absRoot, err := filepath.Abs(path.Dir(fs.branchPath("any_branch_name")))
 	if err != nil {
 		return nil, err
@@ -203,6 +276,7 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 	prefix := absRoot + "/"
 	castResults := make(chan string)
 	go func() {
+		defer span.End()
 		defer close(castResults)
 
 		for entry := range rawResults {

@@ -20,8 +20,13 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/devigned/tab"
+
 	"github.com/marstr/envelopes"
 )
+
+const persistOperationPrefix = "envelopes.persist"
+const defaultLoaderOperationPrefix = persistOperationPrefix + ".DefaultLoader"
 
 // Loader can instantiate core envelopes objects given just an ID.
 type Loader interface {
@@ -51,19 +56,29 @@ func NewErrUnloadableType(subject interface{}) ErrUnloadableType {
 // See Also:
 // - DefaultWriter.Write
 func (dl DefaultLoader) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
+	var span tab.Spanner
+	const operationName = defaultLoaderOperationPrefix + ".Load"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
 	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
 	// Must have default clause to prevent blocking.
 	select {
 	case <-ctx.Done():
-		return ctx.Err()
+		err := ctx.Err()
+		span.Logger().Error(err)
+		return err
 	default:
 		// Intentionally Left Blank
 	}
 
 	contents, err := dl.Fetch(ctx, id)
 	if err != nil {
+		span.Logger().Error(err)
 		return err
 	}
+
+	span.AddAttributes(tab.StringAttribute("entityType", reflect.TypeOf(destination).Name()))
 
 	switch destination.(type) {
 	case *envelopes.Transaction:
@@ -75,20 +90,29 @@ func (dl DefaultLoader) Load(ctx context.Context, id envelopes.ID, destination e
 	case *envelopes.Accounts:
 		return json.Unmarshal(contents, destination)
 	default:
-		return NewErrUnloadableType(destination)
+		err := NewErrUnloadableType(destination)
+		span.Logger().Error(err)
+		return err
 	}
 }
 
 func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, toLoad *envelopes.Transaction) error {
+	var span tab.Spanner
+	const operationName = defaultLoaderOperationPrefix + ".loadTransaction"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
 	var unmarshaled Transaction
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
+		defer span.Logger().Error(err)
 		return err
 	}
 
 	var state envelopes.State
 	err = dl.Load(ctx, unmarshaled.State, &state)
 	if err != nil {
+		defer span.Logger().Error(err)
 		return err
 	}
 
@@ -103,20 +127,28 @@ func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, t
 }
 
 func (dl DefaultLoader) loadState(ctx context.Context, marshaled []byte, toLoad *envelopes.State) error {
+	var span tab.Spanner
+	const operationName = defaultLoaderOperationPrefix + ".loadState"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
 	var unmarshaled State
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
+		span.Logger().Error(err)
 		return err
 	}
 
 	var budget envelopes.Budget
 	err = dl.Load(ctx, unmarshaled.Budget, &budget)
 	if err != nil {
+		span.Logger().Error(err)
 		return err
 	}
 
 	err = dl.Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
 	if err != nil {
+		span.Logger().Error(err)
 		return err
 	}
 
@@ -125,9 +157,15 @@ func (dl DefaultLoader) loadState(ctx context.Context, marshaled []byte, toLoad 
 }
 
 func (dl DefaultLoader) loadBudget(ctx context.Context, marshaled []byte, toLoad *envelopes.Budget) error {
+	var span tab.Spanner
+	const operationName = defaultLoaderOperationPrefix + ".loadBudget"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	defer span.End()
+
 	var unmarshaled Budget
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
+		span.Logger().Error(err)
 		return err
 	}
 
@@ -137,6 +175,7 @@ func (dl DefaultLoader) loadBudget(ctx context.Context, marshaled []byte, toLoad
 		var child envelopes.Budget
 		err = dl.Load(ctx, childID, &child)
 		if err != nil {
+			span.Logger().Error(err)
 			return err
 		}
 		toLoad.Children[name] = &child
@@ -150,9 +189,16 @@ func (dl DefaultLoader) loadBudget(ctx context.Context, marshaled []byte, toLoad
 //
 // Note: Calling LoadAncestor with jumps=0 is equivalent to calling Loader.Load with a transaction, but is a hair slower.
 func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, jumps uint) (*envelopes.Transaction, error) {
+	var span tab.Spanner
+	const operationName = persistOperationPrefix + ".LoadAncestor"
+	ctx, span = tab.StartSpan(ctx, operationName)
+	span.AddAttributes(tab.Int64Attribute("jumps", int64(jumps)))
+	defer span.End()
+
 	var result envelopes.Transaction
 	for i := uint(0); i <= jumps; i++ {
 		if err := loader.Load(ctx, transaction, &result); err != nil {
+			span.Logger().Error(err)
 			return nil, err
 		}
 		transaction = result.Parent
