@@ -38,6 +38,14 @@ const objectsDir = "objects"
 // objects to and from a hard drive.
 type FileSystem struct {
 	Root string
+	CreatePermissions os.FileMode
+}
+
+func (fs FileSystem) getCreatePermissions() os.FileMode	{
+	if fs.CreatePermissions == 0 {
+		return 0770
+	}
+	return fs.CreatePermissions
 }
 
 // Current finds the ID of the most recent transaction.
@@ -99,7 +107,7 @@ func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transa
 			return err
 		}
 
-		return ioutil.WriteFile(p, transformed, os.ModePerm)
+		return ioutil.WriteFile(p, transformed, fs.getCreatePermissions())
 	}
 
 	return fs.WriteBranch(ctx, trimmed, current.ID())
@@ -115,7 +123,7 @@ func (fs FileSystem) SetCurrent(ctx context.Context, current RefSpec) error {
 	}
 
 	if _, err = fs.ReadBranch(ctx, string(current)); err == nil {
-		return ioutil.WriteFile(p, []byte(current), os.ModePerm)
+		return ioutil.WriteFile(p, []byte(current), fs.getCreatePermissions())
 	} else if os.IsNotExist(err) {
 		resolver := RefSpecResolver{
 			Loader:   DefaultLoader{Fetcher: fs},
@@ -132,7 +140,7 @@ func (fs FileSystem) SetCurrent(ctx context.Context, current RefSpec) error {
 		if err != nil {
 			return err
 		}
-		return ioutil.WriteFile(p, marshaled, os.ModePerm)
+		return ioutil.WriteFile(p, marshaled, fs.getCreatePermissions())
 	}
 
 	return err
@@ -160,7 +168,7 @@ func (fs FileSystem) Stash(ctx context.Context, id envelopes.ID, payload []byte)
 		return err
 	}
 
-	err = os.MkdirAll(path.Dir(loc), os.ModePerm)
+	err = os.MkdirAll(path.Dir(loc), fs.getCreatePermissions())
 	if err != nil {
 		return err
 	}
@@ -227,7 +235,7 @@ func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelope
 func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
 	branchLoc := fs.branchPath(name)
 
-	err := os.MkdirAll(filepath.Dir(branchLoc), os.ModePerm)
+	err := os.MkdirAll(filepath.Dir(branchLoc), fs.getCreatePermissions())
 	if err != nil {
 		return err
 	}
