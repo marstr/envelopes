@@ -264,11 +264,13 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 	rawResults := dir.Enumerate(ctx.Done())
 
 	prefix := absRoot + "/"
+	prefix = strings.ReplaceAll(prefix, "\\", "/")
 	castResults := make(chan string)
 	go func() {
 		defer close(castResults)
 
 		for entry := range rawResults {
+			entry = strings.ReplaceAll(entry.(string), "\\", "/")
 			trimmed := strings.TrimPrefix(entry.(string), prefix)
 			select {
 			case <-ctx.Done():
