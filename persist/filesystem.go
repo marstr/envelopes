@@ -123,7 +123,11 @@ func (fs FileSystem) Stash(ctx context.Context, id envelopes.ID, payload []byte)
 		return err
 	}
 
-	os.MkdirAll(path.Dir(loc), os.ModePerm)
+	err = os.MkdirAll(path.Dir(loc), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	handle, err := os.Create(loc)
 	if err != nil {
 		return err
@@ -185,10 +189,17 @@ func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelope
 // WriteBranch sets a branch to be pointing at a particular ID.
 func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
 	branchLoc := fs.branchPath(name)
+
+	err := os.MkdirAll(branchLoc, os.ModePerm)
+	if err != nil {
+		return err
+	}
+
 	handle, err := os.Create(branchLoc)
 	if err != nil {
 		return err
 	}
+	defer handle.Close()
 
 	_, err = handle.WriteString(id.String())
 	return err
