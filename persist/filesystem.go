@@ -80,6 +80,10 @@ func (fs FileSystem) CurrentRef(ctx context.Context) (result RefSpec, err error)
 // replaced by the ID of the current Transaction.
 func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transaction) error {
 	p, err := fs.CurrentPath()
+	if err != nil {
+		return err
+	}
+
 	raw, err := ioutil.ReadFile(p)
 	if os.IsNotExist(err) {
 		raw = []byte(DefaultBranch)
@@ -99,6 +103,39 @@ func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transa
 	}
 
 	return fs.WriteBranch(ctx, trimmed, current.ID())
+}
+
+// SetCurrent replaces the current pointer to the most recent Transaction with a given RefSpec. For instance, this
+// should be used to change which branch is currently checked-out.
+//
+func (fs FileSystem) SetCurrent(ctx context.Context, current RefSpec) error {
+	p, err := fs.CurrentPath()
+	if err != nil {
+		return err
+	}
+
+	if _, err = fs.ReadBranch(ctx, string(current)); err == nil {
+		return ioutil.WriteFile(p, []byte(current), os.ModePerm)
+	} else if os.IsNotExist(err) {
+		resolver := RefSpecResolver{
+			Loader:   DefaultLoader{Fetcher: fs},
+			Brancher: fs,
+			Fetcher:  fs,
+		}
+
+		id, err := resolver.Resolve(ctx, current)
+		if err != nil {
+			return err
+		}
+
+		marshaled, err := id.MarshalText()
+		if err != nil {
+			return err
+		}
+		return ioutil.WriteFile(p, marshaled, os.ModePerm)
+	}
+
+	return err
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
