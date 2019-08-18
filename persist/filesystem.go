@@ -210,11 +210,11 @@ func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelope
 		return
 	}
 
-	if n != cap(contents) {
+	if expected := cap(contents); n != expected {
 		err = fmt.Errorf(
 			"%s was not long enough to be a candidate for pointing to a Transaction ID (want: %v got: %v)",
 			branchLoc,
-			cap(contents),
+			expected,
 			n)
 		return
 	}
