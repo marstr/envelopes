@@ -154,6 +154,12 @@ func (resolver RefSpecResolver) resolveTransactionRefSpec(ctx context.Context, s
 		return envelopes.ID{}, err
 	}
 
+	// An empty transaction ID (all zeros) is a special case that indicates an uninitialized repository. In this case,
+	// no matching object will be found. In all other cases, we want to Resolve the RefSpec only if the object exists.
+	if result.Equal(envelopes.ID{}) {
+		return result, nil
+	}
+
 	var target envelopes.Transaction
 	err = resolver.Load(ctx, result, &target)
 	if err != nil {

@@ -42,8 +42,25 @@ type FileSystem struct {
 
 // Current finds the ID of the most recent transaction.
 func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err error) {
-	p, err := fs.CurrentPath()
+	rs, err := fs.CurrentRef(ctx)
+	if err != nil {
+		return
+	}
 
+	resolver := RefSpecResolver{
+		Brancher: fs,
+		Fetcher:  fs,
+		Loader: DefaultLoader{
+			Fetcher: fs,
+		},
+	}
+
+	result, err = resolver.Resolve(ctx, rs)
+	return
+}
+
+func (fs FileSystem) CurrentRef(ctx context.Context) (result RefSpec, err error) {
+	p, err := fs.CurrentPath()
 	if err != nil {
 		return
 	}
@@ -54,17 +71,7 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 	}
 
 	trimmed := strings.TrimSpace(string(raw))
-
-	result, err = fs.ReadBranch(ctx, trimmed)
-	if err == nil {
-		return
-	}
-
-	err = result.UnmarshalText([]byte(trimmed))
-	if err != nil {
-		return
-	}
-
+	result = RefSpec(trimmed)
 	return
 }
 

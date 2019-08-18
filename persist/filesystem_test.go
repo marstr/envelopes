@@ -52,6 +52,9 @@ func TestFileSystem_Current(t *testing.T) {
 }
 
 func TestFileSystem_RoundTrip_Current(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
 	testLocation := path.Join("testdata", "test", "roundtrip", "current")
 	err := os.MkdirAll(testLocation, os.ModePerm)
 	if err != nil {
@@ -73,16 +76,25 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	}
 
 	subject := persist.FileSystem{Root: testLocation}
+	writer := persist.DefaultWriter{
+		Stasher: subject,
+	}
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			err := subject.WriteCurrent(context.Background(), &tc)
+			err := writer.Write(ctx, &tc)
 			if err != nil {
 				t.Error(err)
 				return
 			}
 
-			got, err := subject.Current(context.Background())
+			err = subject.WriteCurrent(ctx, &tc)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			got, err := subject.Current(ctx)
 			if err != nil {
 				t.Error(err)
 				return
