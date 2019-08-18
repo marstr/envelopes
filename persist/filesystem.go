@@ -190,7 +190,7 @@ func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelope
 func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
 	branchLoc := fs.branchPath(name)
 
-	err := os.MkdirAll(branchLoc, os.ModePerm)
+	err := os.MkdirAll(filepath.Dir(branchLoc), os.ModePerm)
 	if err != nil {
 		return err
 	}
