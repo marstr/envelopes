@@ -229,11 +229,11 @@ func TestFileSystem_ListBranches(t *testing.T) {
 }
 
 func TestFileSystem_Clone(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 60 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
 	original := persist.FileSystem{
-		Root:              path.Join(".", "testdata", "test3", ".baronial"),
+		Root: path.Join(".", "testdata", "test3", ".baronial"),
 	}
 
 	outputLoc, err := ioutil.TempDir("", "envelopesCloneTest")
@@ -291,6 +291,75 @@ func TestFileSystem_Clone(t *testing.T) {
 	if encountered < len(expectedResults) {
 		t.Logf("Too few branches encountered")
 		t.Fail()
+	}
+}
+
+func TestFileSystem_WriteCurrent(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Run("from-scratch", testFileSystem_WriteCurrentFromScratch(ctx))
+}
+
+func testFileSystem_WriteCurrentFromScratch(ctx context.Context) func(t *testing.T) {
+	return func(t *testing.T) {
+		tempDir, err := ioutil.TempDir("", "")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		t.Logf("Repo Location: %s", tempDir)
+
+		subject := persist.FileSystem{
+			Root: tempDir,
+		}
+
+		firstTransaction := envelopes.Transaction{
+			Merchant: "Aer Lingus",
+			Time:     time.Now(),
+			Comment:  "foo",
+		}
+
+		err = subject.WriteBranch(ctx, persist.DefaultBranch, firstTransaction.ID())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		err = subject.SetCurrent(ctx, persist.DefaultBranch)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		err = subject.WriteCurrent(ctx, &firstTransaction)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		actualRef, err := subject.CurrentRef(ctx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if actualRef != persist.DefaultBranch {
+			t.Logf("Unexpected RefSpec!\n\twant:\t%q\n\tgot: \t%q", persist.DefaultBranch, actualRef)
+			t.Fail()
+		}
+
+		want := firstTransaction.ID()
+		got, err := subject.Current(ctx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if !got.Equal(want) {
+			t.Logf("Unexpected Transaction ID!\n\twant:\t%q\n\tgot: \t%q", got.String(), want.String())
+			t.Fail()
+		}
 	}
 }
 
