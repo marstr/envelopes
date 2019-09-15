@@ -270,7 +270,7 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 		defer close(castResults)
 
 		for entry := range rawResults {
-			entry = strings.ReplaceAll(entry.(string), "\\", "/")
+			entry = strings.Replace(entry.(string), "\\", "/", -1)
 			trimmed := strings.TrimPrefix(entry.(string), prefix)
 			select {
 			case <-ctx.Done():
