@@ -17,6 +17,7 @@ package persist_test
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -108,7 +109,7 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	}
 }
 
-func TestFileSystem_RoundTrip(t *testing.T) {
+func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	// defer cancel()
 	ctx := context.Background()
@@ -224,6 +225,107 @@ func TestFileSystem_ListBranches(t *testing.T) {
 				t.Fail()
 			}
 		})
+	}
+}
+
+func TestFileSystem_Clone(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 60 * time.Second)
+	defer cancel()
+
+	original := persist.FileSystem{
+		Root:              path.Join(".", "testdata", "test3", ".baronial"),
+	}
+
+	outputLoc, err := ioutil.TempDir("", "envelopesCloneTest")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Logf("Output Location: %s\n", outputLoc)
+
+	subject := persist.FileSystem{
+		Root: outputLoc,
+	}
+
+	head, err := original.Current(ctx)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = subject.Clone(ctx, head, persist.DefaultBranch, persist.DefaultLoader{Fetcher: original})
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	branchCheck, cancelBranchEnumeration := context.WithCancel(ctx)
+	expectedResults := []string{persist.DefaultBranch}
+	results, err := subject.ListBranches(branchCheck)
+	if err != nil {
+		t.Error(err)
+		cancelBranchEnumeration()
+		return
+	}
+
+	encounteredUnexpected := false
+	encountered := 0
+	for entry := range results {
+		encountered++
+		if len(expectedResults) > 0 {
+			if expectedResults[0] != entry {
+				encounteredUnexpected = true
+				t.Fail()
+			}
+		} else {
+			t.Log("extra branches encountered")
+			t.Fail()
+			break
+		}
+	}
+	cancelBranchEnumeration()
+
+	if encounteredUnexpected {
+		t.Logf("Unexpected branch results encountered")
+	}
+	if encountered < len(expectedResults) {
+		t.Logf("Too few branches encountered")
+		t.Fail()
+	}
+}
+
+func BenchmarkFileSystem_CloneSmall(b *testing.B) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	original := persist.FileSystem{
+		Root: path.Join(".", "testdata", "test3", ".baronial"),
+	}
+	head, err := original.Current(ctx)
+	if err != nil {
+		b.Error(err)
+		return
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		b.StopTimer()
+		outputLoc, err := ioutil.TempDir("", "cloneSmallBenchmark")
+		if err != nil {
+			b.Error(err)
+			return
+		}
+
+		subject := persist.FileSystem{
+			Root: outputLoc,
+		}
+
+		b.StartTimer()
+		err = subject.Clone(ctx, head, persist.DefaultBranch, persist.DefaultLoader{Fetcher: original})
+		if err != nil {
+			b.Error(err)
+			return
+		}
 	}
 }
 
