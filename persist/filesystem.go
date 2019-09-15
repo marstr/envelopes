@@ -264,7 +264,7 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 	rawResults := dir.Enumerate(ctx.Done())
 
 	prefix := absRoot + "/"
-	prefix = strings.ReplaceAll(prefix, "\\", "/")
+	prefix = strings.Replace(prefix, "\\", "/", -1)
 	castResults := make(chan string)
 	go func() {
 		defer close(castResults)
