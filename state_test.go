@@ -30,6 +30,7 @@ func TestState_ID(t *testing.T) {
 
 	t.Run("deterministic", getTestStateIDDeterministic(ctx))
 	t.Run("roundtrip", getTestStateIDRoundtrip(ctx))
+	t.Run("lock", getTestStateIDLock(ctx))
 }
 
 func getTestStateIDDeterministic(ctx context.Context) func(*testing.T) {
@@ -144,6 +145,41 @@ func getTestStateIDRoundtrip(ctx context.Context) func(*testing.T) {
 	}
 }
 
+func getTestStateIDLock(ctx context.Context) func(*testing.T) {
+	return func(t *testing.T) {
+		testCases := []struct {
+			Subject  envelopes.State
+			Expected string
+		}{
+			{
+				Subject:  envelopes.State{},
+				Expected: "94ed54bf9f02dff56f806a2b6b853124e3608596",
+			},
+			{
+				Subject: envelopes.State{
+					Budget: &envelopes.Budget{
+						Balance: 4507,
+						Children: map[string]*envelopes.Budget{
+							"grocery":     {Balance: 9813},
+							"restaurants": {Balance: 10099},
+						},
+					},
+				},
+				Expected: "3e2d4829a6793c9952478d85ea0f022150f927ce",
+			},
+		}
+
+		for _, tc := range testCases {
+			got := tc.Subject.ID().String()
+
+			if got != tc.Expected {
+				t.Logf("got:  %q\nwant: %q", got, tc.Expected)
+				t.Fail()
+			}
+		}
+	}
+}
+
 func TestState_Subtract(t *testing.T) {
 	testCases := []struct {
 		Name     string
@@ -174,13 +210,13 @@ func TestState_Subtract(t *testing.T) {
 			Subject: envelopes.State{
 				Accounts: envelopes.Accounts{
 					"checking": 15000,
-					"savings": 1000000,
+					"savings":  1000000,
 				},
 			},
 			Other: envelopes.State{
 				Accounts: envelopes.Accounts{
 					"checking": 10000,
-					"savings": 1000000,
+					"savings":  1000000,
 				},
 			},
 			Expected: envelopes.Impact{
