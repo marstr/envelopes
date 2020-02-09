@@ -17,23 +17,6 @@ import (
 // Microsoft Stock Shares -> MSFT
 type AssetType string
 
-const (
-	USD = "USD" // United States Dollar
-	GBP = "GBP" // British Pound
-	EUR = "EUR" // Euro
-	RUB = "RUB" // Russian Ruble
-)
-
-var (
-	DefaultAsset       = AssetType(USD)
-	CurrencyShorthands = map[AssetType]AssetType{
-		"$": USD,
-		"£": GBP,
-		"€": EUR,
-		"₽": RUB,
-	}
-)
-
 // Balance captures an amount of USD pennies.
 type Balance map[AssetType]*big.Rat
 
