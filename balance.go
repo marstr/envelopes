@@ -120,6 +120,19 @@ func (b Balance) Negate() Balance {
 	return retval
 }
 
+// Scale multiplies each entry in a Balance by a constant amount. This may be useful for diving
+func (b Balance) Scale(s float64) Balance {
+	retval := make(Balance, len(b))
+
+	t := new(big.Rat).SetFloat64(s)
+	for key, value := range b {
+		var scaled big.Rat
+		retval[key] = scaled.Mul(value, t)
+	}
+
+	return retval
+}
+
 func (b Balance) String() string {
 	if len(b) > 0 {
 		keys := make([]string, 0, len(b))
