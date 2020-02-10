@@ -17,6 +17,22 @@ import (
 // Microsoft Stock Shares -> MSFT
 type AssetType string
 
+const (
+	DefaultAsset AssetType = "USD"
+)
+
+// Exchange represents the known conversion rates from one asset to another. For example an instance of Exchange may
+// contain the rates needed to get all types TO United States Dollars, from a host of other types of assets, like Euros,
+// shares of stock, etc.
+type Exchange map[AssetType]float64
+
+// ErrUnknownAsset indicates that an asset was requested that is not present.
+type ErrUnknownAsset AssetType
+
+func (e ErrUnknownAsset) Error() string {
+	return fmt.Sprintf("could not find AssetType %s", e)
+}
+
 // Balance captures an amount of USD pennies.
 type Balance map[AssetType]*big.Rat
 
@@ -116,6 +132,25 @@ func (b Balance) Scale(s float64) Balance {
 	return retval
 }
 
+// Normalize finds the total value of a Balance, but expresses the answer as a scalar instead of a multi-component
+// Balance.
+func (b Balance) Normalize(rates Exchange) (*big.Rat, error) {
+	sum := new(big.Rat)
+	var scaled big.Rat
+
+	for k, v := range b {
+		if rawRate, ok := rates[k]; ok {
+			rate := new(big.Rat).SetFloat64(rawRate)
+			scaled.Mul(v, rate)
+			sum.Add(sum, &scaled)
+		} else {
+			return nil, ErrUnknownAsset(k)
+		}
+	}
+
+	return sum, nil
+}
+
 func (b Balance) String() string {
 	if len(b) > 0 {
 		keys := make([]string, 0, len(b))
@@ -173,8 +208,6 @@ func ParseBalanceWithDefault(raw []byte, def AssetType) (Balance, error) {
 
 		if id == "" {
 			id = def
-		} else if expanded, ok := CurrencyShorthands[id]; ok {
-			id = expanded
 		}
 
 		if created == nil {
