@@ -37,6 +37,7 @@ type (
 		Loader
 		Brancher
 		Fetcher
+		CurrentReader
 	}
 )
 
