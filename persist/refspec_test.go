@@ -59,8 +59,9 @@ func TestRefSpecResolver_Resolve(t *testing.T) {
 		Loader: DefaultLoader{
 			Fetcher: fs,
 		},
-		Brancher: fs,
-		Fetcher:  fs,
+		Brancher:      fs,
+		Fetcher:       fs,
+		CurrentReader: fs,
 	}
 
 	for _, tc := range testCases {

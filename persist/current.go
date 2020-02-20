@@ -6,15 +6,17 @@ import (
 	"github.com/marstr/envelopes"
 )
 
+type CurrentReaderWriter interface {
+	CurrentReader
+	CurrentWriter
+}
+
 // CurrentReader allows the caller to view the state of the CurrentPointer.
 type CurrentReader interface {
-	// Current finds the ID of the most recently checked out Transaction.
-	Current(ctx context.Context) (envelopes.ID, error)
-
 	// CurrentRef finds an identifier for the most recent Transaction that has been committed. Most times, this is the
 	// name of the current branch. A repository could also be in HEADless mode, in which case this will return a
 	// Transaction ID instead.
-	CurrentRef(ctx context.Context) (RefSpec, error)
+	Current(ctx context.Context) (RefSpec, error)
 }
 
 // CurrentWriter allows the caller to modify the state of the Current pointer.
