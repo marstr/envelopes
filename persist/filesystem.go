@@ -48,27 +48,8 @@ func (fs FileSystem) getCreatePermissions() os.FileMode {
 	return fs.CreatePermissions
 }
 
-// Current finds the ID of the most recent transaction.
-func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err error) {
-	rs, err := fs.CurrentRef(ctx)
-	if err != nil {
-		return
-	}
-
-	resolver := RefSpecResolver{
-		Brancher: fs,
-		Fetcher:  fs,
-		Loader: DefaultLoader{
-			Fetcher: fs,
-		},
-	}
-
-	result, err = resolver.Resolve(ctx, rs)
-	return
-}
-
-func (fs FileSystem) CurrentRef(_ context.Context) (result RefSpec, err error) {
-	p, err := fs.CurrentPath()
+func (fs FileSystem) Current(_ context.Context) (result RefSpec, err error) {
+	p, err := fs.currentPath()
 	if err != nil {
 		return
 	}
@@ -87,7 +68,7 @@ func (fs FileSystem) CurrentRef(_ context.Context) (result RefSpec, err error) {
 // operation defers to updating the branch file. Should the contents be anything else, the contents of current.txt are
 // replaced by the ID of the current Transaction.
 func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transaction) error {
-	p, err := fs.CurrentPath()
+	p, err := fs.currentPath()
 	if err != nil {
 		return err
 	}
@@ -115,9 +96,8 @@ func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transac
 
 // SetCurrent replaces the current pointer to the most recent Transaction with a given RefSpec. For instance, this
 // should be used to change which branch is currently checked-out.
-//
 func (fs FileSystem) SetCurrent(ctx context.Context, current RefSpec) error {
-	p, err := fs.CurrentPath()
+	p, err := fs.currentPath()
 	if err != nil {
 		return err
 	}
@@ -183,8 +163,8 @@ func (fs FileSystem) Stash(ctx context.Context, id envelopes.ID, payload []byte)
 	return err
 }
 
-// CurrentPath fetches the name of the file containing the ID to the most up-to-date Transaction.
-func (fs FileSystem) CurrentPath() (result string, err error) {
+// currentPath fetches the name of the file containing the ID to the most up-to-date Transaction.
+func (fs FileSystem) currentPath() (result string, err error) {
 	exp, err := homedir.Expand(fs.Root)
 	if err != nil {
 		return

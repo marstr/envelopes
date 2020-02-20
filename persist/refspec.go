@@ -115,7 +115,12 @@ func (resolver RefSpecResolver) resolveMostRecentRefSpec(ctx context.Context, su
 		return envelopes.ID{}, ErrNoRefSpec(subject)
 	}
 
-	return resolver.Current(ctx)
+	currentRefSpec, err := resolver.Current(ctx)
+	if err != nil {
+		return envelopes.ID{}, err
+	}
+
+	return resolver.Resolve(ctx, currentRefSpec)
 }
 
 // resolveTildeRefSpec scrapes a count of transactions off the end of a RefSpec, resolves the left-hand side, then

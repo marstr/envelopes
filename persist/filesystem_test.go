@@ -28,6 +28,9 @@ import (
 )
 
 func TestFileSystem_Current(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	testCases := []string{
 		"./testdata/test1",
 		"./testdata/test2",
@@ -36,14 +39,22 @@ func TestFileSystem_Current(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
 			subject := persist.FileSystem{Root: tc}
-			id, err := subject.Current(context.Background())
+			resolver := persist.RefSpecResolver{
+				Loader:        persist.DefaultLoader{Fetcher: subject},
+				Brancher:      subject,
+				Fetcher:       subject,
+				CurrentReader: subject,
+			}
+			head, err := subject.Current(context.Background())
 			if err != nil {
 				t.Error(err)
 			}
 
-			for i := range id {
-				if id[i] != 0 {
-					t.Logf("got: %X want: %X", id, envelopes.ID{})
+			headId, err := resolver.Resolve(ctx, head)
+
+			for i := range headId {
+				if headId[i] != 0 {
+					t.Logf("\ngot:  %X\nwant: %X", headId, envelopes.ID{})
 					t.Fail()
 					break
 				}
@@ -80,22 +91,34 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	writer := persist.DefaultWriter{
 		Stasher: subject,
 	}
+	resolver := persist.RefSpecResolver{
+		Loader:        persist.DefaultLoader{Fetcher: subject},
+		Brancher:      subject,
+		Fetcher:       subject,
+		CurrentReader: subject,
+	}
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			err := writer.Write(ctx, &tc)
+			err := writer.Write(ctx, tc)
 			if err != nil {
 				t.Error(err)
 				return
 			}
 
-			err = subject.WriteCurrent(ctx, &tc)
+			err = subject.WriteCurrent(ctx, tc)
 			if err != nil {
 				t.Error(err)
 				return
 			}
 
-			got, err := subject.Current(ctx)
+			refSpec, err := subject.Current(ctx)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			got, err := resolver.Resolve(ctx, refSpec)
 			if err != nil {
 				t.Error(err)
 				return
@@ -235,6 +258,12 @@ func TestFileSystem_Clone(t *testing.T) {
 	original := persist.FileSystem{
 		Root: path.Join(".", "testdata", "test3", ".baronial"),
 	}
+	resolver := persist.RefSpecResolver{
+		Loader:        persist.DefaultLoader{Fetcher: original},
+		Brancher:      original,
+		Fetcher:       original,
+		CurrentReader: original,
+	}
 
 	outputLoc, err := ioutil.TempDir("", "envelopesCloneTest")
 	if err != nil {
@@ -253,7 +282,13 @@ func TestFileSystem_Clone(t *testing.T) {
 		return
 	}
 
-	err = subject.Clone(ctx, head, persist.DefaultBranch, persist.DefaultLoader{Fetcher: original})
+	headId, err := resolver.Resolve(ctx, head)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = subject.Clone(ctx, headId, persist.DefaultBranch, persist.DefaultLoader{Fetcher: original})
 	if err != nil {
 		t.Error(err)
 		return
@@ -314,6 +349,12 @@ func testFileSystem_WriteCurrentFromScratch(ctx context.Context) func(t *testing
 		subject := persist.FileSystem{
 			Root: tempDir,
 		}
+		resolver := persist.RefSpecResolver{
+			Loader:        persist.DefaultLoader{Fetcher: subject},
+			Brancher:      subject,
+			Fetcher:       subject,
+			CurrentReader: subject,
+		}
 
 		firstTransaction := envelopes.Transaction{
 			Merchant: "Aer Lingus",
@@ -333,13 +374,13 @@ func testFileSystem_WriteCurrentFromScratch(ctx context.Context) func(t *testing
 			return
 		}
 
-		err = subject.WriteCurrent(ctx, &firstTransaction)
+		err = subject.WriteCurrent(ctx, firstTransaction)
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		actualRef, err := subject.CurrentRef(ctx)
+		actualRef, err := subject.Current(ctx)
 		if err != nil {
 			t.Error(err)
 			return
@@ -356,8 +397,14 @@ func testFileSystem_WriteCurrentFromScratch(ctx context.Context) func(t *testing
 			return
 		}
 
-		if !got.Equal(want) {
-			t.Logf("Unexpected Transaction ID!\n\twant:\t%q\n\tgot: \t%q", got.String(), want.String())
+		gotId, err := resolver.Resolve(ctx, got)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if !gotId.Equal(want) {
+			t.Logf("Unexpected Transaction ID!\n\twant:\t%q\n\tgot: \t%q", gotId.String(), want.String())
 			t.Fail()
 		}
 	}
@@ -370,7 +417,18 @@ func BenchmarkFileSystem_CloneSmall(b *testing.B) {
 	original := persist.FileSystem{
 		Root: path.Join(".", "testdata", "test3", ".baronial"),
 	}
+	resolver := persist.RefSpecResolver{
+		Loader:        persist.DefaultLoader{Fetcher: original},
+		Brancher:      original,
+		Fetcher:       original,
+		CurrentReader: original,
+	}
 	head, err := original.Current(ctx)
+	if err != nil {
+		b.Error(err)
+		return
+	}
+	headId, err := resolver.Resolve(ctx, head)
 	if err != nil {
 		b.Error(err)
 		return
@@ -390,7 +448,7 @@ func BenchmarkFileSystem_CloneSmall(b *testing.B) {
 		}
 
 		b.StartTimer()
-		err = subject.Clone(ctx, head, persist.DefaultBranch, persist.DefaultLoader{Fetcher: original})
+		err = subject.Clone(ctx, headId, persist.DefaultBranch, persist.DefaultLoader{Fetcher: original})
 		if err != nil {
 			b.Error(err)
 			return
