@@ -20,6 +20,18 @@ func ExampleBalance_String() {
 	// USD 99.99
 }
 
+func ExampleBalance_Normalize() {
+
+}
+
+func ExampleBalance_Scale() {
+	subject := envelopes.Balance{"USD": big.NewRat(100, 1)}
+	subject = subject.Scale(.5)
+	fmt.Println(subject)
+	// Output:
+	// USD 50.00
+}
+
 func TestBalance_String(t *testing.T) {
 	testCases := []struct {
 		envelopes.Balance
