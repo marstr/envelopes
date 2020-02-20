@@ -23,5 +23,4 @@ import (
 // Fetcher can grab the marshaled form of an Object given an ID.
 type Fetcher interface {
 	Fetch(context.Context, envelopes.ID) ([]byte, error)
-	Current(context.Context) (envelopes.ID, error)
 }

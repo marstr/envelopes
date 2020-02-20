@@ -37,11 +37,11 @@ const objectsDir = "objects"
 // FileSystem allows an easy mechanism for reading and writing Budget related
 // objects to and from a hard drive.
 type FileSystem struct {
-	Root string
+	Root              string
 	CreatePermissions os.FileMode
 }
 
-func (fs FileSystem) getCreatePermissions() os.FileMode	{
+func (fs FileSystem) getCreatePermissions() os.FileMode {
 	if fs.CreatePermissions == 0 {
 		return 0770
 	}
@@ -67,7 +67,7 @@ func (fs FileSystem) Current(ctx context.Context) (result envelopes.ID, err erro
 	return
 }
 
-func (fs FileSystem) CurrentRef(ctx context.Context) (result RefSpec, err error) {
+func (fs FileSystem) CurrentRef(_ context.Context) (result RefSpec, err error) {
 	p, err := fs.CurrentPath()
 	if err != nil {
 		return
@@ -86,7 +86,7 @@ func (fs FileSystem) CurrentRef(ctx context.Context) (result RefSpec, err error)
 // WriteCurrent makes note of the most recent ID of transaction. If current.txt currently contains a branch, this
 // operation defers to updating the branch file. Should the contents be anything else, the contents of current.txt are
 // replaced by the ID of the current Transaction.
-func (fs FileSystem) WriteCurrent(ctx context.Context, current *envelopes.Transaction) error {
+func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transaction) error {
 	p, err := fs.CurrentPath()
 	if err != nil {
 		return err
