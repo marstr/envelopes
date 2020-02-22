@@ -50,14 +50,14 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 						},
 					},
 				},
-				Expected: "46426bfb73ea0c36c37e86a5fab064e1b686ed53",
+				Expected: "bf854644682bc016a8b34a9c4f2589a062bab1b6",
 			},
 		}
 
 		for _, tc := range testCases {
 			got := tc.Subject.ID().String()
 			if got != tc.Expected {
-				t.Logf("got:  %q\nwant: %q", got, tc.Expected)
+				t.Logf("\ngot:  %q\nwant: %q", got, tc.Expected)
 				t.Fail()
 			}
 		}
