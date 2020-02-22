@@ -165,7 +165,7 @@ func getTestStateIDLock(ctx context.Context) func(*testing.T) {
 						},
 					},
 				},
-				Expected: "3e2d4829a6793c9952478d85ea0f022150f927ce",
+				Expected: "069e189a323cefbd5cf33c3bd42325cb2d1dea39",
 			},
 		}
 
@@ -173,7 +173,7 @@ func getTestStateIDLock(ctx context.Context) func(*testing.T) {
 			got := tc.Subject.ID().String()
 
 			if got != tc.Expected {
-				t.Logf("got:  %q\nwant: %q", got, tc.Expected)
+				t.Logf("\ngot:  %q\nwant: %q", got, tc.Expected)
 				t.Fail()
 			}
 		}

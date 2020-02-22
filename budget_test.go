@@ -114,7 +114,7 @@ func TestBudget_ID_Lock(t *testing.T) {
 	// it is indicative that these changes have broken all existing repositories and that a migration will need to
 	testCases := map[string]envelopes.Budget{
 		"788245b186cad464b7aa1e8e359eb19fbcf7b6e4": {},
-		"33e0af30c719e4d42b60bda9070da638d86edeaf": {
+		"d470f9ef284484fd7afd94cdb98143ea67222364": {
 			Balance: 1098,
 			Children: map[string]*envelopes.Budget{
 				"grocery": {
