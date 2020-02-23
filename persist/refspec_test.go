@@ -60,7 +60,6 @@ func TestRefSpecResolver_Resolve(t *testing.T) {
 			Fetcher: fs,
 		},
 		Brancher:      fs,
-		Fetcher:       fs,
 		CurrentReader: fs,
 	}
 

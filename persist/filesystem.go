@@ -108,7 +108,6 @@ func (fs FileSystem) SetCurrent(ctx context.Context, current RefSpec) error {
 		resolver := RefSpecResolver{
 			Loader:   DefaultLoader{Fetcher: fs},
 			Brancher: fs,
-			Fetcher:  fs,
 		}
 
 		id, err := resolver.Resolve(ctx, current)
