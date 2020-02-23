@@ -42,7 +42,6 @@ func TestFileSystem_Current(t *testing.T) {
 			resolver := persist.RefSpecResolver{
 				Loader:        persist.DefaultLoader{Fetcher: subject},
 				Brancher:      subject,
-				Fetcher:       subject,
 				CurrentReader: subject,
 			}
 			head, err := subject.Current(context.Background())
@@ -94,7 +93,6 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	resolver := persist.RefSpecResolver{
 		Loader:        persist.DefaultLoader{Fetcher: subject},
 		Brancher:      subject,
-		Fetcher:       subject,
 		CurrentReader: subject,
 	}
 
@@ -261,7 +259,6 @@ func TestFileSystem_Clone(t *testing.T) {
 	resolver := persist.RefSpecResolver{
 		Loader:        persist.DefaultLoader{Fetcher: original},
 		Brancher:      original,
-		Fetcher:       original,
 		CurrentReader: original,
 	}
 
@@ -352,7 +349,6 @@ func testFileSystem_WriteCurrentFromScratch(ctx context.Context) func(t *testing
 		resolver := persist.RefSpecResolver{
 			Loader:        persist.DefaultLoader{Fetcher: subject},
 			Brancher:      subject,
-			Fetcher:       subject,
 			CurrentReader: subject,
 		}
 
@@ -420,7 +416,6 @@ func BenchmarkFileSystem_CloneSmall(b *testing.B) {
 	resolver := persist.RefSpecResolver{
 		Loader:        persist.DefaultLoader{Fetcher: original},
 		Brancher:      original,
-		Fetcher:       original,
 		CurrentReader: original,
 	}
 	head, err := original.Current(ctx)

@@ -36,7 +36,6 @@ type (
 	RefSpecResolver struct {
 		Loader
 		Brancher
-		Fetcher
 		CurrentReader
 	}
 )
