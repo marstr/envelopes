@@ -18,6 +18,7 @@ import (
 type AssetType string
 
 const (
+	// DefaultAsset is the label that will be used when parsing a balance given as just a number i.e. with no label.
 	DefaultAsset AssetType = "USD"
 )
 
@@ -38,6 +39,9 @@ type Balance map[AssetType]*big.Rat
 
 var zero = big.NewRat(0, 100)
 
+// Add combines two balances, summing any shared components, and including unmatched components without further
+// processing.
+// Returns a new instance of a Balance, without modifying the two original balances.
 func (b Balance) Add(other Balance) Balance {
 	sum := make(Balance, len(b))
 
@@ -66,6 +70,8 @@ func (b Balance) Add(other Balance) Balance {
 	return sum
 }
 
+// Sub combines two balances, however all of the parameters magnitudes are treated as if they are inverted.
+// See Add for more behavior details.
 func (b Balance) Sub(other Balance) Balance {
 	sum := make(Balance, len(b))
 
@@ -203,6 +209,9 @@ var (
 	balancePattern = regexp.MustCompile(`(?m:^\s*(?P<id>[^\s\-\d]+?)??\s*(?P<magnitude>-?(?:[\d]*|(?:\d{1,3}(?:,\d{3})+))(?:\.\d+)?)$)`)
 )
 
+// ParseBalanceWithDefault extracts information about a balance from text. Any line items that do not have a label are
+// treated as the specified default asset type.
+// Lines with the same asset type are summed together.
 func ParseBalanceWithDefault(raw []byte, def AssetType) (Balance, error) {
 	var created Balance
 

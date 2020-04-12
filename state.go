@@ -40,6 +40,8 @@ func (s State) ID() (id ID) {
 	return sha1.Sum(marshaled)
 }
 
+// Equal determines whether or not each component of two States have the same balances. If any components are not
+// shared, the answer is false.
 func (s State) Equal(other State) bool {
 	result := s.Subtract(other)
 	if len(result.Accounts) > 0 {
