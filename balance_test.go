@@ -9,19 +9,66 @@ import (
 )
 
 func ExampleParseBalance() {
-	fmt.Println(envelopes.ParseBalance([]byte("$99.88")))
+	fmt.Println(envelopes.ParseBalance([]byte("USD 99.88")))
 	// Output:
-	// USD 99.88 <nil>
+	// USD 99.880 <nil>
 }
 
 func ExampleBalance_String() {
 	fmt.Println(envelopes.Balance{"USD": big.NewRat(9999, 100)})
 	// Output:
-	// USD 99.99
+	// USD 99.990
 }
 
-func ExampleBalance_Normalize() {
+func ExampleBalance_Equal() {
+	a := envelopes.Balance{"USD": big.NewRat(0, 100)}
+	b := envelopes.Balance{"USD": big.NewRat(0, 1000)}
+	c := envelopes.Balance{}
+	d := envelopes.Balance{"$": big.NewRat(0, 100)}
+	e := envelopes.Balance{"EUR": big.NewRat(1095, 100)}
+	f := envelopes.Balance{"USD": big.NewRat(1095, 100)}
+	g := envelopes.Balance{"$": big.NewRat(1095, 100)}
 
+	fmt.Println(a.Equal(b)) // True
+	fmt.Println(a.Equal(c)) // True
+	fmt.Println(a.Equal(d)) // True
+	fmt.Println(a.Equal(e)) // False
+	fmt.Println(a.Equal(f)) // False
+	fmt.Println(a.Equal(g)) // False
+	fmt.Println(b.Equal(c)) // True
+	fmt.Println(b.Equal(d)) // True
+	fmt.Println(b.Equal(e)) // False
+	fmt.Println(b.Equal(f)) // False
+	fmt.Println(b.Equal(g)) // False
+	fmt.Println(c.Equal(d)) // True
+	fmt.Println(c.Equal(e)) // False
+	fmt.Println(d.Equal(e)) // False
+	fmt.Println(d.Equal(f)) // False
+	fmt.Println(d.Equal(g)) // False
+	fmt.Println(e.Equal(f)) // False
+	fmt.Println(e.Equal(g)) // False
+	fmt.Println(f.Equal(g)) // False
+
+	// Output:
+	// true
+	// true
+	// true
+	// false
+	// false
+	// false
+	// true
+	// true
+	// false
+	// false
+	// false
+	// true
+	// false
+	// false
+	// false
+	// false
+	// false
+	// false
+	// false
 }
 
 func ExampleBalance_Scale() {
@@ -29,7 +76,7 @@ func ExampleBalance_Scale() {
 	subject = subject.Scale(.5)
 	fmt.Println(subject)
 	// Output:
-	// USD 50.00
+	// USD 50.000
 }
 
 func TestBalance_String(t *testing.T) {
@@ -37,15 +84,15 @@ func TestBalance_String(t *testing.T) {
 		envelopes.Balance
 		expected string
 	}{
-		{envelopes.Balance{"USD": big.NewRat(0, 100)}, "USD 0.00"},
-		{envelopes.Balance{"USD": big.NewRat(1, 100)}, "USD 0.01"},
-		{envelopes.Balance{"USD": big.NewRat(-1, 100)}, "USD -0.01"},
-		{envelopes.Balance{"USD": big.NewRat(1000, 1)}, "USD 1000.00"},
+		{envelopes.Balance{"USD": big.NewRat(0, 100)}, "USD 0.000"},
+		{envelopes.Balance{"USD": big.NewRat(1, 100)}, "USD 0.010"},
+		{envelopes.Balance{"USD": big.NewRat(-1, 100)}, "USD -0.010"},
+		{envelopes.Balance{"USD": big.NewRat(1000, 1)}, "USD 1000.000"},
 	}
 
 	for _, tc := range testCases {
 		if got := tc.Balance.String(); got != tc.expected {
-			t.Logf("got:\n\t%qwant:\n\t%q", got, tc.expected)
+			t.Logf("\ngot:  %q\nwant: %q", got, tc.expected)
 			t.Fail()
 		}
 	}
@@ -79,29 +126,30 @@ func testParseBalance_scalar(t *testing.T) {
 		string
 		expected envelopes.Balance
 	}{
-		{"$0.00", envelopes.Balance{"USD": big.NewRat(0, 1)}},
+		{"USD 0.00", envelopes.Balance{"USD": big.NewRat(0, 1)}},
 		{"0", envelopes.Balance{"USD": big.NewRat(0, 1)}},
-		{"$0.01", envelopes.Balance{"USD": big.NewRat(1, 100)}},
+		{"USD 0.01", envelopes.Balance{"USD": big.NewRat(1, 100)}},
 		{"0.01", envelopes.Balance{"USD": big.NewRat(1, 100)}},
 		{".01", envelopes.Balance{"USD": big.NewRat(1, 100)}},
-		{"$-0.01", envelopes.Balance{"USD": big.NewRat(-1, 100)}},
+		{"USD -0.01", envelopes.Balance{"USD": big.NewRat(-1, 100)}},
 		{"-0.01", envelopes.Balance{"USD": big.NewRat(-1, 100)}},
-		{"$1", envelopes.Balance{"USD": big.NewRat(1, 1)}},
+		{"USD 1", envelopes.Balance{"USD": big.NewRat(1, 1)}},
 		{"1", envelopes.Balance{"USD": big.NewRat(1, 1)}},
-		{"$-1", envelopes.Balance{"USD": big.NewRat(-1, 1)}},
-		{"$0.001", envelopes.Balance{"USD": big.NewRat(1, 1000)}},
-		{"$0.005", envelopes.Balance{"USD": big.NewRat(5, 1000)}},
-		{"$1000000", envelopes.Balance{"USD": big.NewRat(1000000, 1)}},
-		{"$1,000,000", envelopes.Balance{"USD": big.NewRat(1000000, 1)}},
-		{"$1,000,000.00", envelopes.Balance{"USD": big.NewRat(1000000, 1)}},
+		{"USD -1", envelopes.Balance{"USD": big.NewRat(-1, 1)}},
+		{"USD 0.001", envelopes.Balance{"USD": big.NewRat(1, 1000)}},
+		{"USD 0.005", envelopes.Balance{"USD": big.NewRat(5, 1000)}},
+		{"USD 1000000", envelopes.Balance{"USD": big.NewRat(1000000, 1)}},
+		{"USD 1,000,000", envelopes.Balance{"USD": big.NewRat(1000000, 1)}},
+		{"USD 1,000,000.00", envelopes.Balance{"USD": big.NewRat(1000000, 1)}},
 		{"1,000", envelopes.Balance{"USD": big.NewRat(1000, 1)}},
 		{"988.01", envelopes.Balance{"USD": big.NewRat(98801, 100)}},
 		{"988", envelopes.Balance{"USD": big.NewRat(988, 1)}},
-		{"$5", envelopes.Balance{"USD": big.NewRat(5, 1)}},
-		{"$-5", envelopes.Balance{"USD": big.NewRat(-5, 1)}},
-		{"$0800", envelopes.Balance{"USD": big.NewRat(800, 1)}},
-		{" $10.98\n", envelopes.Balance{"USD": big.NewRat(1098, 100)}},
-		{"$10.98\n", envelopes.Balance{"USD": big.NewRat(1098, 100)}},
+		{"USD 5", envelopes.Balance{"USD": big.NewRat(5, 1)}},
+		{"USD -5", envelopes.Balance{"USD": big.NewRat(-5, 1)}},
+		{"USD 0800", envelopes.Balance{"USD": big.NewRat(800, 1)}},
+		{" USD 10.98\n", envelopes.Balance{"USD": big.NewRat(1098, 100)}},
+		{"USD 10.98\n", envelopes.Balance{"USD": big.NewRat(1098, 100)}},
+		{"FZROX 590.319", envelopes.Balance{"FZROX": big.NewRat(590319, 1000)}},
 	}
 
 	for _, tc := range testCases {
@@ -109,7 +157,7 @@ func testParseBalance_scalar(t *testing.T) {
 			t.Errorf("input: %q -> %v", tc.string, err)
 			continue
 		} else if !got.Equal(tc.expected) {
-			t.Logf("input: %q got: %s want: %s", tc.string, got, tc.expected)
+			t.Logf("\ninput: %q\ngot:   %s\nwant:  %s", tc.string, got, tc.expected)
 			t.Fail()
 		}
 	}

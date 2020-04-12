@@ -32,7 +32,7 @@ func ExampleBudget_RecursiveBalance() {
 	}
 
 	fmt.Println(subject.RecursiveBalance())
-	// Output: USD 17.29
+	// Output: USD 17.290
 }
 
 func TestBudget_Equal(t *testing.T) {
@@ -115,7 +115,7 @@ func TestBudget_ID_Lock(t *testing.T) {
 	// it is indicative that these changes have broken all existing repositories and that a migration will need to
 	testCases := map[string]envelopes.Budget{
 		"788245b186cad464b7aa1e8e359eb19fbcf7b6e4": {},
-		"33e0af30c719e4d42b60bda9070da638d86edeaf": {
+		"17c8c20300bdd02c076cc5cd3b67139a1e203713": {
 			Balance: envelopes.Balance{"USD": big.NewRat(1098, 100)},
 			Children: map[string]*envelopes.Budget{
 				"grocery": {

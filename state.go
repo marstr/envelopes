@@ -46,10 +46,11 @@ func (s State) Equal(other State) bool {
 		return false
 	}
 
-	if result.Budget.Balance != 0 {
-		return false
+	if result.Budget == nil {
+		return true
 	}
 
+	return result.Budget.Equal(Budget{})
 }
 
 // MarshalText computes a deterministic string that uniquely represents this State.

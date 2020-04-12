@@ -175,13 +175,13 @@ func TestState_Subtract(t *testing.T) {
 			Subject: envelopes.State{
 				Accounts: envelopes.Accounts{
 					"checking": envelopes.Balance{"USD": big.NewRat(150, 1)},
-					"savings": envelopes.Balance{"USD": big.NewRat(10000, 1)},
+					"savings":  envelopes.Balance{"USD": big.NewRat(10000, 1)},
 				},
 			},
 			Other: envelopes.State{
 				Accounts: envelopes.Accounts{
 					"checking": envelopes.Balance{"USD": big.NewRat(100, 1)},
-					"savings": envelopes.Balance{"USD": big.NewRat(10000, 1)},
+					"savings":  envelopes.Balance{"USD": big.NewRat(10000, 1)},
 				},
 			},
 			Expected: envelopes.Impact{
@@ -277,7 +277,7 @@ func TestState_Subtract(t *testing.T) {
 		want := envelopes.State(tc.Expected)
 		got := envelopes.State(result)
 
-		if got.String() != want.String() {
+		if !got.Equal(want) {
 			t.Fail()
 			gotRawMarshaled, err := got.MarshalText()
 			if err != nil {

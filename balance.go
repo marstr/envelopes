@@ -36,6 +36,8 @@ func (e ErrUnknownAsset) Error() string {
 // Balance captures an amount of USD pennies.
 type Balance map[AssetType]*big.Rat
 
+var zero = big.NewRat(0, 100)
+
 func (b Balance) Add(other Balance) Balance {
 	sum := make(Balance, len(b))
 
@@ -95,16 +97,37 @@ func (b Balance) Sub(other Balance) Balance {
 // Equal determines whether two balances are compromised of the same mix of assets with the same magnitude assigned to
 // each.
 func (b Balance) Equal(other Balance) bool {
-	if len(b) != len(other) {
+	bNonZero := b.nonZeroBalances()
+	if bNonZero == 0 && other == nil {
+		return true
+	} else if other == nil {
+		return false
+	}
+
+	if bNonZero != other.nonZeroBalances() {
 		return false
 	}
 
 	for id, mag := range b {
+		if mag.Cmp(zero) == 0 {
+			continue
+		}
+
 		if otherMag, ok := other[id]; !ok || mag.Cmp(otherMag) != 0 {
 			return false
 		}
 	}
 	return true
+}
+
+func (b Balance) nonZeroBalances() uint {
+	count := uint(0)
+	for _, mag := range b {
+		if mag.Cmp(zero) != 0 {
+			count++
+		}
+	}
+	return count
 }
 
 // Negate inverts the sign of each entry in a balance.
