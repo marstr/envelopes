@@ -20,7 +20,18 @@ import (
 	"github.com/marstr/envelopes"
 )
 
-// Fetcher can grab the marshaled form of an Object given an ID.
-type Fetcher interface {
-	Fetch(context.Context, envelopes.ID) ([]byte, error)
+const (
+	DefaultBranch = "master"
+)
+
+// Brancher defines the requirements for a type to be able to provide the functionality
+// required to manage branches.
+type Brancher interface {
+	ReadBranch(ctx context.Context, name string) (envelopes.ID, error)
+	WriteBranch(ctx context.Context, name string, id envelopes.ID) error
+}
+
+// BranchLister are able to find all branches is a repository.
+type BranchLister interface {
+	ListBranches(ctx context.Context) (<-chan string, error)
 }

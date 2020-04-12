@@ -89,7 +89,7 @@ func (b Budget) MarshalText() ([]byte, error) {
 
 	for _, childName := range childNames {
 		childID := b.Children[childName].ID()
-		_, err = fmt.Fprintf(identityBuilder, "child %s %x\n", childName, childID)
+		_, err = fmt.Fprintf(identityBuilder, "\nchild %s %s", childName, childID)
 		if err != nil {
 			return nil, err
 		}

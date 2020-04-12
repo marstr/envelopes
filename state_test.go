@@ -16,6 +16,7 @@ package envelopes_test
 
 import (
 	"context"
+	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
 	"io/ioutil"
 	"math/big"
@@ -23,7 +24,6 @@ import (
 	"testing"
 	"time"
 )
-import "github.com/marstr/envelopes"
 
 func TestState_ID(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
@@ -31,6 +31,7 @@ func TestState_ID(t *testing.T) {
 
 	t.Run("deterministic", getTestStateIDDeterministic(ctx))
 	t.Run("roundtrip", getTestStateIDRoundtrip(ctx))
+	t.Run("lock", getTestStateIDLock(ctx))
 }
 
 func getTestStateIDDeterministic(ctx context.Context) func(*testing.T) {
@@ -139,6 +140,41 @@ func getTestStateIDRoundtrip(ctx context.Context) func(*testing.T) {
 
 			if got := rehydrated.ID(); !got.Equal(want) {
 				t.Logf("\ngot: \t%s\nwant:\t%s", got, want)
+				t.Fail()
+			}
+		}
+	}
+}
+
+func getTestStateIDLock(ctx context.Context) func(*testing.T) {
+	return func(t *testing.T) {
+		testCases := []struct {
+			Subject  envelopes.State
+			Expected string
+		}{
+			{
+				Subject:  envelopes.State{},
+				Expected: "94ed54bf9f02dff56f806a2b6b853124e3608596",
+			},
+			{
+				Subject: envelopes.State{
+					Budget: &envelopes.Budget{
+						Balance: envelopes.Balance{"USD": big.NewRat(4507, 100)},
+						Children: map[string]*envelopes.Budget{
+							"grocery":     {Balance: envelopes.Balance{"USD": big.NewRat(9813, 100)}},
+							"restaurants": {Balance: envelopes.Balance{"USD": big.NewRat(10099, 100)}},
+						},
+					},
+				},
+				Expected: "18bfde2be25467512ad843ee8fccc707b5f036d7",
+			},
+		}
+
+		for _, tc := range testCases {
+			got := tc.Subject.ID().String()
+
+			if got != tc.Expected {
+				t.Logf("\ngot:  %q\nwant: %q", got, tc.Expected)
 				t.Fail()
 			}
 		}
