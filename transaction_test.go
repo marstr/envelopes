@@ -28,15 +28,15 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 		}{
 			{
 				Subject:  envelopes.Transaction{},
-				Expected: "30771be1c8910cffb0daf51c838ffddb82893612",
+				Expected: "9273fa1765fd735527196071b244bbafa5706ddf",
 			},
 			{
 				Subject: envelopes.Transaction{
-					Amount:   envelopes.Balance{"USD": big.NewRat(9807, 100)},
-					Merchant: "Target",
-					Time:     authorTime,
-					Comment:  "Shoes",
-					Parent:   envelopes.Transaction{}.ID(),
+					Amount:     envelopes.Balance{"USD": big.NewRat(9807, 100)},
+					Merchant:   "Target",
+					PostedTime: authorTime,
+					Comment:    "Shoes",
+					Parent:     envelopes.Transaction{}.ID(),
 					State: &envelopes.State{
 						Budget: &envelopes.Budget{
 							Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
@@ -51,7 +51,7 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 						},
 					},
 				},
-				Expected: "86329ddd2bec67ade736bd8c823fa644ac6b1afd",
+				Expected: "c8a29d9bc845908238caf17ee0629e4bdeabb2ef",
 			},
 		}
 

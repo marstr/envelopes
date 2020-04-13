@@ -18,8 +18,8 @@ import (
 	"context"
 	"fmt"
 
-	"math/big"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"path"
 	"testing"
@@ -355,9 +355,9 @@ func testFileSystem_WriteCurrentFromScratch(ctx context.Context) func(t *testing
 		}
 
 		firstTransaction := envelopes.Transaction{
-			Merchant: "Aer Lingus",
-			Time:     time.Now(),
-			Comment:  "foo",
+			Merchant:   "Aer Lingus",
+			ActualTime: time.Now(),
+			Comment:    "foo",
 		}
 
 		err = subject.WriteBranch(ctx, persist.DefaultBranch, firstTransaction.ID())

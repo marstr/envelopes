@@ -23,12 +23,14 @@ import (
 
 // Transaction represents one exchange of funds and how it impacted budgets.
 type Transaction struct {
-	State    *State
-	Time     time.Time
-	Amount   Balance
-	Merchant string
-	Comment  string
-	Parent   ID
+	State       *State
+	ActualTime  time.Time
+	PostedTime  time.Time
+	EnteredTime time.Time
+	Amount      Balance
+	Merchant    string
+	Comment     string
+	Parent      ID
 }
 
 // ID fetches a SHA1 hash of this object that will uniquely identify it.
@@ -51,9 +53,11 @@ func (t Transaction) String() string {
 
 // MarshalText computes a string which uniquely represents this Transaction.
 func (t Transaction) MarshalText() ([]byte, error) {
+	const timeFormat = time.RFC3339
 	identityBuilder := identityBuilders.Get().(*bytes.Buffer)
 	identityBuilder.Reset()
 	defer identityBuilders.Put(identityBuilder)
+	defaultTime := time.Time{}
 
 	if t.State == nil {
 		t.State = &State{}
@@ -69,9 +73,21 @@ func (t Transaction) MarshalText() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	_, err = fmt.Fprintf(identityBuilder, "time %s\n", t.Time.Format(time.RFC3339))
+	_, err = fmt.Fprintf(identityBuilder, "posted time %s\n", t.PostedTime.Format(timeFormat))
 	if err != nil {
 		return nil, err
+	}
+	if t.ActualTime != defaultTime {
+		_, err = fmt.Fprintf(identityBuilder, "actual time %s\n", t.ActualTime.Format(timeFormat))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if t.EnteredTime != defaultTime {
+		_, err = fmt.Fprintf(identityBuilder, "entered time %s\n", t.EnteredTime.Format(timeFormat))
+		if err != nil {
+			return nil, err
+		}
 	}
 	_, err = fmt.Fprintf(identityBuilder, "amount %s\n", t.Amount)
 	if err != nil {

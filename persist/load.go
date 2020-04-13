@@ -95,7 +95,9 @@ func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, t
 	toLoad.State = &state
 	toLoad.Comment = unmarshaled.Comment
 	toLoad.Merchant = unmarshaled.Merchant
-	toLoad.Time = unmarshaled.Time
+	toLoad.ActualTime = unmarshaled.ActualTime
+	toLoad.EnteredTime = unmarshaled.EnteredTime
+	toLoad.PostedTime = unmarshaled.PostedTime
 	toLoad.Parent = unmarshaled.Parent
 	toLoad.Amount = unmarshaled.Amount
 

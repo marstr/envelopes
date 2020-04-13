@@ -81,7 +81,9 @@ func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.
 	toMarshal.State = subject.State.ID()
 	toMarshal.Comment = subject.Comment
 	toMarshal.Merchant = subject.Merchant
-	toMarshal.Time = subject.Time
+	toMarshal.ActualTime = subject.ActualTime
+	toMarshal.EnteredTime = subject.EnteredTime
+	toMarshal.PostedTime = subject.PostedTime
 
 	err := dw.Write(ctx, subject.State)
 	if err != nil {

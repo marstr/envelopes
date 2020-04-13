@@ -14,12 +14,14 @@ type (
 
 	// Transaction is a copy of envelopes.Transaction for ORM purposes.
 	Transaction struct {
-		State    envelopes.ID
-		Time     time.Time
-		Amount   envelopes.Balance
-		Merchant string
-		Comment  string
-		Parent   envelopes.ID
+		State       envelopes.ID
+		PostedTime  time.Time
+		ActualTime  time.Time
+		EnteredTime time.Time
+		Amount      envelopes.Balance
+		Merchant    string
+		Comment     string
+		Parent      envelopes.ID
 	}
 
 	// State is a copy of envelopes.State for ORM purposes.
