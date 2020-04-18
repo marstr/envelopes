@@ -21,6 +21,7 @@ type (
 		Amount      envelopes.Balance
 		Merchant    string
 		Comment     string
+		Committer   User
 		Parent      envelopes.ID
 	}
 
@@ -28,5 +29,11 @@ type (
 	State struct {
 		Budget   envelopes.ID
 		Accounts envelopes.ID
+	}
+
+	// User is a copy of envelopes.User for ORM purposes.
+	User struct {
+		FullName string
+		Email    string
 	}
 )

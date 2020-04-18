@@ -358,6 +358,10 @@ func testFileSystem_WriteCurrentFromScratch(ctx context.Context) func(t *testing
 			Merchant:   "Aer Lingus",
 			ActualTime: time.Now(),
 			Comment:    "foo",
+			Committer: envelopes.User{
+				FullName: "Martin Strobel",
+				Email:    "martin.strobel@live.com",
+			},
 		}
 
 		err = subject.WriteBranch(ctx, persist.DefaultBranch, firstTransaction.ID())

@@ -53,9 +53,45 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 				},
 				Expected: "c8a29d9bc845908238caf17ee0629e4bdeabb2ef",
 			},
+			{
+				Subject: envelopes.Transaction{
+					State: &envelopes.State{
+						Budget: &envelopes.Budget{
+							Balance: envelopes.Balance{"USD": big.NewRat(10005, 100)},
+							Children: map[string]*envelopes.Budget{
+								"grocery": {
+									Balance: envelopes.Balance{"USD": big.NewRat(5000, 100)},
+								},
+							},
+						},
+						Accounts: envelopes.Accounts{
+							"checking": envelopes.Balance{},
+						},
+					},
+					ActualTime:  authorTime.Add(-40 * time.Minute),
+					EnteredTime: authorTime,
+					Amount:      envelopes.Balance{"LAT": big.NewRat(10, 1)},
+					Merchant:    "Quark",
+					Committer: envelopes.User{
+						FullName: "James Strobel",
+						Email:    "jamesthebrother@yahoo.org", // Need I point out this is not a real email?
+					},
+					Comment: "Undisclosed Ferengi wares... totally above board",
+					Parent:  envelopes.Transaction{ActualTime: authorTime.Add(-2 * time.Hour)}.ID(),
+				},
+				Expected: "e93c98983c4adb37a4a5a0517de9a627ef23b868",
+			},
 		}
 
 		for _, tc := range testCases {
+			select {
+			case <-ctx.Done():
+				t.Error(ctx.Err())
+				return
+			default:
+				// Intentionally Left Blank
+			}
+
 			got := tc.Subject.ID().String()
 			if got != tc.Expected {
 				t.Logf("\ngot:  %q\nwant: %q", got, tc.Expected)

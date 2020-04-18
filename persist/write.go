@@ -84,6 +84,8 @@ func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.
 	toMarshal.ActualTime = subject.ActualTime
 	toMarshal.EnteredTime = subject.EnteredTime
 	toMarshal.PostedTime = subject.PostedTime
+	toMarshal.Committer.FullName = subject.Committer.FullName
+	toMarshal.Committer.Email = subject.Committer.Email
 
 	err := dw.Write(ctx, subject.State)
 	if err != nil {

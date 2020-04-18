@@ -29,6 +29,7 @@ type Transaction struct {
 	EnteredTime time.Time
 	Amount      Balance
 	Merchant    string
+	Committer   User
 	Comment     string
 	Parent      ID
 }
@@ -96,6 +97,12 @@ func (t Transaction) MarshalText() ([]byte, error) {
 	_, err = fmt.Fprintf(identityBuilder, "merchant %s\n", t.Merchant)
 	if err != nil {
 		return nil, err
+	}
+	if (t.Committer != User{}) {
+		_, err = fmt.Fprintf(identityBuilder, "committer %s\n", t.Committer)
+		if err != nil {
+			return nil, err
+		}
 	}
 	_, err = fmt.Fprintf(identityBuilder, "comment %s\n", t.Comment)
 	if err != nil {

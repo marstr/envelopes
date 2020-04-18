@@ -100,6 +100,8 @@ func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, t
 	toLoad.PostedTime = unmarshaled.PostedTime
 	toLoad.Parent = unmarshaled.Parent
 	toLoad.Amount = unmarshaled.Amount
+	toLoad.Committer.FullName = unmarshaled.Committer.FullName
+	toLoad.Committer.Email = unmarshaled.Committer.Email
 
 	return nil
 }
