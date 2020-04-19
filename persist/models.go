@@ -17,33 +17,33 @@ import (
 type (
 	// Budget is copy of envelopes.Budget for ORM purposes.
 	Budget struct {
-		Balance  Balance
-		Children map[string]envelopes.ID
+		Balance  Balance                 `json:"balance"`
+		Children map[string]envelopes.ID `json:"children"`
 	}
 
 	// Transaction is a copy of envelopes.Transaction for ORM purposes.
 	Transaction struct {
-		State       envelopes.ID
-		PostedTime  time.Time
-		ActualTime  time.Time
-		EnteredTime time.Time
-		Amount      Balance
-		Merchant    string
-		Comment     string
-		Committer   User
-		Parent      envelopes.ID
+		State       envelopes.ID `json:"state"`
+		PostedTime  time.Time    `json:"postedTime"`
+		ActualTime  time.Time    `json:"actualTime,omitempty"`
+		EnteredTime time.Time    `json:"enteredTime,omitempty"`
+		Amount      Balance      `json:"amount"`
+		Merchant    string       `json:"merchant"`
+		Comment     string       `json:"comment"`
+		Committer   User         `json:"committer,omitempty"`
+		Parent      envelopes.ID `json:"parent"`
 	}
 
 	// State is a copy of envelopes.State for ORM purposes.
 	State struct {
-		Budget   envelopes.ID
-		Accounts envelopes.ID
+		Budget   envelopes.ID `json:"budget"`
+		Accounts envelopes.ID `json:"accounts"`
 	}
 
 	// User is a copy of envelopes.User for ORM purposes.
 	User struct {
-		FullName string
-		Email    string
+		FullName string `json:"fullName"`
+		Email    string `json:"email"`
 	}
 
 	// Balance is a copy of envelopes.Balance for ORM purposes.
