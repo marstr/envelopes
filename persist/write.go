@@ -76,7 +76,7 @@ func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.
 	}
 
 	var toMarshal Transaction
-	toMarshal.Amount = subject.Amount
+	toMarshal.Amount = Balance(subject.Amount)
 	toMarshal.Parent = subject.Parent
 	toMarshal.State = subject.State.ID()
 	toMarshal.Comment = subject.Comment
@@ -141,7 +141,7 @@ func (dw DefaultWriter) writeBudget(ctx context.Context, subject envelopes.Budge
 	}
 
 	var toMarshal Budget
-	toMarshal.Balance = subject.Balance
+	toMarshal.Balance = Balance(subject.Balance)
 	toMarshal.Children = make(map[string]envelopes.ID, len(subject.Children))
 	for name, child := range subject.Children {
 		toMarshal.Children[name] = child.ID()

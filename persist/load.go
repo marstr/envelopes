@@ -99,7 +99,7 @@ func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, t
 	toLoad.EnteredTime = unmarshaled.EnteredTime
 	toLoad.PostedTime = unmarshaled.PostedTime
 	toLoad.Parent = unmarshaled.Parent
-	toLoad.Amount = unmarshaled.Amount
+	toLoad.Amount = envelopes.Balance(unmarshaled.Amount)
 	toLoad.Committer.FullName = unmarshaled.Committer.FullName
 	toLoad.Committer.Email = unmarshaled.Committer.Email
 
@@ -135,7 +135,7 @@ func (dl DefaultLoader) loadBudget(ctx context.Context, marshaled []byte, toLoad
 		return err
 	}
 
-	toLoad.Balance = unmarshaled.Balance
+	toLoad.Balance = envelopes.Balance(unmarshaled.Balance)
 	toLoad.Children = make(map[string]*envelopes.Budget, len(unmarshaled.Children))
 	for name, childID := range unmarshaled.Children {
 		var child envelopes.Budget

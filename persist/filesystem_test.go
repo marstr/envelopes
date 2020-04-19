@@ -17,7 +17,6 @@ package persist_test
 import (
 	"context"
 	"fmt"
-
 	"io/ioutil"
 	"math/big"
 	"os"
