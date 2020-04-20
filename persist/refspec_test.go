@@ -28,10 +28,10 @@ func TestRefSpecResolver_Resolve(t *testing.T) {
 	defer cancel()
 
 	var test3and4Transactions [4]envelopes.ID
-	test3and4Transactions[0].UnmarshalText([]byte("7a41c93dd3f21d4a7cc4513451a5706e2f89421b"))
-	test3and4Transactions[1].UnmarshalText([]byte("1396f229bbc973c6c10087d68663fbcdac0b8fae"))
-	test3and4Transactions[2].UnmarshalText([]byte("e26999263bdac65fabfa65ca99a53bf16688dced"))
-	test3and4Transactions[3].UnmarshalText([]byte("558a04a94c1566aaaba9ee18d33d19966a6cf254"))
+	test3and4Transactions[0].UnmarshalText([]byte("f3bd1757f2ccfe63eefce93ffe4c046166d0a1a5"))
+	test3and4Transactions[1].UnmarshalText([]byte("c76ece80f16ef8cfe0213ca4b568d7d576a96f9d"))
+	test3and4Transactions[2].UnmarshalText([]byte("d9ff31f511c1fce2ec75b5efc500a6dfb4d83452"))
+	test3and4Transactions[3].UnmarshalText([]byte("434926f0aa5dde53c24c81e8061f99ab963bb98f"))
 
 	testCases := []struct {
 		repoLocation string
@@ -45,8 +45,8 @@ func TestRefSpecResolver_Resolve(t *testing.T) {
 		{"./testdata/test3/.baronial", "HEAD~1", test3and4Transactions[2]},
 		{"./testdata/test3/.baronial", "HEAD^^", test3and4Transactions[1]},
 		{"./testdata/test3/.baronial", "HEAD~3", test3and4Transactions[0]},
-		{"./testdata/test3/.baronial", "e26999263bdac65fabfa65ca99a53bf16688dced^", test3and4Transactions[1]},
-		{"./testdata/test3/.baronial", "558a04a94c1566aaaba9ee18d33d19966a6cf254~3", test3and4Transactions[0]},
+		{"./testdata/test3/.baronial", "d9ff31f511c1fce2ec75b5efc500a6dfb4d83452^", test3and4Transactions[1]},
+		{"./testdata/test3/.baronial", "434926f0aa5dde53c24c81e8061f99ab963bb98f~3", test3and4Transactions[0]},
 		{"./testdata/test4/.baronial", "backup", test3and4Transactions[1]},
 		{"./testdata/test4/.baronial", "master", test3and4Transactions[3]},
 		{"./testdata/test4/.baronial", "master~2", test3and4Transactions[1]},

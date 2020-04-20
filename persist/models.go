@@ -84,7 +84,9 @@ func (b Balance) MarshalJSON() ([]byte, error) {
 		buf.Truncate(buf.Len() - 1)
 		_, err = fmt.Fprint(buf, ",")
 	}
-	buf.Truncate(buf.Len() - 1)
+	if buf.Len() > 1 {
+		buf.Truncate(buf.Len() - 1)
+	}
 	_, err = fmt.Fprint(buf, "}")
 	if err != nil {
 		return nil, err
