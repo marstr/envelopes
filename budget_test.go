@@ -126,6 +126,13 @@ func TestBudget_ID_Lock(t *testing.T) {
 				},
 			},
 		},
+		"6717950b005ded2716b9b5c52ae5f07ed9b67789":{
+			Balance: envelopes.Balance{
+				"USD": big.NewRat(9080,100),
+				"MSFT": big.NewRat(156718, 1000),
+				"FZROX": big.NewRat(183, 1),
+			},
+		},
 	}
 
 	for expected, subject := range testCases {
