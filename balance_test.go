@@ -170,28 +170,28 @@ func testParseBalance_complex(t *testing.T) {
 		expected envelopes.Balance
 	}{
 		{
-			"USD 10.00, FZROX 193.468",
+			"USD 10.00: FZROX 193.468",
 			envelopes.Balance{
 				"USD": big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
 			},
 		},
 		{
-			"USD10.00, FZROX193.468",
+			"USD10.00: FZROX193.468",
 			envelopes.Balance{
 				"USD": big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
 			},
 		},
 		{
-			"USD10.00,FZROX193.468",
+			"USD10.00:FZROX193.468",
 			envelopes.Balance{
 				"USD": big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
 			},
 		},
 		{
-			"USD10.00,FZROX193.468,MSFT198.890",
+			"USD10.00:FZROX193.468:MSFT198.890",
 			envelopes.Balance{
 				"USD": big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
@@ -204,6 +204,12 @@ func testParseBalance_complex(t *testing.T) {
 				"USD": big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
 				"MSFT": big.NewRat(19889, 100),
+			},
+		},
+		{
+			"USD10:USD5.6",
+			envelopes.Balance{
+				"USD": big.NewRat(156, 10),
 			},
 		},
 	}
