@@ -181,7 +181,10 @@ func (b Balance) Normalize(rates Exchange) (*big.Rat, error) {
 }
 
 func (b Balance) String() string {
-	if len(b) > 0 {
+	const precision = 3
+
+	if len(b) > 1 { // When there are multiple asset types, we want to remove unnecessary components
+		b.pare()
 		keys := make([]string, 0, len(b))
 		for key := range b {
 			keys = append(keys, string(key))
@@ -191,11 +194,15 @@ func (b Balance) String() string {
 		buf := &bytes.Buffer{}
 
 		for i := range keys {
-			fmt.Fprintf(buf, "%s %s, ", keys[i], b[AssetType(keys[i])].FloatString(3))
+			fmt.Fprintf(buf, "%s %s:", keys[i], b[AssetType(keys[i])].FloatString(precision))
 		}
 
-		buf.Truncate(buf.Len() - 2)
+		buf.Truncate(buf.Len() - 1)
 		return buf.String()
+	} else if len(b) == 1 { // When there's only a single asset type - we don't want to pare or deal with extra allocations.
+		for k := range b {
+			return fmt.Sprintf("%s %s", k, b[k].FloatString(precision))
+		}
 	}
 
 	// In the default case, where balance is zero because there are no assets, we want to continue keeping the same IDs
@@ -214,51 +221,67 @@ var (
 // Lines with the same asset type are summed together.
 func ParseBalanceWithDefault(raw []byte, def AssetType) (Balance, error) {
 	var created Balance
-
 	const noMatchText = "unable to find balance in text"
+	clauses := strings.Split(string(raw), ":")
+	for _, clause := range clauses {
 
-	matches := balancePattern.FindAllSubmatch(raw, -1)
-	if len(matches) == 0 {
-		return nil, errors.New(noMatchText)
-	}
-
-	for _, match := range matches {
-		if len(match[0]) == 0 {
-			continue
+		matches := balancePattern.FindAllStringSubmatch(clause, -1)
+		if len(matches) == 0 {
+			return nil, errors.New(noMatchText)
 		}
 
-		id := AssetType(match[1])
-		rawMagnitude := match[2]
+		for _, match := range matches {
+			if len(match[0]) == 0 {
+				continue
+			}
 
-		rawMagnitude = []byte(strings.Replace(string(rawMagnitude), ",", "", -1))
+			id := AssetType(match[1])
+			rawMagnitude := match[2]
 
-		var rehydrated big.Rat
+			rawMagnitude = strings.Replace(string(rawMagnitude), ",", "", -1)
 
-		if err := rehydrated.UnmarshalText(rawMagnitude); err != nil {
+			rehydrated := new(big.Rat)
+
+			if err := rehydrated.UnmarshalText([]byte(rawMagnitude)); err != nil {
+				return nil, err
+			}
+
+			if id == "" {
+				id = def
+			}
+
+			if created == nil {
+				created = make(Balance)
+			}
+
+			if existing, ok := created[id]; ok {
+				created[id].Add(existing, rehydrated)
+			} else {
+				created[id] = rehydrated
+			}
+		}
+
+		var err error
+		if created == nil {
+			err = errors.New(noMatchText)
 			return nil, err
 		}
-
-		if id == "" {
-			id = def
-		}
-
-		if created == nil {
-			created = make(Balance)
-		}
-
-		created[id] = &rehydrated
 	}
 
-	var err error
-	if created == nil {
-		err = errors.New(noMatchText)
-	}
-
-	return created, err
+	return created, nil
 }
 
 // ParseBalance converts between a string representation of an amount of dollars
 // into an int64 number of cents.
 func ParseBalance(raw []byte) (result Balance, err error) {
 	return ParseBalanceWithDefault(raw, DefaultAsset)
+}
+
+// pare removes components of a balance that are inconsequential - i.e. magnitude of zero.
+func (b Balance) pare() {
+	for k, v := range b {
+		if v.Cmp(zero) == 0 {
+			delete(b, k)
+		}
+	}
 }
