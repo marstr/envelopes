@@ -101,6 +101,7 @@ func TestBalance_String(t *testing.T) {
 func Test_ParseBalance(t *testing.T) {
 	t.Run("scalar", testParseBalance_scalar)
 	t.Run("negative scalar", testParseBalance_scalarNegative)
+	t.Run("complex", testParseBalance_complex)
 }
 
 func testParseBalance_scalarNegative(t *testing.T) {
@@ -150,6 +151,61 @@ func testParseBalance_scalar(t *testing.T) {
 		{" USD 10.98\n", envelopes.Balance{"USD": big.NewRat(1098, 100)}},
 		{"USD 10.98\n", envelopes.Balance{"USD": big.NewRat(1098, 100)}},
 		{"FZROX 590.319", envelopes.Balance{"FZROX": big.NewRat(590319, 1000)}},
+	}
+
+	for _, tc := range testCases {
+		if got, err := envelopes.ParseBalance([]byte(tc.string)); err != nil {
+			t.Errorf("input: %q -> %v", tc.string, err)
+			continue
+		} else if !got.Equal(tc.expected) {
+			t.Logf("\ninput: %q\ngot:   %s\nwant:  %s", tc.string, got, tc.expected)
+			t.Fail()
+		}
+	}
+}
+
+func testParseBalance_complex(t *testing.T) {
+	testCases := []struct {
+		string
+		expected envelopes.Balance
+	}{
+		{
+			"USD 10.00, FZROX 193.468",
+			envelopes.Balance{
+				"USD": big.NewRat(10, 1),
+				"FZROX": big.NewRat(193468, 1000),
+			},
+		},
+		{
+			"USD10.00, FZROX193.468",
+			envelopes.Balance{
+				"USD": big.NewRat(10, 1),
+				"FZROX": big.NewRat(193468, 1000),
+			},
+		},
+		{
+			"USD10.00,FZROX193.468",
+			envelopes.Balance{
+				"USD": big.NewRat(10, 1),
+				"FZROX": big.NewRat(193468, 1000),
+			},
+		},
+		{
+			"USD10.00,FZROX193.468,MSFT198.890",
+			envelopes.Balance{
+				"USD": big.NewRat(10, 1),
+				"FZROX": big.NewRat(193468, 1000),
+				"MSFT": big.NewRat(19889, 100),
+			},
+		},
+		{
+			"USD10.00\nFZROX193.468\nMSFT198.890",
+			envelopes.Balance{
+				"USD": big.NewRat(10, 1),
+				"FZROX": big.NewRat(193468, 1000),
+				"MSFT": big.NewRat(19889, 100),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
