@@ -1,5 +1,7 @@
 SRC = $(shell find . -name '*.go' -type f)
 
+.PHONY: all
+all: test lint
 
 .PHONY: test
 test: ${SRC}
