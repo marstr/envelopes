@@ -99,6 +99,11 @@ objects to be built up and modified more easily between being committed to disk.
 concepts enumerated above in a way that is ready to be scripted against, or just interacted with by a person comfortable
 working in a terminal.
 
+### envelopes-azure
+
+[envelopes-azure](https://github.com/marstr/envelopes-azure/tree/master/README.md) implements a client for storing
+serialized `IDer`s in Azure, instead of just using filesystem constructs.
+
 ## logo
 
 The nerdy gopher is artwork by the amazing Ashley McNamara, and is based on the gopher drawn by Renée French. It is 
