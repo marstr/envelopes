@@ -181,10 +181,22 @@ func (b Balance) Normalize(rates Exchange) (*big.Rat, error) {
 }
 
 func (b Balance) String() string {
+	const defaultResult = "USD 0.00"
 	const precision = 3
 
-	if len(b) > 1 { // When there are multiple asset types, we want to remove unnecessary components
+	if len(b) == 1 { // When there's only a single asset type - we don't want to pare or deal with extra allocations.
+		for k := range b {
+			return fmt.Sprintf("%s %s", k, b[k].FloatString(precision))
+		}
+	} else if len(b) > 1 { // When there are multiple asset types, we want to remove unnecessary components
 		b.pare()
+
+		if len(b) == 0 {
+			// Just like the default case below, if there are multiple asset types that should all fall away, skip
+			// all further processing.
+			return defaultResult
+		}
+
 		keys := make([]string, 0, len(b))
 		for key := range b {
 			keys = append(keys, string(key))
@@ -199,17 +211,13 @@ func (b Balance) String() string {
 
 		buf.Truncate(buf.Len() - 1)
 		return buf.String()
-	} else if len(b) == 1 { // When there's only a single asset type - we don't want to pare or deal with extra allocations.
-		for k := range b {
-			return fmt.Sprintf("%s %s", k, b[k].FloatString(precision))
-		}
 	}
 
 	// In the default case, where balance is zero because there are no assets, we want to continue keeping the same IDs
 	// that were previously generated. Because previously a zero balance specifically meant that there were zero USD, to
 	// preserve the existing persist package's behavior without any breaking changes, we must assume the value
 	// "USD 0.00" here.
-	return "USD 0.00"
+	return defaultResult
 }
 
 var (

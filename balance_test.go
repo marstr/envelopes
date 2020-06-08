@@ -80,14 +80,26 @@ func ExampleBalance_Scale() {
 }
 
 func TestBalance_String(t *testing.T) {
+	zero := big.NewRat(0, 1)
 	testCases := []struct {
 		envelopes.Balance
 		expected string
 	}{
-		{envelopes.Balance{"USD": big.NewRat(0, 100)}, "USD 0.000"},
+		{envelopes.Balance{"USD": zero}, "USD 0.000"},
 		{envelopes.Balance{"USD": big.NewRat(1, 100)}, "USD 0.010"},
 		{envelopes.Balance{"USD": big.NewRat(-1, 100)}, "USD -0.010"},
 		{envelopes.Balance{"USD": big.NewRat(1000, 1)}, "USD 1000.000"},
+		{
+			envelopes.Balance{
+				"FZROX": zero,
+				"MSFT": zero,
+				"TMUS": zero,
+				"USD": zero,
+			},
+			"USD 0.00",
+		},
+		{envelopes.Balance{}, "USD 0.00"},
+		{envelopes.Balance{"MSFT": zero	}, "MSFT 0.000"},
 	}
 
 	for _, tc := range testCases {
