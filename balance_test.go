@@ -98,6 +98,8 @@ func TestBalance_String(t *testing.T) {
 			},
 			"USD 0.00",
 		},
+		{envelopes.Balance{}, "USD 0.00"},
+		{envelopes.Balance{"MSFT": zero	}, "MSFT 0.000"},
 	}
 
 	for _, tc := range testCases {
