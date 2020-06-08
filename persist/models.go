@@ -52,6 +52,7 @@ type (
 
 var jsonNumberPattern = regexp.MustCompile(`^(?P<sign>-?)(?P<number>\d+)(?:\.(?P<fraction>\d+))?(?:[eE](?P<exponent>[\-+]?\d+))?$`)
 
+// MarshalJSON converts a Balance into a serialized JSON object which can be round-tripped back to a Balance.
 func (b Balance) MarshalJSON() ([]byte, error) {
 	assetTypes := make([]string, 0, len(b))
 	for k := range b {
@@ -94,6 +95,7 @@ func (b Balance) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// UnmarshalJSON reconstitutes a Balance that had previously been converted into a JSON object by MarshalJSON.
 func (b *Balance) UnmarshalJSON(text []byte) error {
 	type RawBalance map[envelopes.AssetType]json.Number
 

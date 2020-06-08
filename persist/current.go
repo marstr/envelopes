@@ -6,6 +6,8 @@ import (
 	"github.com/marstr/envelopes"
 )
 
+// CurrentReaderWriter exposes a contract that requires both CurrentReader and CurrentWriter functionality to be
+// implemented.
 type CurrentReaderWriter interface {
 	CurrentReader
 	CurrentWriter

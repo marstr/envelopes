@@ -25,6 +25,8 @@ import (
 )
 
 const (
+	// MostRecentTransactionAlias is a string that can be used as a shortcut to represent whichever RefSpec was used to
+	// most recently populate the index. It is the same as typing out the most recent branch name or transaction id.
 	MostRecentTransactionAlias = "HEAD"
 )
 

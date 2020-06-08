@@ -21,6 +21,8 @@ import (
 )
 
 const (
+	// DefaultBranch is the name of the ref that will be used to to create a repository should no other branch name be
+	// specified.
 	DefaultBranch = "master"
 )
 
