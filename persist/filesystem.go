@@ -48,6 +48,7 @@ func (fs FileSystem) getCreatePermissions() os.FileMode {
 	return fs.CreatePermissions
 }
 
+// Current fetches the RefSpec that was most recently used to populate the index.
 func (fs FileSystem) Current(_ context.Context) (result RefSpec, err error) {
 	p, err := fs.currentPath()
 	if err != nil {
@@ -229,6 +230,7 @@ func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID
 	return err
 }
 
+// ListBranches fetches the distinct names of the branches that exist in a repository.
 func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 	absRoot, err := filepath.Abs(path.Dir(fs.branchPath("any_branch_name")))
 	if err != nil {
