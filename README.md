@@ -106,7 +106,7 @@ serialized `IDer`s in Azure, instead of just using filesystem constructs.
 
 ## logo
 
-The nerdy gopher is artwork by the amazing Ashley McNamara, and is based on the gopher drawn by Renée French. It is 
+The nerdy gopher is artwork by the amazing Ashley Willis (McNamara), and is based on the gopher drawn by Renée French. It is 
 licensed under the [
 Attribution-NonCommercial-ShareAlike 4.0 International](https://github.com/ashleymcnamara/gophers/blob/4ddd92f3f0830f5d9a9eab50c410878249fe6515/LICENSE)
 License. You can find this gopher, and many more like it, at: https://github.com/ashleymcnamara/gophers 
