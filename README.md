@@ -3,9 +3,9 @@
 # envelopes
 [![Build](https://github.com/marstr/envelopes/workflows/Build/badge.svg?branch=main)](https://github.com/marstr/envelopes/actions?query=workflow%3ABuild)
 
-Been scouring the internet looking for a personal finance library written in Go flexible enough to model your budget? 
-You have arrived at a library that aims to give you the building blocks to represent your finances no matter how you 
-look at them.
+Been scouring the internet looking for a personal finance library written in Go? Having trouble finding one flexible 
+enough to model your budget? You have arrived at a library that aims to give you the building blocks to represent your 
+finances no matter how you look at them.
 
 ## include
 Whether you're using Go modules or $GOPATH, you can acquire this library by simply running the following command from 
@@ -19,9 +19,8 @@ $ go get github.com/marstr/envelopes
 
 ### balances
 
-The [`Balance`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Balance) type represents an amount. You'll notice
-it isn't a scalar type. This is so accounts which hold multiple types of assets (like brokerage accounts) can have their
-contents fully represented.
+The [`Balance`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Balance) type represents an amount of funds
+available.
 
 Let's say you're working in Euros, you could initialize a balance of €10,76 the following way:
 
@@ -31,7 +30,9 @@ mySimpleBalance := envelopes.Balance{
 }
 ```
 
-How about the balance of a brokerage account that has 90 shares of T-Mobile (TMUS), and 89.143 shares of Tesla (TSLA)?
+You'll notice above that `Balance` isn't a scalar type, but rather a dictionary. This is so accounts which hold multiple
+types of assets (like brokerage accounts) can have their contents fully represented. For instance, what if you need to
+represent the balance of a brokerage account that has 90 shares of T-Mobile (TMUS), and 89.143 shares of Tesla (TSLA)?
  
 ``` Go
 myComplexBalance := envelopes.Balance{
@@ -41,12 +42,13 @@ myComplexBalance := envelopes.Balance{
 ```
 
 When you do arithmetic with balances, each term will be combined with like terms. That is to say, when you [`Add`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Balance.Add)
-or [`Sub`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Balance.Sub) balances, the EUR component of one 
-balance will be summed against the other balance's EUR component, etc. Notably, because different stocks and currencies 
-have different values, greater than and less than operations can't be done directly on instances of `Balance`. You'll 
-need to [`Normalize`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Balance.Normalize) them first.
+or [`Sub`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Balance.Sub) balances, the `"EUR"` component of one 
+balance will be summed against the other balance's `"EUR"` component, etc. Notably, because different stocks and 
+currencies have different values, greater than and less than operations can't be done directly on instances of `
+Balance`. You'll need to [`Normalize`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Balance.Normalize) them 
+first.
 
-While not all modern currencies in the world are decimalized, even the exceptions are subdivided only once by a factor 
+While not all modern currencies in the world are decimalized, even the exceptions are subdivided only once; by a factor 
 of five. The two exceptions are the [Malagasy ariary](https://en.wikipedia.org/wiki/Malagasy_ariary) and the 
 [Mauritanian ouguiya](https://en.wikipedia.org/wiki/Mauritanian_ouguiya)). So at the time of writing, this library 
 should work reasonably well for any currency.
@@ -54,19 +56,20 @@ should work reasonably well for any currency.
 ### accounts
 
 The [`Accounts`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Accounts) type seeks to help answer the question
-"Where is my money?" It is a collection of account names to the [Balance](#balances) in that account. Accounts are flat,
+"Where is my money?" It is a collection of account names to the [Balance](#balances) in each account. Accounts are flat,
 and do not contain other accounts. For accounts like bank accounts and brokerage accounts, which hold assets, the
 magnitudes should be positive. For accounts like credit cards, which hold liabilities, the intention is to have balances
-be negative. In this regard, the sum of all of the balances of your accounts should be the total of your tracked value.
-As you spend money (be that on a credit card, or with a debit card) the total goes down. This is a little simpler than
+be negative. In this regard, the sum of the balances of your accounts should be the total of your tracked value. As you 
+spend money (be that on a credit card, or with a debit card) the total goes down. This is a little simpler than 
 traditional doubly-entry accounting, which has credits/debits get swapped based on the type of the account. 
 
 ### budgets
 
 The [`Budget`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Budget) type seeks to help answer the question
-"How do I want to spend my money?" Budgets can be nested, and have both a value of just that budget, and a recursive
-that is the sum of it and all its children. The system was designed to use both accounts and budgets at the same time,
-as we'll discuss in [#states](#states). 
+"How do I want to spend my money?" Unlike [accounts](#accounts), Budgets can be nested (a budget can live inside another
+budget.). Because they can be nested, they have both an immediate balance and a recursive balance, which is the sum of 
+its balance and all the balances of its children. The system is designed to use both accounts and budgets at the same 
+time, as we'll discuss in [#states](#states). 
 
 ### states
 
@@ -79,17 +82,16 @@ idea here is that you may want to have more control than "all of my stocks are b
 ### transactions
 
 A [`Transaction`](https://pkg.go.dev/github.com/marstr/envelopes?tab=doc#Transaction) captures metadata around a change 
-in the current `State`. It could be associated with a financial institution, or it may just capture funds that are 
+in the current `State`. It could be associated with a financial institution, or it may just capture funds being 
 transferred between two budgets. This library was inspired by [Git](https://git-scm.com), and borrows a lot its 
-architecture and ideas. One of the most notable consequences is that instead of directly using the amount of a
-transaction as a delta, instead a transaction points to the `State` that your accounts and budget are in immediately 
-after the transaction was completed. If you're familiar with Git's object model, this is the same behavior Git uses when
-creating a commit.
+architecture and ideas. One of the most notable consequences is that instead of using amount of a transaction to figure
+out the current state, it uses the current state (and the one immediately proceeding it) to figure out the amount of
+the transaction.
 
 ### immutability
 
-Conceptually, each of the models above are immutable. A SHA1 uniquely identifies each one, so that it can be stored to
-disk and referred to later unambiguously. This immutability has not made it's way into the code, in order to allow
+Conceptually, each of the models above are immutable. A SHA1 uniquely identifies each one so that it can be stored to
+disk and referred to later unambiguously. This immutability has not made its way into the code, however. This allows
 objects to be built up and modified more easily between being committed to disk.
 
 ## related projects
