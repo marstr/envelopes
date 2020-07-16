@@ -97,7 +97,7 @@ objects to be built up and modified more easily between being committed to disk.
 ## related projects
 
 ### baronial
-[baronial](https://github.com/marstr/baronial/tree/master/README.md) is a command line interface that exposes the 
+[baronial](https://github.com/marstr/baronial/tree/main/README.md) is a command line interface that exposes the 
 concepts enumerated above in a way that is ready to be scripted against, or just interacted with by a person comfortable
 working in a terminal.
 
