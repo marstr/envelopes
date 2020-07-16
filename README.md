@@ -1,7 +1,7 @@
 <p align="center"><a href="./README.md#logo"><img src="https://github.com/ashleymcnamara/gophers/raw/4ddd92f3f0830f5d9a9eab50c410878249fe6515/NERDY.png" width="360"></a></p>
 
 # envelopes
-[![Build Status](https://travis-ci.org/marstr/envelopes.svg?branch=master)](https://travis-ci.org/marstr/envelopes)
+![Build](https://github.com/marstr/envelopes/workflows/Build/badge.svg)
 
 Been scouring the internet looking for a personal finance library written in Go flexible enough to model your budget? 
 You have arrived at a library that aims to give you the building blocks to represent your finances no matter how you 
