@@ -31,6 +31,10 @@ type Loader interface {
 // DefaultLoader wraps a Fetcher and does just the unmarshaling portion.
 type DefaultLoader struct {
 	Fetcher
+
+	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a Transaction needs a State.
+	// If it is not set, DefaultLoader will use itself.
+	Loopback Loader
 }
 
 // ErrObjectNotFound indicates that a non-existent object was requested.
@@ -51,6 +55,13 @@ func (err ErrUnloadableType) Error() string {
 // how to Load.
 func NewErrUnloadableType(subject interface{}) ErrUnloadableType {
 	return ErrUnloadableType(reflect.TypeOf(subject).Name())
+}
+
+func (dl DefaultLoader) loopback() Loader {
+	if dl.Loopback == nil {
+		return dl
+	}
+	return dl.Loopback
 }
 
 // Load fetches and parses all objects necessary to fully rehydrate `destination` from wherever it was stashed.
@@ -94,7 +105,7 @@ func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, t
 	}
 
 	var state envelopes.State
-	err = dl.Load(ctx, unmarshaled.State, &state)
+	err = dl.loopback().Load(ctx, unmarshaled.State, &state)
 	if err != nil {
 		return err
 	}
@@ -121,12 +132,12 @@ func (dl DefaultLoader) loadState(ctx context.Context, marshaled []byte, toLoad 
 	}
 
 	var budget envelopes.Budget
-	err = dl.Load(ctx, unmarshaled.Budget, &budget)
+	err = dl.loopback().Load(ctx, unmarshaled.Budget, &budget)
 	if err != nil {
 		return err
 	}
 
-	err = dl.Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
+	err = dl.loopback().Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
 	if err != nil {
 		return err
 	}
@@ -146,7 +157,7 @@ func (dl DefaultLoader) loadBudget(ctx context.Context, marshaled []byte, toLoad
 	toLoad.Children = make(map[string]*envelopes.Budget, len(unmarshaled.Children))
 	for name, childID := range unmarshaled.Children {
 		var child envelopes.Budget
-		err = dl.Load(ctx, childID, &child)
+		err = dl.loopback().Load(ctx, childID, &child)
 		if err != nil {
 			return err
 		}

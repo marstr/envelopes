@@ -19,6 +19,7 @@ func TestCache_Load_passThroughMiss(t *testing.T) {
 	subject := NewCache(10)
 	subject.Loader = &DefaultLoader{
 		Fetcher: passThrough,
+		Loopback: subject,
 	}
 
 	var got envelopes.State
@@ -55,6 +56,7 @@ func TestCache_Load_reuseHits(t *testing.T) {
 	subject := NewCache(10)
 	subject.Loader = &DefaultLoader{
 		Fetcher: passThrough,
+		Loopback: subject,
 	}
 
 	var want envelopes.State
