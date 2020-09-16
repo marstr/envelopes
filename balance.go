@@ -31,7 +31,7 @@ type Exchange map[AssetType]float64
 type ErrUnknownAsset AssetType
 
 func (e ErrUnknownAsset) Error() string {
-	return fmt.Sprintf("could not find AssetType %s", e)
+	return fmt.Sprintf("could not find AssetType %s", AssetType(e))
 }
 
 // Balance captures an amount of USD pennies.
