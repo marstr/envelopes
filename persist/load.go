@@ -33,6 +33,13 @@ type DefaultLoader struct {
 	Fetcher
 }
 
+// ErrObjectNotFound indicates that a non-existent object was requested.
+type ErrObjectNotFound envelopes.ID
+
+func (err ErrObjectNotFound) Error() string {
+	return fmt.Sprintf("not able to find object %s", envelopes.ID(err).String())
+}
+
 // ErrUnloadableType indicates that a Loader is unable to recognize the specified type.
 type ErrUnloadableType string
 
