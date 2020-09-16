@@ -33,7 +33,11 @@ type (
 
 	// DefaultWriter knows how to navigate the envelopes object model and stash each individual component of an object.
 	DefaultWriter struct {
+		// Writes the serialized form of an object to persistent memory. Must not be nil.
 		Stasher
+
+		// Allow recursive calls to Write to invoke the top-level Writer. If this is nil, DefaultWriter uses itself.
+		Loopback Writer
 	}
 )
 
@@ -70,6 +74,13 @@ func (dw DefaultWriter) Write(ctx context.Context, subject envelopes.IDer) error
 	}
 }
 
+func (dw DefaultWriter) loopback() Writer {
+	if dw.Loopback == nil {
+		return dw
+	}
+	return dw.Loopback
+}
+
 func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.Transaction) error {
 	if subject.State == nil {
 		subject.State = &envelopes.State{}
@@ -87,7 +98,7 @@ func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.
 	toMarshal.Committer.FullName = subject.Committer.FullName
 	toMarshal.Committer.Email = subject.Committer.Email
 
-	err := dw.Write(ctx, subject.State)
+	err := dw.loopback().Write(ctx, subject.State)
 	if err != nil {
 		return err
 	}
@@ -104,7 +115,7 @@ func (dw DefaultWriter) writeState(ctx context.Context, subject envelopes.State)
 	if subject.Accounts == nil {
 		subject.Accounts = make(envelopes.Accounts, 0)
 	}
-	err := dw.Write(ctx, subject.Accounts)
+	err := dw.loopback().Write(ctx, subject.Accounts)
 	if err != nil {
 		return err
 	}
@@ -112,7 +123,7 @@ func (dw DefaultWriter) writeState(ctx context.Context, subject envelopes.State)
 	if subject.Budget == nil {
 		subject.Budget = &envelopes.Budget{}
 	}
-	err = dw.Write(ctx, subject.Budget)
+	err = dw.loopback().Write(ctx, subject.Budget)
 	if err != nil {
 		return err
 	}
@@ -134,7 +145,7 @@ func (dw DefaultWriter) writeBudget(ctx context.Context, subject envelopes.Budge
 		subject.Children = make(map[string]*envelopes.Budget, 0)
 	}
 	for _, child := range subject.Children {
-		err := dw.Write(ctx, child)
+		err := dw.loopback().Write(ctx, child)
 		if err != nil {
 			return err
 		}
