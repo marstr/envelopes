@@ -120,6 +120,7 @@ func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, t
 	toLoad.Amount = envelopes.Balance(unmarshaled.Amount)
 	toLoad.Committer.FullName = unmarshaled.Committer.FullName
 	toLoad.Committer.Email = unmarshaled.Committer.Email
+	toLoad.RecordId = envelopes.BankRecordID(unmarshaled.RecordId)
 
 	return nil
 }
