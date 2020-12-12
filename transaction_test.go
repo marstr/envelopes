@@ -13,6 +13,7 @@ func TestTransaction_ID(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	t.Run("lock", getTestTransactionIDLock(ctx))
+	t.Run("recordIdIncluded", getEnsureBankIdIncluded(ctx))
 }
 
 func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
@@ -81,6 +82,33 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 				},
 				Expected: "e93c98983c4adb37a4a5a0517de9a627ef23b868",
 			},
+			{
+				Subject: envelopes.Transaction{
+					Amount:     envelopes.Balance{"USD": big.NewRat(9807, 100)},
+					Merchant:   "Target",
+					PostedTime: authorTime,
+					Comment:    "Shoes",
+					Parent:     envelopes.Transaction{}.ID(),
+					RecordId:   "20201212 575073 2,000 202,012,128,756",
+					State: &envelopes.State{
+						Budget: &envelopes.Budget{
+							Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
+							Children: map[string]*envelopes.Budget{
+								"grocery": {
+									Balance: envelopes.Balance{"USD": big.NewRat(6709, 100)},
+								},
+								"restaurants": {
+									Balance: envelopes.Balance{"USD": big.NewRat(12933, 100)},
+								},
+							},
+						},
+						Accounts: envelopes.Accounts{
+							"checking": envelopes.Balance{"USD": big.NewRat(24153, 100)},
+						},
+					},
+				},
+				Expected: "536917042d2f793dd6e0d5bfd8c6fa21636aeda1",
+			},
 		}
 
 		for _, tc := range testCases {
@@ -97,6 +125,47 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 				t.Logf("\ngot:  %q\nwant: %q", got, tc.Expected)
 				t.Fail()
 			}
+		}
+	}
+}
+
+func getEnsureBankIdIncluded(_ context.Context) func(*testing.T) {
+	authorTime, err := time.Parse(time.RFC3339, "2019-10-25T16:23:48-07:00")
+	if err != nil {
+		panic(err)
+	}
+	return func(t *testing.T) {
+		with := envelopes.Transaction{
+			Amount:     envelopes.Balance{"USD": big.NewRat(9807, 100)},
+			Merchant:   "Target",
+			PostedTime: authorTime,
+			Comment:    "Shoes",
+			Parent:     envelopes.Transaction{}.ID(),
+			RecordId:   "20201212 575073 2,000 202,012,128,756",
+			State: &envelopes.State{
+				Budget: &envelopes.Budget{
+					Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
+					Children: map[string]*envelopes.Budget{
+						"grocery": {
+							Balance: envelopes.Balance{"USD": big.NewRat(6709, 100)},
+						},
+						"restaurants": {
+							Balance: envelopes.Balance{"USD": big.NewRat(12933, 100)},
+						},
+					},
+				},
+				Accounts: envelopes.Accounts{
+					"checking": envelopes.Balance{"USD": big.NewRat(24153, 100)},
+				},
+			},
+		}
+
+		without := with
+		without.RecordId = ""
+
+		if with.ID() == without.ID() {
+			t.Logf("including a bank record ID should change the ID of the transaction")
+			t.Fail()
 		}
 	}
 }

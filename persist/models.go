@@ -15,6 +15,8 @@ import (
 )
 
 type (
+	BankRecordID string
+
 	// Budget is copy of envelopes.Budget for ORM purposes.
 	Budget struct {
 		Balance  Balance                 `json:"balance"`
@@ -31,6 +33,7 @@ type (
 		Merchant    string       `json:"merchant"`
 		Comment     string       `json:"comment"`
 		Committer   User         `json:"committer,omitempty"`
+		RecordId    BankRecordID `json:"recordId,omitempty"`
 		Parent      envelopes.ID `json:"parent"`
 	}
 
