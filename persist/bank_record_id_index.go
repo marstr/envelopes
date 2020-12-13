@@ -15,6 +15,7 @@
 package persist
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -162,4 +163,49 @@ func (index FilesystemBankRecordIDIndex) processBankRecordID(flag int, bankRecor
 		}
 	}
 	return nil
+}
+
+// listTransactions enumerates all of the envelopes.Transaction IDs that are associated with a particular
+// envelopes.BankRecordId.
+//
+// It's still private because I don't want to commit to an interface yet, i.e. this is an inappropriate use of channels.
+func (index FilesystemBankRecordIDIndex) listTransactions(id envelopes.BankRecordID) (<-chan envelopes.ID, error) {
+	var err error
+	var fileName string
+	fileName, err = index.bankRecordIdFilename(id)
+	if err != nil {
+		return nil, err
+	}
+
+	var handle *os.File
+	handle, err = os.Open(fileName)
+	if err != nil {
+		return nil, err
+	}
+
+	retval := make(chan envelopes.ID)
+	go func() {
+		defer close(retval)
+		defer handle.Close()
+
+		reader := bufio.NewReader(handle)
+		for {
+			var line []byte
+			var current envelopes.ID
+			line, err = reader.ReadBytes('\n')
+			if err != nil {
+				// this is why channels are so bad for this
+				return
+			}
+
+			err = current.UnmarshalText(line)
+			if err != nil {
+				// this is why channels are so bad for this
+				return
+			}
+			retval <- current
+		}
+	}()
+
+	return retval, nil
 }
