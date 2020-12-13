@@ -15,6 +15,7 @@
 package persist
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"os"
@@ -33,12 +34,13 @@ func (err ErrEmptyBankRecordID) Error() string {
 }
 
 type FilesystemBankRecordIDIndex struct {
-	Root string
+	Root            string
+	DecoratedWriter Writer
 }
 
 // Converts an arbitrary bank transaction ID to something that's deterministic and only contains characters safe for
 // using in filenames i.e. an RFC 4648 Base 64 URL encoded string: https://tools.ietf.org/html/rfc4648#section-5
-func normalizeBankRecordID(id BankRecordID) normalizedBankRecordID {
+func normalizeBankRecordID(id envelopes.BankRecordID) normalizedBankRecordID {
 	return normalizedBankRecordID(base64.URLEncoding.EncodeToString([]byte(id)))
 }
 
@@ -54,7 +56,30 @@ func segmentNormalizedName(id normalizedBankRecordID) []string {
 	return retval
 }
 
-func (index FilesystemBankRecordIDIndex) bankRecordIdFilename(bankRecordID BankRecordID) (string, error) {
+// Write associates the given Transaction with it's BankRecordID if applicable, then passes the call along to the next
+// Writer.
+//
+// If subject is not a Transaction, or subject is a Transaction but does not have a BankRecordID, the association step
+// is skipped altogether, and this continues to call the DecoratedWriter.
+//
+// If DecoratedWriter is nil, the association step will still happen if applicable, but then nothing more happens.
+func (index FilesystemBankRecordIDIndex) Write(ctx context.Context, subject envelopes.IDer) error {
+	transaction, ok := subject.(envelopes.Transaction)
+	if ok && transaction.RecordId != "" {
+		err := index.AppendBankRecordID(transaction.RecordId, transaction.ID())
+		if err != nil {
+			return err
+		}
+	}
+
+	if index.DecoratedWriter != nil {
+		return index.DecoratedWriter.Write(ctx, subject)
+	}
+
+	return nil
+}
+
+func (index FilesystemBankRecordIDIndex) bankRecordIdFilename(bankRecordID envelopes.BankRecordID) (string, error) {
 	if bankRecordID == "" {
 		return "", ErrEmptyBankRecordID{}
 	}
@@ -66,7 +91,7 @@ func (index FilesystemBankRecordIDIndex) bankRecordIdFilename(bankRecordID BankR
 }
 
 // HasBankRecordId returns true if this repository has at least one Transaction associated with a given BankRecordID.
-func (index FilesystemBankRecordIDIndex) HasBankRecordId(id BankRecordID) (bool, error) {
+func (index FilesystemBankRecordIDIndex) HasBankRecordId(id envelopes.BankRecordID) (bool, error) {
 	var fileName string
 	var err error
 	fileName, err = index.bankRecordIdFilename(id)
@@ -83,7 +108,7 @@ func (index FilesystemBankRecordIDIndex) HasBankRecordId(id BankRecordID) (bool,
 }
 
 // ClearBankRecordID disassociates all transactions from this BankRecordID.
-func (index FilesystemBankRecordIDIndex) ClearBankRecordID(bankRecordID BankRecordID) error {
+func (index FilesystemBankRecordIDIndex) ClearBankRecordID(bankRecordID envelopes.BankRecordID) error {
 	var fileName string
 	var err error
 	fileName, err = index.bankRecordIdFilename(bankRecordID)
@@ -98,16 +123,16 @@ func (index FilesystemBankRecordIDIndex) ClearBankRecordID(bankRecordID BankReco
 }
 
 // WriteBankRecordID replaces the list of Transactions associated with a BankRecordID.
-func (index FilesystemBankRecordIDIndex) WriteBankRecordID(bankRecordID BankRecordID, transactionIDs ...envelopes.ID) error {
+func (index FilesystemBankRecordIDIndex) WriteBankRecordID(bankRecordID envelopes.BankRecordID, transactionIDs ...envelopes.ID) error {
 	return index.processBankRecordID(os.O_TRUNC|os.O_CREATE|os.O_WRONLY, bankRecordID, transactionIDs...)
 }
 
 // AppendBankRecordID adds to the list of Transactions associated with a BankRecordID.
-func (index FilesystemBankRecordIDIndex) AppendBankRecordID(bankRecordID BankRecordID, transactionIDs ...envelopes.ID) error {
+func (index FilesystemBankRecordIDIndex) AppendBankRecordID(bankRecordID envelopes.BankRecordID, transactionIDs ...envelopes.ID) error {
 	return index.processBankRecordID(os.O_APPEND|os.O_CREATE|os.O_WRONLY, bankRecordID, transactionIDs...)
 }
 
-func (index FilesystemBankRecordIDIndex) processBankRecordID(flag int, bankRecordID BankRecordID, transactionIds ...envelopes.ID) error {
+func (index FilesystemBankRecordIDIndex) processBankRecordID(flag int, bankRecordID envelopes.BankRecordID, transactionIds ...envelopes.ID) error {
 	if len(transactionIds) == 0 {
 		return nil
 	}
