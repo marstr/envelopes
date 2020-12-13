@@ -65,8 +65,8 @@ func segmentNormalizedName(id normalizedBankRecordID) []string {
 // If DecoratedWriter is nil, the association step will still happen if applicable, but then nothing more happens.
 func (index FilesystemBankRecordIDIndex) Write(ctx context.Context, subject envelopes.IDer) error {
 	transaction, ok := subject.(envelopes.Transaction)
-	if ok && transaction.RecordId != "" {
-		err := index.AppendBankRecordID(transaction.RecordId, transaction.ID())
+	if ok && transaction.RecordID != "" {
+		err := index.AppendBankRecordID(transaction.RecordID, transaction.ID())
 		if err != nil {
 			return err
 		}

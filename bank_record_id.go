@@ -20,7 +20,7 @@
 
 package envelopes
 
-// A unique identifier provided by a financial institution that is associated with precisely one transfer of funds.
+// BankRecordID A unique identifier provided by a financial institution that is associated with precisely one transfer of funds.
 //
 // There may be semantics embedded in this string, or it may be a randomly generated UUID. Because the details will be
 // specific to the institution that provided the data, we will treat this as an opaque string for this type. Wrappers

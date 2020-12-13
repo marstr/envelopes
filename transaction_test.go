@@ -89,7 +89,7 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 					PostedTime: authorTime,
 					Comment:    "Shoes",
 					Parent:     envelopes.Transaction{}.ID(),
-					RecordId:   "20201212 575073 2,000 202,012,128,756",
+					RecordID:   "20201212 575073 2,000 202,012,128,756",
 					State: &envelopes.State{
 						Budget: &envelopes.Budget{
 							Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
@@ -141,7 +141,7 @@ func getEnsureBankIdIncluded(_ context.Context) func(*testing.T) {
 			PostedTime: authorTime,
 			Comment:    "Shoes",
 			Parent:     envelopes.Transaction{}.ID(),
-			RecordId:   "20201212 575073 2,000 202,012,128,756",
+			RecordID:   "20201212 575073 2,000 202,012,128,756",
 			State: &envelopes.State{
 				Budget: &envelopes.Budget{
 					Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
@@ -161,7 +161,7 @@ func getEnsureBankIdIncluded(_ context.Context) func(*testing.T) {
 		}
 
 		without := with
-		without.RecordId = ""
+		without.RecordID = ""
 
 		if with.ID() == without.ID() {
 			t.Logf("including a bank record ID should change the ID of the transaction")

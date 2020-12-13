@@ -29,7 +29,7 @@ func Test_segmentNormalizedName(t *testing.T) {
 }
 
 func TestFilesystemBankRecordIDIndex_AppendBankRecordID(t *testing.T) {
-	bankRecordId := BankRecordID("20201212 575073 2,000 202,012,128,756")
+	bankRecordId := envelopes.BankRecordID("20201212 575073 2,000 202,012,128,756")
 	tempDir, err := ioutil.TempDir("", "bankRecordID_index_test")
 	if err != nil {
 		t.Error(err)

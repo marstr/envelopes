@@ -31,7 +31,7 @@ type Transaction struct {
 	Merchant    string
 	Committer   User
 	Comment     string
-	RecordId    BankRecordID
+	RecordID    BankRecordID
 	Parent      ID
 }
 
@@ -105,8 +105,8 @@ func (t Transaction) MarshalText() ([]byte, error) {
 			return nil, err
 		}
 	}
-	if t.RecordId != "" {
-		_, err = fmt.Fprintf(identityBuilder, "record %s\n", t.RecordId)
+	if t.RecordID != "" {
+		_, err = fmt.Fprintf(identityBuilder, "record %s\n", t.RecordID)
 		if err != nil {
 			return nil, err
 		}

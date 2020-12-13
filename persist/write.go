@@ -97,7 +97,7 @@ func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.
 	toMarshal.PostedTime = subject.PostedTime
 	toMarshal.Committer.FullName = subject.Committer.FullName
 	toMarshal.Committer.Email = subject.Committer.Email
-	toMarshal.RecordId = BankRecordID(subject.RecordId)
+	toMarshal.RecordId = BankRecordID(subject.RecordID)
 
 	err := dw.loopback().Write(ctx, subject.State)
 	if err != nil {
