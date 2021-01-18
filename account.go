@@ -12,6 +12,9 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
+// "can't let the evil of the money trap me"
+// -Holla at Me, Tupac Shakur
+
 package envelopes
 
 import (
