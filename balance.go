@@ -1,3 +1,14 @@
+// " Money
+//   It's a crime
+//   Share it fairly
+//   But don't take a slice of my pie
+//   Money
+//   So they say
+//   Is the root of all evil today
+//   But if you ask for a raise
+//   It's no surprise that they're giving none away"
+// - Money, Pink Floyd
+
 package envelopes
 
 import (
