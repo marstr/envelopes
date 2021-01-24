@@ -11,6 +11,15 @@ import (
 
 type WalkFunc func(ctx context.Context, transaction envelopes.Transaction) error
 
+// ErrSkipAncestors allows a WalkFunc to communicate that parents of this transaction shouldn't be visited.
+// If other Transactions have shared parent, but don't return ErrSkipAncestors, the shared parents will still
+// be visited.
+type ErrSkipAncestors struct{}
+
+func (err ErrSkipAncestors) Error() string {
+	return "Don't add this Transaction's parents to the list to be processed."
+}
+
 type Walker struct {
 	Loader persist.Loader
 }
@@ -23,6 +32,13 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 	}
 
 	for collection.Any(toProcess) {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			// Intentionally Left Blank
+		}
+
 		frontNode, _ := toProcess.RemoveFront()
 		currentId := frontNode.(envelopes.ID)
 
@@ -35,17 +51,21 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 		if err != nil {
 			return err
 		}
+		processed[currentId] = struct{}{}
 
 		err = action(ctx, current)
 		if err != nil {
-			return err
+			switch err.(type) {
+			case ErrSkipAncestors:
+				continue
+			default:
+				return err
+			}
 		}
 
 		for i := range current.Parent {
 			toProcess.AddBack(current.Parent[i])
 		}
-
-		processed[currentId] = struct{}{}
 	}
 
 	return nil
