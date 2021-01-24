@@ -178,7 +178,7 @@ func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, 
 		if err := loader.Load(ctx, transaction, &result); err != nil {
 			return nil, err
 		}
-		transaction = result.Parent
+		transaction = result.Parent[0]
 	}
 	return &result, nil
 }
