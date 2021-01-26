@@ -1,7 +1,9 @@
 <p align="center"><a href="./README.md#logo"><img src="https://github.com/ashleymcnamara/gophers/raw/4ddd92f3f0830f5d9a9eab50c410878249fe6515/NERDY.png" width="360"></a></p>
 
 # envelopes
-[![Build](https://github.com/marstr/envelopes/workflows/Build/badge.svg?branch=main)](https://github.com/marstr/envelopes/actions?query=workflow%3ABuild) [![PkgGoDev](https://pkg.go.dev/badge/github.com/marstr/envelopes)](https://pkg.go.dev/github.com/marstr/envelopes)
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/marstr/envelopes)](https://pkg.go.dev/github.com/marstr/envelopes)
+[![Build](https://github.com/marstr/envelopes/workflows/Build/badge.svg?branch=main)](https://github.com/marstr/envelopes/actions?query=workflow%3ABuild)
+[![CodeQL](https://github.com/marstr/envelopes/workflows/CodeQL/badge.svg)](https://github.com/marstr/envelopes/actions?query=workflow%A3CodeQL)
 
 Been scouring the internet looking for a personal finance library written in Go? Having trouble finding one flexible 
 enough to model your budget? You have arrived at a library that aims to give you the building blocks to represent your 
