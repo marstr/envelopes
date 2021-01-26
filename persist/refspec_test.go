@@ -24,48 +24,105 @@ import (
 )
 
 func TestRefSpecResolver_Resolve(t *testing.T) {
+	const primaryBranch = DefaultBranch
+	const secondaryBranch = "backup"
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var test3and4Transactions [4]envelopes.ID
-	test3and4Transactions[0].UnmarshalText([]byte("f3bd1757f2ccfe63eefce93ffe4c046166d0a1a5"))
-	test3and4Transactions[1].UnmarshalText([]byte("c76ece80f16ef8cfe0213ca4b568d7d576a96f9d"))
-	test3and4Transactions[2].UnmarshalText([]byte("d9ff31f511c1fce2ec75b5efc500a6dfb4d83452"))
-	test3and4Transactions[3].UnmarshalText([]byte("434926f0aa5dde53c24c81e8061f99ab963bb98f"))
+	mockRepo := NewMockRepository(2, 4)
 
-	testCases := []struct {
-		repoLocation string
-		subject      RefSpec
-		expected     envelopes.ID
-	}{
-		{"./testdata/test1", "HEAD", envelopes.ID{}},
-		{"./testdata/test2", "HEAD", envelopes.ID{}},
-		{"./testdata/test3/.baronial", "HEAD", test3and4Transactions[3]},
-		{"./testdata/test3/.baronial", "HEAD^", test3and4Transactions[2]},
-		{"./testdata/test3/.baronial", "HEAD~1", test3and4Transactions[2]},
-		{"./testdata/test3/.baronial", "HEAD^^", test3and4Transactions[1]},
-		{"./testdata/test3/.baronial", "HEAD~3", test3and4Transactions[0]},
-		{"./testdata/test3/.baronial", "d9ff31f511c1fce2ec75b5efc500a6dfb4d83452^", test3and4Transactions[1]},
-		{"./testdata/test3/.baronial", "434926f0aa5dde53c24c81e8061f99ab963bb98f~3", test3and4Transactions[0]},
-		{"./testdata/test4/.baronial", "backup", test3and4Transactions[1]},
-		{"./testdata/test4/.baronial", "master", test3and4Transactions[3]},
-		{"./testdata/test4/.baronial", "master~2", test3and4Transactions[1]},
-		{"./testdata/test4/.baronial", "HEAD", test3and4Transactions[3]},
+	var transactions [4]envelopes.Transaction
+	transactions[0] = envelopes.Transaction{
+		Comment: "A!",
+	}
+	aid := transactions[0].ID()
+	err := mockRepo.Write(ctx, transactions[0])
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
-	fs := &FileSystem{}
+	transactions[1] = envelopes.Transaction{
+		Comment: "B!",
+		Parents: []envelopes.ID{
+			aid,
+		},
+	}
+	bid := transactions[1].ID()
+	err = mockRepo.Write(ctx, transactions[1])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = mockRepo.WriteBranch(ctx, secondaryBranch, bid)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	transactions[2] = envelopes.Transaction{
+		Comment: "C!",
+		Parents: []envelopes.ID{
+			bid,
+		},
+	}
+	cid := transactions[2].ID()
+	err = mockRepo.Write(ctx, transactions[2])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	transactions[3] = envelopes.Transaction{
+		Comment: "D!",
+		Parents: []envelopes.ID{
+			cid,
+		},
+	}
+	did := transactions[3].ID()
+	err = mockRepo.Write(ctx, transactions[3])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mockRepo.WriteBranch(ctx, primaryBranch, did)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mockRepo.SetCurrent(ctx, primaryBranch)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	testCases := []struct {
+		subject  RefSpec
+		expected envelopes.ID
+	}{
+		{MostRecentTransactionAlias, did},
+		{MostRecentTransactionAlias + "^", cid},
+		{MostRecentTransactionAlias + "~1", cid},
+		{MostRecentTransactionAlias + "^^", bid},
+		{MostRecentTransactionAlias + "~3", aid},
+		{RefSpec(cid.String() + "^"), bid},
+		{RefSpec(did.String() + "~3"), aid},
+		{secondaryBranch, bid},
+		{primaryBranch, did},
+		{primaryBranch + "~2", bid},
+	}
 
 	resolver := RefSpecResolver{
-		Loader: DefaultLoader{
-			Fetcher: fs,
-		},
-		Brancher:      fs,
-		CurrentReader: fs,
+		Loader:        mockRepo,
+		Brancher:      mockRepo,
+		CurrentReader: mockRepo,
 	}
 
 	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("%s-%q", tc.repoLocation, string(tc.subject)), func(t *testing.T) {
-			fs.Root = tc.repoLocation
+		t.Run(fmt.Sprintf("%q", string(tc.subject)), func(t *testing.T) {
 			got, err := resolver.Resolve(ctx, tc.subject)
 			if err != nil {
 				t.Error(err)

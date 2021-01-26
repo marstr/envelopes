@@ -34,7 +34,7 @@ type (
 		Comment     string       `json:"comment"`
 		Committer   User         `json:"committer,omitempty"`
 		RecordId    BankRecordID `json:"recordId,omitempty"`
-		Parent      envelopes.ID `json:"parent"`
+		Parent      []envelopes.ID `json:"parent"`
 	}
 
 	// State is a copy of envelopes.State for ORM purposes.

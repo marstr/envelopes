@@ -88,7 +88,7 @@ func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.
 
 	var toMarshal Transaction
 	toMarshal.Amount = Balance(subject.Amount)
-	toMarshal.Parent = subject.Parent
+	toMarshal.Parent = subject.Parents
 	toMarshal.State = subject.State.ID()
 	toMarshal.Comment = subject.Comment
 	toMarshal.Merchant = subject.Merchant

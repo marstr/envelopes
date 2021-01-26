@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -32,7 +33,7 @@ type Transaction struct {
 	Committer   User
 	Comment     string
 	RecordID    BankRecordID
-	Parent      ID
+	Parents     []ID
 }
 
 // ID fetches a SHA1 hash of this object that will uniquely identify it.
@@ -71,7 +72,12 @@ func (t Transaction) MarshalText() ([]byte, error) {
 		return nil, err
 	}
 
-	_, err = fmt.Fprintf(identityBuilder, "parent %s\n", t.Parent)
+	strParents := make([]string, 0, len(t.Parents))
+	for i := range t.Parents {
+		strParents = append(strParents, t.Parents[i].String())
+	}
+	joinedParents := strings.Join(strParents, ",")
+	_, err = fmt.Fprintf(identityBuilder, "parents %s\n", joinedParents)
 	if err != nil {
 		return nil, err
 	}
