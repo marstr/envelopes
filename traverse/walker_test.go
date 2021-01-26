@@ -27,7 +27,7 @@ func chain(ctx context.Context) func(t *testing.T) {
 
 	b := envelopes.Transaction{
 		Comment: "Second!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			aid,
 		},
 	}
@@ -37,7 +37,7 @@ func chain(ctx context.Context) func(t *testing.T) {
 		panic(err)
 	}
 
-	return func (t *testing.T) {
+	return func(t *testing.T) {
 		expected := map[envelopes.ID]struct{}{
 			aid: {},
 			bid: {},
@@ -81,7 +81,7 @@ func fork(ctx context.Context) func(t *testing.T) {
 
 	b := envelopes.Transaction{
 		Comment: "Second!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			aid,
 		},
 	}
@@ -93,7 +93,7 @@ func fork(ctx context.Context) func(t *testing.T) {
 
 	c := envelopes.Transaction{
 		Comment: "Third!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			aid,
 		},
 	}
@@ -103,7 +103,7 @@ func fork(ctx context.Context) func(t *testing.T) {
 		panic(err)
 	}
 
-	return func (t *testing.T) {
+	return func(t *testing.T) {
 		expected := map[envelopes.ID]struct{}{
 			aid: {},
 			bid: {},
@@ -151,7 +151,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 
 	b := envelopes.Transaction{
 		Comment: "Second!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			aid,
 		},
 	}
@@ -163,7 +163,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 
 	c := envelopes.Transaction{
 		Comment: "Third!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			bid,
 		},
 	}
@@ -175,7 +175,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 
 	d := envelopes.Transaction{
 		Comment: "Fourth!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			cid,
 		},
 	}
@@ -185,7 +185,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 		panic(err)
 	}
 
-	return func (t *testing.T) {
+	return func(t *testing.T) {
 		expected := map[envelopes.ID]struct{}{
 			cid: {},
 			did: {},
@@ -225,4 +225,3 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 		}
 	}
 }
-

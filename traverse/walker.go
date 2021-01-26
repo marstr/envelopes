@@ -63,8 +63,8 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 			}
 		}
 
-		for i := range current.Parent {
-			toProcess.AddBack(current.Parent[i])
+		for i := range current.Parents {
+			toProcess.AddBack(current.Parents[i])
 		}
 	}
 

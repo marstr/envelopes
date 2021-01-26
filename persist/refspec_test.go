@@ -45,7 +45,7 @@ func TestRefSpecResolver_Resolve(t *testing.T) {
 
 	transactions[1] = envelopes.Transaction{
 		Comment: "B!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			aid,
 		},
 	}
@@ -63,7 +63,7 @@ func TestRefSpecResolver_Resolve(t *testing.T) {
 
 	transactions[2] = envelopes.Transaction{
 		Comment: "C!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			bid,
 		},
 	}
@@ -76,7 +76,7 @@ func TestRefSpecResolver_Resolve(t *testing.T) {
 
 	transactions[3] = envelopes.Transaction{
 		Comment: "D!",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			cid,
 		},
 	}

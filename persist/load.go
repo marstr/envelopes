@@ -117,7 +117,7 @@ func (dl DefaultLoader) loadTransaction(ctx context.Context, marshaled []byte, t
 	toLoad.ActualTime = unmarshaled.ActualTime
 	toLoad.EnteredTime = unmarshaled.EnteredTime
 	toLoad.PostedTime = unmarshaled.PostedTime
-	toLoad.Parent = unmarshaled.Parent
+	toLoad.Parents = unmarshaled.Parent
 	toLoad.Amount = envelopes.Balance(unmarshaled.Amount)
 	toLoad.Committer.FullName = unmarshaled.Committer.FullName
 	toLoad.Committer.Email = unmarshaled.Committer.Email
@@ -179,8 +179,8 @@ func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, 
 		if err := loader.Load(ctx, transaction, &result); err != nil {
 			return nil, err
 		}
-		if len(result.Parent) > 0 {
-			transaction = result.Parent[0]
+		if len(result.Parents) > 0 {
+			transaction = result.Parents[0]
 		} else if i < jumps {
 			return nil, errors.New("no such ancestor")
 		}

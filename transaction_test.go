@@ -29,7 +29,7 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 		}{
 			{
 				Subject:  envelopes.Transaction{},
-				Expected: "9273fa1765fd735527196071b244bbafa5706ddf",
+				Expected: "48087310cd4fafe77745abccea008388ec10775c",
 			},
 			{
 				Subject: envelopes.Transaction{
@@ -37,7 +37,7 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 					Merchant:   "Target",
 					PostedTime: authorTime,
 					Comment:    "Shoes",
-					Parent: []envelopes.ID{
+					Parents: []envelopes.ID{
 						envelopes.Transaction{}.ID(),
 					},
 					State: &envelopes.State{
@@ -54,7 +54,7 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 						},
 					},
 				},
-				Expected: "c8a29d9bc845908238caf17ee0629e4bdeabb2ef",
+				Expected: "71e6c71d9acdbe69598aceef7c703cdb86f563c1",
 			},
 			{
 				Subject: envelopes.Transaction{
@@ -80,11 +80,11 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 						Email:    "jamesthebrother@yahoo.org", // Need I point out this is not a real email?
 					},
 					Comment: "Undisclosed Ferengi wares... totally above board",
-					Parent: []envelopes.ID{
+					Parents: []envelopes.ID{
 						envelopes.Transaction{ActualTime: authorTime.Add(-2 * time.Hour)}.ID(),
 					},
 				},
-				Expected: "e93c98983c4adb37a4a5a0517de9a627ef23b868",
+				Expected: "7277fbcedec2739dec52b6fd158d014d8209c9eb",
 			},
 			{
 				Subject: envelopes.Transaction{
@@ -92,7 +92,7 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 					Merchant:   "Target",
 					PostedTime: authorTime,
 					Comment:    "Shoes",
-					Parent: []envelopes.ID{
+					Parents: []envelopes.ID{
 						envelopes.Transaction{}.ID(),
 					},
 					RecordID: "20201212 575073 2,000 202,012,128,756",
@@ -113,7 +113,7 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 						},
 					},
 				},
-				Expected: "536917042d2f793dd6e0d5bfd8c6fa21636aeda1",
+				Expected: "ebad5097e0013577f9926fa2f5f5bec385608794",
 			},
 		}
 
@@ -146,7 +146,7 @@ func getEnsureBankIdIncluded(_ context.Context) func(*testing.T) {
 			Merchant:   "Target",
 			PostedTime: authorTime,
 			Comment:    "Shoes",
-			Parent: []envelopes.ID{
+			Parents: []envelopes.ID{
 				envelopes.Transaction{}.ID(),
 			},
 			RecordID: "20201212 575073 2,000 202,012,128,756",

@@ -33,14 +33,14 @@ func TestLoadAncestor(t *testing.T) {
 
 	t2 := envelopes.Transaction{
 		Comment: "2",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			t1.ID(),
 		},
 	}
 
 	t3 := envelopes.Transaction{
 		Comment: "3",
-		Parent: []envelopes.ID{
+		Parents: []envelopes.ID{
 			t2.ID(),
 		},
 	}
