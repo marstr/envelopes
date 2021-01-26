@@ -17,6 +17,7 @@ package persist
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -178,7 +179,11 @@ func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, 
 		if err := loader.Load(ctx, transaction, &result); err != nil {
 			return nil, err
 		}
-		transaction = result.Parent[0]
+		if len(result.Parent) > 0 {
+			transaction = result.Parent[0]
+		} else if i < jumps {
+			return nil, errors.New("no such ancestor")
+		}
 	}
 	return &result, nil
 }

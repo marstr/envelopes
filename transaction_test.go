@@ -37,7 +37,9 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 					Merchant:   "Target",
 					PostedTime: authorTime,
 					Comment:    "Shoes",
-					Parent:     envelopes.Transaction{}.ID(),
+					Parent: []envelopes.ID{
+						envelopes.Transaction{}.ID(),
+					},
 					State: &envelopes.State{
 						Budget: &envelopes.Budget{
 							Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
@@ -78,7 +80,9 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 						Email:    "jamesthebrother@yahoo.org", // Need I point out this is not a real email?
 					},
 					Comment: "Undisclosed Ferengi wares... totally above board",
-					Parent:  envelopes.Transaction{ActualTime: authorTime.Add(-2 * time.Hour)}.ID(),
+					Parent: []envelopes.ID{
+						envelopes.Transaction{ActualTime: authorTime.Add(-2 * time.Hour)}.ID(),
+					},
 				},
 				Expected: "e93c98983c4adb37a4a5a0517de9a627ef23b868",
 			},
@@ -88,8 +92,10 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 					Merchant:   "Target",
 					PostedTime: authorTime,
 					Comment:    "Shoes",
-					Parent:     envelopes.Transaction{}.ID(),
-					RecordID:   "20201212 575073 2,000 202,012,128,756",
+					Parent: []envelopes.ID{
+						envelopes.Transaction{}.ID(),
+					},
+					RecordID: "20201212 575073 2,000 202,012,128,756",
 					State: &envelopes.State{
 						Budget: &envelopes.Budget{
 							Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
@@ -140,8 +146,10 @@ func getEnsureBankIdIncluded(_ context.Context) func(*testing.T) {
 			Merchant:   "Target",
 			PostedTime: authorTime,
 			Comment:    "Shoes",
-			Parent:     envelopes.Transaction{}.ID(),
-			RecordID:   "20201212 575073 2,000 202,012,128,756",
+			Parent: []envelopes.ID{
+				envelopes.Transaction{}.ID(),
+			},
+			RecordID: "20201212 575073 2,000 202,012,128,756",
 			State: &envelopes.State{
 				Budget: &envelopes.Budget{
 					Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
