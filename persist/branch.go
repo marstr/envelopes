@@ -36,6 +36,12 @@ type BranchWriter interface {
 	WriteBranch(ctx context.Context, name string, id envelopes.ID) error
 }
 
+// BranchReaderWriter indicates that a types has both the capabilities of a BranchReader and BranchWriter.
+type BranchReaderWriter interface {
+	BranchReader
+	BranchWriter
+}
+
 // BranchLister are able to find all branches is a repository.
 type BranchLister interface {
 	ListBranches(ctx context.Context) (<-chan string, error)
