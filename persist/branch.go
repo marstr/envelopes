@@ -26,10 +26,13 @@ const (
 	DefaultBranch = "master"
 )
 
-// Brancher defines the requirements for a type to be able to provide the functionality
-// required to manage branches.
-type Brancher interface {
+// BranchReader indicates that a type is capable of discovering the envelopes.Transaction that a branch points at.
+type BranchReader interface {
 	ReadBranch(ctx context.Context, name string) (envelopes.ID, error)
+}
+
+// BranchWriter indicates that a type is capable of update the envelopes.Transaction that a branch points at.
+type BranchWriter interface {
 	WriteBranch(ctx context.Context, name string, id envelopes.ID) error
 }
 
