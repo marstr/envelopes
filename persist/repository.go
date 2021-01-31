@@ -43,16 +43,19 @@ type BareRepositoryReaderWriter interface {
 	BareRepositoryWriter
 }
 
+// RepositoryReader indicates that a structs has all the functionality of a BareRepositoryReader, plus a CurrentReader.
 type RepositoryReader interface {
 	BareRepositoryReader
 	CurrentReader
 }
 
+// RepositoryWriter has all the functionality of a BareRepositoryWriter, plus the ability to update Current.
 type RepositoryWriter interface {
 	BareRepositoryWriter
 	CurrentWriter
 }
 
+// RepositoryReaderWriter has all the functionality of a RepositoryReader and RepositoryWriter.
 type RepositoryReaderWriter interface {
 	RepositoryReader
 	RepositoryWriter
