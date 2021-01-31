@@ -176,6 +176,12 @@ func (dl DefaultLoader) loadBudget(ctx context.Context, marshaled []byte, toLoad
 func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, jumps uint) (*envelopes.Transaction, error) {
 	var result envelopes.Transaction
 	for i := uint(0); i <= jumps; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			// Intentionally Left Blank
+		}
 		if err := loader.Load(ctx, transaction, &result); err != nil {
 			return nil, err
 		}
