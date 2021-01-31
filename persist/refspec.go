@@ -33,13 +33,6 @@ const (
 type (
 	// RefSpec exposes operations on a string that is attempting to specify a particular Transaction ID.
 	RefSpec string
-
-	// RefSpecResolver provides a mechanism for converting a RefSpec into a Transaction ID.
-	RefSpecResolver struct {
-		Loader
-		Brancher
-		CurrentReader
-	}
 )
 
 // ErrNoRefSpec indicates that a particular value was passed as if it could be interpreted as a RefSpec, but it could
@@ -56,29 +49,29 @@ var (
 	tildePattern  = buildRegexpOnce(`^(?P<ancestor>.+)~(?P<jumps>\d+)$`)
 )
 
-// Resolve interprets a RefSpec that is provided to the Transaction ID it is referring to.
-func (resolver RefSpecResolver) Resolve(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
-	resolved, err := resolver.resolveTransactionRefSpec(ctx, subject)
+// Resolve interprets a RefSpec that is provided to the envelopes.Transaction ID it is referring to.
+func Resolve(ctx context.Context, repo RepositoryReader, subject RefSpec) (envelopes.ID, error) {
+	resolved, err := resolveTransactionRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
-	resolved, err = resolver.resolveBranchRefSpec(ctx, subject)
+	resolved, err = resolveBranchRefSpec(ctx, repo, subject)
 	if err == nil {
 		return resolved, err
 	}
 
-	resolved, err = resolver.resolveMostRecentRefSpec(ctx, subject)
+	resolved, err = resolveMostRecentRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
-	resolved, err = resolver.resolveCaretRefSpec(ctx, subject)
+	resolved, err = resolveCaretRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
-	resolved, err = resolver.resolveTildeRefSpec(ctx, subject)
+	resolved, err = resolveTildeRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
@@ -87,23 +80,23 @@ func (resolver RefSpecResolver) Resolve(ctx context.Context, subject RefSpec) (e
 }
 
 // resolveBranchRefSpec find the ID of the Transaction a branch is pointing to.
-func (resolver RefSpecResolver) resolveBranchRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
-	return resolver.ReadBranch(ctx, string(subject))
+func resolveBranchRefSpec(ctx context.Context, reader BranchReader, subject RefSpec) (envelopes.ID, error) {
+	return reader.ReadBranch(ctx, string(subject))
 }
 
 // resolveCaretRefSpec finds the parent ID of the most recent Transaction.
-func (resolver RefSpecResolver) resolveCaretRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+func resolveCaretRefSpec(ctx context.Context, repo RepositoryReader, subject RefSpec) (envelopes.ID, error) {
 	matches := caretPattern().FindStringSubmatch(string(subject))
 	if len(matches) < 2 {
 		return envelopes.ID{}, ErrNoRefSpec(subject)
 	}
 
-	target, err := resolver.Resolve(ctx, RefSpec(matches[1]))
+	target, err := Resolve(ctx, repo, RefSpec(matches[1]))
 	if err != nil {
 		return envelopes.ID{}, err
 	}
 
-	loaded, err := LoadAncestor(ctx, resolver, target, 1)
+	loaded, err := LoadAncestor(ctx, repo, target, 1)
 	if err != nil {
 		return envelopes.ID{}, err
 	}
@@ -111,22 +104,22 @@ func (resolver RefSpecResolver) resolveCaretRefSpec(ctx context.Context, subject
 }
 
 // resolveMostRecentRefSpec finds the most recent Transaction ID.
-func (resolver RefSpecResolver) resolveMostRecentRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+func resolveMostRecentRefSpec(ctx context.Context, repo RepositoryReader, subject RefSpec) (envelopes.ID, error) {
 	if subject != MostRecentTransactionAlias {
 		return envelopes.ID{}, ErrNoRefSpec(subject)
 	}
 
-	currentRefSpec, err := resolver.Current(ctx)
+	currentRefSpec, err := repo.Current(ctx)
 	if err != nil {
 		return envelopes.ID{}, err
 	}
 
-	return resolver.Resolve(ctx, currentRefSpec)
+	return Resolve(ctx, repo, currentRefSpec)
 }
 
 // resolveTildeRefSpec scrapes a count of transactions off the end of a RefSpec, resolves the left-hand side, then
 // traverses the direct descendents of the specified transactions the number of specified jumps.
-func (resolver RefSpecResolver) resolveTildeRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+func resolveTildeRefSpec(ctx context.Context, repo RepositoryReader, subject RefSpec) (envelopes.ID, error) {
 	matches := tildePattern().FindStringSubmatch(string(subject))
 	if len(matches) < 3 {
 		return envelopes.ID{}, ErrNoRefSpec(subject)
@@ -137,12 +130,12 @@ func (resolver RefSpecResolver) resolveTildeRefSpec(ctx context.Context, subject
 		return envelopes.ID{}, err
 	}
 
-	target, err := resolver.Resolve(ctx, RefSpec(matches[1]))
+	target, err := Resolve(ctx, repo, RefSpec(matches[1]))
 	if err != nil {
 		return envelopes.ID{}, err
 	}
 
-	loaded, err := LoadAncestor(ctx, resolver, target, uint(jumps))
+	loaded, err := LoadAncestor(ctx, repo, target, uint(jumps))
 	if err != nil {
 		return envelopes.ID{}, err
 	}
@@ -150,7 +143,7 @@ func (resolver RefSpecResolver) resolveTildeRefSpec(ctx context.Context, subject
 }
 
 // resolveTransactionRefSpec parses a RefSpec which directly specifies a Transaction via text into a binary ID.
-func (resolver RefSpecResolver) resolveTransactionRefSpec(ctx context.Context, subject RefSpec) (envelopes.ID, error) {
+func resolveTransactionRefSpec(ctx context.Context, loader Loader, subject RefSpec) (envelopes.ID, error) {
 	if !commitPattern().MatchString(string(subject)) {
 		return envelopes.ID{}, ErrNoRefSpec(subject)
 	}
@@ -168,7 +161,7 @@ func (resolver RefSpecResolver) resolveTransactionRefSpec(ctx context.Context, s
 	}
 
 	var target envelopes.Transaction
-	err = resolver.Load(ctx, result, &target)
+	err = loader.Load(ctx, result, &target)
 	if err != nil {
 		return envelopes.ID{}, err
 	}
