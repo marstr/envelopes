@@ -1,4 +1,4 @@
 github.com/marstr/collection v1.1.1 h1:NJgrWXrjYWkrAr/bAp6LVCT+NvrZpE8URGFy7R7CBIA=
 github.com/marstr/collection v1.1.1/go.mod h1:yGFnCtb7iWtkdragXuuvnQzBQ8DAu+awhmE7F4kRgaQ=
-github.com/mitchellh/go-homedir v0.0.0-20161203194507-b8bc1bf76747 h1:eQox4Rh4ewJF+mqYPxCkmBAirRnPaHEB26UkNuPyjlk=
-github.com/mitchellh/go-homedir v0.0.0-20161203194507-b8bc1bf76747/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
+github.com/mitchellh/go-homedir v1.0.0 h1:vKb8ShqSby24Yrqr/yDYkuFz8d0WUjys40rvnGC8aR0=
+github.com/mitchellh/go-homedir v1.0.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
