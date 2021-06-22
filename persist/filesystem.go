@@ -34,11 +34,87 @@ import (
 
 const objectsDir = "objects"
 
-// FileSystem allows an easy mechanism for reading and writing Budget related
-// objects to and from a hard drive.
+// FileSystem allows an easy mechanism for reading and writing raw Budget related objects to and from a hard drive.
 type FileSystem struct {
 	Root              string
 	CreatePermissions os.FileMode
+}
+
+// FileSystemRepository combines the capability to read and write raw budget objects to the file system with both a
+// Loader and Writer that convert between instantiated object model and raw bits.
+//
+// This abstraction exists to allow repositories that differ in the format files are stored in (say JSON or XML) to
+// share the logic of where those files should live relative to a root directory.
+type FileSystemRepository struct {
+	FileSystem
+	Loader
+	Writer
+}
+
+type defaultFileSystemRepository struct {
+	FileSystem
+	DefaultLoader
+	DefaultWriter
+}
+
+type DefaultFileSystemRepositoryOption func(repository *defaultFileSystemRepository) error
+
+func DefaultFileSystemRepositoryUseCache(capacity uint) DefaultFileSystemRepositoryOption {
+	cache := NewCache(capacity)
+	return func(repository *defaultFileSystemRepository) error {
+		repository.DefaultLoader.Loopback = cache
+		repository.DefaultWriter.Loopback = cache
+		return nil
+	}
+}
+
+func DefaultFileSystemRepositoryFileMode(mode os.FileMode) DefaultFileSystemRepositoryOption {
+	return func(repository *defaultFileSystemRepository) error {
+		repository.FileSystem.CreatePermissions = mode
+		return nil
+	}
+}
+
+func NewDefaultFileSystemRepository(root string, options ...DefaultFileSystemRepositoryOption) (*FileSystemRepository, error) {
+	fs := FileSystem{
+		Root: root,
+	}
+
+	temp := defaultFileSystemRepository{
+		FileSystem: fs,
+		DefaultLoader:     DefaultLoader{
+			Fetcher:  fs,
+			Loopback: nil,
+		},
+		DefaultWriter:     DefaultWriter{
+			Stasher:  fs,
+			Loopback: nil,
+		},
+	}
+
+	for _, option := range options {
+		if err := option(&temp); err != nil {
+			return nil, err
+		}
+	}
+
+	retval := &FileSystemRepository{
+		FileSystem: temp.FileSystem,
+	}
+
+	if temp.DefaultLoader.Loopback == nil {
+		retval.Loader = temp.DefaultLoader
+	} else {
+		retval.Loader = temp.DefaultLoader.Loopback
+	}
+
+	if temp.DefaultWriter.Loopback == nil {
+		retval.Writer = temp.DefaultWriter
+	} else {
+		retval.Writer = temp.DefaultWriter.Loopback
+	}
+
+	return retval, nil
 }
 
 func (fs FileSystem) getCreatePermissions() os.FileMode {
@@ -65,65 +141,14 @@ func (fs FileSystem) Current(_ context.Context) (result RefSpec, err error) {
 	return
 }
 
-// WriteCurrent makes note of the most recent ID of transaction. If current.txt currently contains a branch, this
-// operation defers to updating the branch file. Should the contents be anything else, the contents of current.txt are
-// replaced by the ID of the current Transaction.
-func (fs FileSystem) WriteCurrent(ctx context.Context, current envelopes.Transaction) error {
-	p, err := fs.currentPath()
-	if err != nil {
-		return err
-	}
-
-	raw, err := ioutil.ReadFile(p)
-	if os.IsNotExist(err) {
-		raw = []byte(DefaultBranch)
-	} else if err != nil {
-		return err
-	}
-
-	trimmed := strings.TrimSpace(string(raw))
-	_, err = fs.ReadBranch(ctx, trimmed)
-	if os.IsNotExist(err) {
-		transformed, err := current.ID().MarshalText()
-		if err != nil {
-			return err
-		}
-
-		return ioutil.WriteFile(p, transformed, fs.getCreatePermissions())
-	}
-
-	return fs.WriteBranch(ctx, trimmed, current.ID())
-}
-
 // SetCurrent replaces the current pointer to the most recent Transaction with a given RefSpec. For instance, this
 // should be used to change which branch is currently checked-out.
-func (fs FileSystem) SetCurrent(ctx context.Context, current RefSpec) error {
+func (fs FileSystem) SetCurrent(_ context.Context, current RefSpec) error {
 	p, err := fs.currentPath()
 	if err != nil {
 		return err
 	}
-
-	if _, err = fs.ReadBranch(ctx, string(current)); err == nil {
-		return ioutil.WriteFile(p, []byte(current), fs.getCreatePermissions())
-	} else if os.IsNotExist(err) {
-		resolver := RefSpecResolver{
-			Loader:   DefaultLoader{Fetcher: fs},
-			Brancher: fs,
-		}
-
-		id, err := resolver.Resolve(ctx, current)
-		if err != nil {
-			return err
-		}
-
-		marshaled, err := id.MarshalText()
-		if err != nil {
-			return err
-		}
-		return ioutil.WriteFile(p, marshaled, fs.getCreatePermissions())
-	}
-
-	return err
+	return ioutil.WriteFile(p, []byte(current), fs.getCreatePermissions())
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
@@ -263,55 +288,4 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 	}()
 
 	return castResults, nil
-}
-
-// Clone uses an arbitrary Loader to retrieve all transactions that are ancestors of a specified Transaction. As it
-// acquires each Transaction, it writes it to disk.
-func (fs FileSystem) Clone(ctx context.Context, walkStart envelopes.ID, branchName string, loader Loader) error {
-	err := fs.copyTransactions(ctx, walkStart, loader)
-	if err != nil {
-		return err
-	}
-
-	err = fs.WriteBranch(ctx, branchName, walkStart)
-	if err != nil {
-		return err
-	}
-
-	localLoader := DefaultLoader{Fetcher: fs}
-	var head envelopes.Transaction
-	err = localLoader.Load(ctx, walkStart, &head)
-	if err != nil {
-		return err
-	}
-
-	return fs.SetCurrent(ctx, RefSpec(branchName))
-}
-
-func (fs FileSystem) copyTransactions(ctx context.Context, walkStart envelopes.ID, loader Loader) error {
-	next := walkStart
-
-	writer := DefaultWriter{
-		Stasher: fs,
-	}
-
-	var current envelopes.Transaction
-	for {
-		err := loader.Load(ctx, next, &current)
-		if err != nil {
-			return err
-		}
-
-		err = writer.Write(ctx, current)
-		if err != nil {
-			return err
-		}
-
-		if current.Parent.Equal(envelopes.ID{}) {
-			break
-		}
-		next = current.Parent
-	}
-
-	return nil
 }

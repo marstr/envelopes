@@ -23,7 +23,7 @@ import (
 	"github.com/marstr/envelopes"
 )
 
-func TestRefSpecResolver_Resolve(t *testing.T) {
+func Test_Resolve(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -55,18 +55,22 @@ func TestRefSpecResolver_Resolve(t *testing.T) {
 
 	fs := &FileSystem{}
 
-	resolver := RefSpecResolver{
-		Loader: DefaultLoader{
-			Fetcher: fs,
-		},
-		Brancher:      fs,
+	loader := struct{
+		Loader
+		CurrentReader
+		BranchReader
+		BranchLister
+	}{
+		Loader: &DefaultLoader{Fetcher: fs},
 		CurrentReader: fs,
+		BranchLister: fs,
+		BranchReader: fs,
 	}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%s-%q", tc.repoLocation, string(tc.subject)), func(t *testing.T) {
 			fs.Root = tc.repoLocation
-			got, err := resolver.Resolve(ctx, tc.subject)
+			got, err := Resolve(ctx, loader, tc.subject)
 			if err != nil {
 				t.Error(err)
 				return
