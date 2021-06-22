@@ -16,12 +16,6 @@
 
 package persist
 
-import (
-	"context"
-
-	"github.com/marstr/envelopes"
-)
-
 // BareRepositoryReader indicates that a struct is able to read objects like envelopes.Budget, envelopes.Transaction,
 // and branch instances from a repository. However, it does not indicate that the repository has a current working copy.
 type BareRepositoryReader interface {
@@ -59,21 +53,4 @@ type RepositoryWriter interface {
 type RepositoryReaderWriter interface {
 	RepositoryReader
 	RepositoryWriter
-}
-
-// Commitb adds an envelopes.Transaction as the most recent commit on a branch. Whatever parent belongs to `t` will be
-// overwritten by this operation before the write.
-func Commitb(ctx context.Context, repo BareRepositoryReaderWriter, t envelopes.Transaction, branch string) error {
-	var err error
-	t.Parent, err = repo.ReadBranch(ctx, branch)
-	if err != nil {
-		return err
-	}
-
-	err = repo.Write(ctx, t)
-	if err != nil {
-		return err
-	}
-
-	return repo.WriteBranch(ctx, branch, t.ID())
 }
