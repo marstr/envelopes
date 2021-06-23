@@ -51,3 +51,7 @@ func (u User) String() string {
 	}
 	return string(result)
 }
+
+func (u User) Equal(other User) bool {
+	return u.FullName == other.FullName && u.Email == other.Email
+}

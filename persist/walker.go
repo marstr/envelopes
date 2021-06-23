@@ -1,12 +1,11 @@
 // "Money talks, bullshit walks" -Unknown
 
-package traverse
+package persist
 
 import (
 	"context"
 	"github.com/marstr/collection"
 	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/persist"
 )
 
 type WalkFunc func(ctx context.Context, transaction envelopes.Transaction) error
@@ -21,7 +20,7 @@ func (err ErrSkipAncestors) Error() string {
 }
 
 type Walker struct {
-	Loader persist.Loader
+	Loader Loader
 }
 
 func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.ID) error {
