@@ -54,6 +54,61 @@ func (t Transaction) String() string {
 	return string(marshaled)
 }
 
+// Equal determines whether two instances of Transaction share identical values.
+func (t Transaction) Equal(other Transaction) bool {
+	if t.State == nil && other.State != nil {
+		return false
+	} else if t.State == nil && other.State == nil {
+		// Intentionally Left Blank
+	} else if !t.State.Equal(*other.State) {
+		return false
+	}
+
+	if !t.ActualTime.Equal(other.ActualTime) {
+		return false
+	}
+
+	if !t.PostedTime.Equal(other.PostedTime) {
+		return false
+	}
+
+	if !t.EnteredTime.Equal(other.EnteredTime) {
+		return false
+	}
+
+	if !t.Amount.Equal(other.Amount) {
+		return false
+	}
+
+	if t.Merchant != other.Merchant {
+		return false
+	}
+
+	if !t.Committer.Equal(other.Committer) {
+		return false
+	}
+
+	if t.Comment != other.Comment {
+		return false
+	}
+
+	if t.RecordID != other.RecordID {
+		return false
+	}
+
+	if len(t.Parents) != len(other.Parents) {
+		return false
+	}
+
+	for i := range t.Parents {
+		if !t.Parents[i].Equal(other.Parents[i]) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // MarshalText computes a string which uniquely represents this Transaction.
 func (t Transaction) MarshalText() ([]byte, error) {
 	const timeFormat = time.RFC3339

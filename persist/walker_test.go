@@ -1,9 +1,8 @@
-package traverse
+package persist
 
 import (
 	"context"
 	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/persist"
 	"testing"
 )
 
@@ -15,7 +14,7 @@ func TestWalker_Walk(t *testing.T) {
 }
 
 func chain(ctx context.Context) func(t *testing.T) {
-	cache := persist.NewCache(2)
+	cache := NewCache(2)
 	a := envelopes.Transaction{
 		Comment: "First!",
 	}
@@ -69,7 +68,7 @@ func chain(ctx context.Context) func(t *testing.T) {
 }
 
 func fork(ctx context.Context) func(t *testing.T) {
-	cache := persist.NewCache(3)
+	cache := NewCache(3)
 	a := envelopes.Transaction{
 		Comment: "First!",
 	}
@@ -139,7 +138,7 @@ func fork(ctx context.Context) func(t *testing.T) {
 }
 
 func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
-	cache := persist.NewCache(4)
+	cache := NewCache(4)
 	a := envelopes.Transaction{
 		Comment: "First!",
 	}

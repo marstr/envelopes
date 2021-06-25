@@ -16,6 +16,11 @@
 
 package persist
 
+import (
+	"context"
+	"github.com/marstr/envelopes"
+)
+
 // BareRepositoryReader indicates that a struct is able to read objects like envelopes.Budget, envelopes.Transaction,
 // and branch instances from a repository. However, it does not indicate that the repository has a current working copy.
 type BareRepositoryReader interface {
@@ -53,4 +58,60 @@ type RepositoryWriter interface {
 type RepositoryReaderWriter interface {
 	RepositoryReader
 	RepositoryWriter
+}
+
+type cloneOptions struct {
+	Depth uint
+}
+
+type CloneOption func(options *cloneOptions) error
+
+// CloneDepth limits the number of transactions that will be copied by BareClone by indicating the number of generations
+// it should traverse.
+func CloneDepth(depth uint) CloneOption {
+	return func(options *cloneOptions) error {
+		options.Depth = depth
+		return nil
+	}
+}
+
+// BareClone retrieves budget objects from `src` and duplicates them at `dest`.
+func BareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositoryWriter, options ...CloneOption) error {
+	aggregatedOptions := cloneOptions{}
+	for _, option := range options {
+		if err := option(&aggregatedOptions); err != nil {
+			return err
+		}
+	}
+
+	return bareClone(ctx, src, dest, aggregatedOptions)
+}
+
+func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositoryWriter, options cloneOptions) error {
+	rawBranches, err := src.ListBranches(ctx)
+	if err != nil {
+		return err
+	}
+
+	heads := make([]envelopes.ID,0)
+
+	for branch := range rawBranches {
+		val, err := src.ReadBranch(ctx, branch)
+		if err != nil {
+			return err
+		}
+		heads = append(heads, val)
+		err = dest.WriteBranch(ctx, branch, val)
+		if err != nil {
+			return err
+		}
+	}
+
+	walker := Walker{
+		Loader: src,
+	}
+
+	return walker.Walk(ctx, func(ctx context.Context, transaction envelopes.Transaction) error {
+		return dest.Write(ctx, transaction)
+	}, heads...)
 }

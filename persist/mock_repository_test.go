@@ -53,7 +53,7 @@ func (mb MockRepository) WriteBranch(_ context.Context, name string, id envelope
 func (mb MockRepository) ListBranches(ctx context.Context) (<-chan string, error) {
 	retval := make(chan string)
 
-	func() {
+	go func() {
 		defer close(retval)
 		for k := range mb.branches {
 			select {
