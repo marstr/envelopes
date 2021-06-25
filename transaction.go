@@ -58,6 +58,8 @@ func (t Transaction) String() string {
 func (t Transaction) Equal(other Transaction) bool {
 	if t.State == nil && other.State != nil {
 		return false
+	} else if t.State == nil && other.State == nil {
+		// Intentionally Left Blank
 	} else if !t.State.Equal(*other.State) {
 		return false
 	}
