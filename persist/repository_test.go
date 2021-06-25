@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/marstr/envelopes"
 	"testing"
+	"time"
 )
 
 func TestBareClone(t *testing.T) {
-	//ctx, cancel := context.WithTimeout(context.Background(), 90 * time.Second)
-	// defer cancel()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 90 * time.Second)
+	defer cancel()
 
 	t.Run("linear", testBareCloneLinear(ctx))
 	t.Run("diamond", testBareCloneDiamond(ctx))
