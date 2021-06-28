@@ -15,11 +15,12 @@
 // Package persist defines the basic requirements that the object model expects
 // in order to save and load state. The object model expects to be spun up
 // and down frequently.
-package persist
+package filesystem
 
 import (
 	"context"
 	"fmt"
+	"github.com/marstr/envelopes/persist"
 	"io/ioutil"
 	"os"
 	"path"
@@ -40,82 +41,6 @@ type FileSystem struct {
 	CreatePermissions os.FileMode
 }
 
-// FileSystemRepository combines the capability to read and write raw budget objects to the file system with both a
-// Loader and Writer that convert between instantiated object model and raw bits.
-//
-// This abstraction exists to allow repositories that differ in the format files are stored in (say JSON or XML) to
-// share the logic of where those files should live relative to a root directory.
-type FileSystemRepository struct {
-	FileSystem
-	Loader
-	Writer
-}
-
-type defaultFileSystemRepository struct {
-	FileSystem
-	DefaultLoader
-	DefaultWriter
-}
-
-type DefaultFileSystemRepositoryOption func(repository *defaultFileSystemRepository) error
-
-func DefaultFileSystemRepositoryUseCache(capacity uint) DefaultFileSystemRepositoryOption {
-	cache := NewCache(capacity)
-	return func(repository *defaultFileSystemRepository) error {
-		repository.DefaultLoader.Loopback = cache
-		repository.DefaultWriter.Loopback = cache
-		return nil
-	}
-}
-
-func DefaultFileSystemRepositoryFileMode(mode os.FileMode) DefaultFileSystemRepositoryOption {
-	return func(repository *defaultFileSystemRepository) error {
-		repository.FileSystem.CreatePermissions = mode
-		return nil
-	}
-}
-
-func NewDefaultFileSystemRepository(root string, options ...DefaultFileSystemRepositoryOption) (*FileSystemRepository, error) {
-	fs := FileSystem{
-		Root: root,
-	}
-
-	temp := defaultFileSystemRepository{
-		FileSystem: fs,
-		DefaultLoader:     DefaultLoader{
-			Fetcher:  fs,
-			Loopback: nil,
-		},
-		DefaultWriter:     DefaultWriter{
-			Stasher:  fs,
-			Loopback: nil,
-		},
-	}
-
-	for _, option := range options {
-		if err := option(&temp); err != nil {
-			return nil, err
-		}
-	}
-
-	retval := &FileSystemRepository{
-		FileSystem: temp.FileSystem,
-	}
-
-	if temp.DefaultLoader.Loopback == nil {
-		retval.Loader = temp.DefaultLoader
-	} else {
-		retval.Loader = temp.DefaultLoader.Loopback
-	}
-
-	if temp.DefaultWriter.Loopback == nil {
-		retval.Writer = temp.DefaultWriter
-	} else {
-		retval.Writer = temp.DefaultWriter.Loopback
-	}
-
-	return retval, nil
-}
 
 func (fs FileSystem) getCreatePermissions() os.FileMode {
 	if fs.CreatePermissions == 0 {
@@ -125,7 +50,7 @@ func (fs FileSystem) getCreatePermissions() os.FileMode {
 }
 
 // Current fetches the RefSpec that was most recently used to populate the index.
-func (fs FileSystem) Current(_ context.Context) (result RefSpec, err error) {
+func (fs FileSystem) Current(_ context.Context) (result persist.RefSpec, err error) {
 	p, err := fs.currentPath()
 	if err != nil {
 		return
@@ -137,13 +62,13 @@ func (fs FileSystem) Current(_ context.Context) (result RefSpec, err error) {
 	}
 
 	trimmed := strings.TrimSpace(string(raw))
-	result = RefSpec(trimmed)
+	result = persist.RefSpec(trimmed)
 	return
 }
 
 // SetCurrent replaces the current pointer to the most recent Transaction with a given RefSpec. For instance, this
 // should be used to change which branch is currently checked-out.
-func (fs FileSystem) SetCurrent(_ context.Context, current RefSpec) error {
+func (fs FileSystem) SetCurrent(_ context.Context, current persist.RefSpec) error {
 	p, err := fs.currentPath()
 	if err != nil {
 		return err

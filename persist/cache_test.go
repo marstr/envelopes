@@ -3,6 +3,7 @@ package persist
 import (
 	"context"
 	"github.com/marstr/envelopes"
+	"github.com/marstr/envelopes/persist/filesystem"
 	"testing"
 )
 
@@ -12,7 +13,7 @@ func TestCache_Load_passThroughMiss(t *testing.T) {
 	var targetId envelopes.ID
 	targetId.UnmarshalText([]byte(rawTargetId))
 
-	passThrough := FileSystem{
+	passThrough := filesystem.FileSystem{
 		Root: "./testdata/test3/.baronial",
 	}
 
@@ -49,7 +50,7 @@ func TestCache_Load_reuseHits(t *testing.T) {
 	var targetId envelopes.ID
 	targetId.UnmarshalText([]byte(rawTargetId))
 
-	passThrough := FileSystem{
+	passThrough := filesystem.FileSystem{
 		Root: "./testdata/test3/.baronial",
 	}
 

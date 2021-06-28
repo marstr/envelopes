@@ -1,48 +1,25 @@
-// Copyright 2017 Martin Strobel
-//
-//  Licensed under the Apache License, Version 2.0 (the "License");
-//  you may not use this file except in compliance with the License.
-//  You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-//  Unless required by applicable law or agreed to in writing, software
-//  distributed under the License is distributed on an "AS IS" BASIS,
-//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-//  See the License for the specific language governing permissions and
-//  limitations under the License.
-
-package persist
+package json
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
-
 	"github.com/marstr/envelopes"
+	"github.com/marstr/envelopes/persist"
+	"reflect"
 )
 
-type (
-	// Writer defines a contract that allows an object to express that it knows how to persist
-	// an object so that it can be recalled using an instance of an object that satisfies `persist.Fetch`.
-	Writer interface {
-		// Write persists an object in durable storage where it can be retrieved later.
-		Write(ctx context.Context, subject envelopes.IDer) error
-	}
+// Writer knows how to navigate the envelopes object model and stash each individual component of an object.
+type Writer struct {
+	// Writes the serialized form of an object to persistent memory. Must not be nil.
+	persist.Stasher
 
-	// DefaultWriter knows how to navigate the envelopes object model and stash each individual component of an object.
-	DefaultWriter struct {
-		// Writes the serialized form of an object to persistent memory. Must not be nil.
-		Stasher
+	// Allow recursive calls to Write to invoke the top-level Writer. If this is nil, Writer uses itself.
+	Loopback persist.Writer
+}
 
-		// Allow recursive calls to Write to invoke the top-level Writer. If this is nil, DefaultWriter uses itself.
-		Loopback Writer
-	}
-)
-
-// Write uses the Stasher it is composed of to write the given Envelopes object to a persistent storage space.
-func (dw DefaultWriter) Write(ctx context.Context, subject envelopes.IDer) error {
+// Write uses the persist.Stasher it is composed of to write the given Envelopes object to a persistent storage space.
+func (dw Writer) Write(ctx context.Context, subject envelopes.IDer) error {
 	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
 	// Must have default clause to prevent blocking.
 	select {
@@ -74,14 +51,14 @@ func (dw DefaultWriter) Write(ctx context.Context, subject envelopes.IDer) error
 	}
 }
 
-func (dw DefaultWriter) loopback() Writer {
+func (dw Writer) loopback() persist.Writer {
 	if dw.Loopback == nil {
 		return dw
 	}
 	return dw.Loopback
 }
 
-func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.Transaction) error {
+func (dw Writer) writeTransaction(ctx context.Context, subject envelopes.Transaction) error {
 	if subject.State == nil {
 		subject.State = &envelopes.State{}
 	}
@@ -112,7 +89,7 @@ func (dw DefaultWriter) writeTransaction(ctx context.Context, subject envelopes.
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw DefaultWriter) writeState(ctx context.Context, subject envelopes.State) error {
+func (dw Writer) writeState(ctx context.Context, subject envelopes.State) error {
 	if subject.Accounts == nil {
 		subject.Accounts = make(envelopes.Accounts, 0)
 	}
@@ -141,7 +118,7 @@ func (dw DefaultWriter) writeState(ctx context.Context, subject envelopes.State)
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw DefaultWriter) writeBudget(ctx context.Context, subject envelopes.Budget) error {
+func (dw Writer) writeBudget(ctx context.Context, subject envelopes.Budget) error {
 	if subject.Children == nil {
 		subject.Children = make(map[string]*envelopes.Budget, 0)
 	}
@@ -167,7 +144,7 @@ func (dw DefaultWriter) writeBudget(ctx context.Context, subject envelopes.Budge
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw DefaultWriter) writeAccounts(ctx context.Context, subject envelopes.Accounts) error {
+func (dw Writer) writeAccounts(ctx context.Context, subject envelopes.Accounts) error {
 	marshaled, err := json.Marshal(subject)
 	if err != nil {
 		return err

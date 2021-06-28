@@ -1,7 +1,8 @@
-package persist_test
+package json
 
 import (
 	"context"
+	"github.com/marstr/envelopes/persist/filesystem"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -23,7 +24,7 @@ func TestLoadAncestor(t *testing.T) {
 	}
 	defer os.RemoveAll(test_loc)
 
-	fs := persist.FileSystem{
+	fs := filesystem.FileSystem{
 		Root: test_loc,
 	}
 
@@ -45,7 +46,7 @@ func TestLoadAncestor(t *testing.T) {
 		},
 	}
 
-	writer := persist.DefaultWriter{
+	writer := Writer{
 		Stasher: fs,
 	}
 
@@ -58,7 +59,7 @@ func TestLoadAncestor(t *testing.T) {
 		}
 	}
 
-	subject := persist.DefaultLoader{
+	subject := Loader{
 		Fetcher: fs,
 	}
 

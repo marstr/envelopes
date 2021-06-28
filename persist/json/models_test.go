@@ -1,4 +1,4 @@
-package persist
+package json
 
 import (
 	"encoding/json"

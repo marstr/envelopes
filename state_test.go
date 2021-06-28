@@ -18,6 +18,7 @@ import (
 	"context"
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
+	"github.com/marstr/envelopes/persist/filesystem"
 	"io/ioutil"
 	"math/big"
 	"os"
@@ -111,7 +112,7 @@ func getTestStateIDRoundtrip(ctx context.Context) func(*testing.T) {
 		}
 		defer os.RemoveAll(tempLocation)
 
-		fs := persist.FileSystem{
+		fs := filesystem.FileSystem{
 			Root: tempLocation,
 		}
 

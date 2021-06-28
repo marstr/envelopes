@@ -1,4 +1,4 @@
-package persist
+package json
 
 import (
 	"bytes"
@@ -25,15 +25,15 @@ type (
 
 	// Transaction is a copy of envelopes.Transaction for ORM purposes.
 	Transaction struct {
-		State       envelopes.ID `json:"state"`
-		PostedTime  time.Time    `json:"postedTime"`
-		ActualTime  time.Time    `json:"actualTime,omitempty"`
-		EnteredTime time.Time    `json:"enteredTime,omitempty"`
-		Amount      Balance      `json:"amount"`
-		Merchant    string       `json:"merchant"`
-		Comment     string       `json:"comment"`
-		Committer   User         `json:"committer,omitempty"`
-		RecordId    BankRecordID `json:"recordId,omitempty"`
+		State       envelopes.ID   `json:"state"`
+		PostedTime  time.Time      `json:"postedTime"`
+		ActualTime  time.Time      `json:"actualTime,omitempty"`
+		EnteredTime time.Time      `json:"enteredTime,omitempty"`
+		Amount      Balance        `json:"amount"`
+		Merchant    string         `json:"merchant"`
+		Comment     string         `json:"comment"`
+		Committer   User           `json:"committer,omitempty"`
+		RecordId    BankRecordID   `json:"recordId,omitempty"`
 		Parent      []envelopes.ID `json:"parent"`
 	}
 
