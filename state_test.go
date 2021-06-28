@@ -17,11 +17,7 @@ package envelopes_test
 import (
 	"context"
 	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/persist"
-	"github.com/marstr/envelopes/persist/filesystem"
-	"io/ioutil"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 )
@@ -31,7 +27,6 @@ func TestState_ID(t *testing.T) {
 	defer cancel()
 
 	t.Run("deterministic", getTestStateIDDeterministic(ctx))
-	t.Run("roundtrip", getTestStateIDRoundtrip(ctx))
 	t.Run("lock", getTestStateIDLock(ctx))
 }
 
@@ -60,88 +55,6 @@ func getTestStateIDDeterministic(ctx context.Context) func(*testing.T) {
 					t.Fail()
 					continue
 				}
-			}
-		}
-	}
-}
-
-func getTestStateIDRoundtrip(ctx context.Context) func(*testing.T) {
-	return func(t *testing.T) {
-		testCases := map[string]envelopes.State{
-			"empty": {},
-			"full": {
-				Accounts: envelopes.Accounts{
-					"checking": envelopes.Balance{"USD": big.NewRat(4590, 100)},
-					"savings":  envelopes.Balance{"USD": big.NewRat(1, 100)},
-				},
-				Budget: &envelopes.Budget{
-					Children: map[string]*envelopes.Budget{
-						"foo": {
-							Balance: envelopes.Balance{"USD": big.NewRat(2291, 100)},
-						},
-						"bar": {
-							Balance: envelopes.Balance{"USD": big.NewRat(23, 1)},
-						},
-					},
-				},
-			},
-			"accounts_only": {
-				Accounts: envelopes.Accounts{
-					"checking": envelopes.Balance{"USD": big.NewRat(4590, 100)},
-					"savings":  envelopes.Balance{"USD": big.NewRat(1, 100)},
-				},
-			},
-			"budget_only": {
-				Budget: &envelopes.Budget{
-					Children: map[string]*envelopes.Budget{
-						"foo": {
-							Balance: envelopes.Balance{"USD": big.NewRat(2291, 100)},
-						},
-						"bar": {
-							Balance: envelopes.Balance{"USD": big.NewRat(2300, 100)},
-						},
-					},
-				},
-			},
-		}
-
-		tempLocation, err := ioutil.TempDir("", "envelopes_id_tests")
-		if err != nil {
-			t.Errorf("unable to create test location")
-			return
-		}
-		defer os.RemoveAll(tempLocation)
-
-		fs := filesystem.FileSystem{
-			Root: tempLocation,
-		}
-
-		saver := persist.DefaultWriter{
-			Stasher: fs,
-		}
-		reader := persist.DefaultLoader{
-			Fetcher: fs,
-		}
-
-		for name, subject := range testCases {
-			want := subject.ID()
-
-			err := saver.Write(ctx, subject)
-			if err != nil {
-				t.Errorf("(%s) unable to write subject: %v", name, err)
-				continue
-			}
-
-			var rehydrated envelopes.State
-			err = reader.Load(ctx, want, &rehydrated)
-			if err != nil {
-				t.Errorf("(%s) unable to read subject: %v", name, err)
-				continue
-			}
-
-			if got := rehydrated.ID(); !got.Equal(want) {
-				t.Logf("\ngot: \t%s\nwant:\t%s", got, want)
-				t.Fail()
 			}
 		}
 	}
