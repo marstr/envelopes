@@ -17,14 +17,38 @@ package persist
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/marstr/envelopes"
+	"reflect"
 )
+
+
+// ErrObjectNotFound indicates that a non-existent object was requested.
+type ErrObjectNotFound envelopes.ID
+
+func (err ErrObjectNotFound) Error() string {
+	return fmt.Sprintf("not able to find object %s", envelopes.ID(err).String())
+}
 
 // Loader can instantiate core envelopes objects given just an ID.
 type Loader interface {
 	Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error
 }
 
+
+
+// ErrUnloadableType indicates that a Loader is unable to recognize the specified type.
+type ErrUnloadableType string
+
+func (err ErrUnloadableType) Error() string {
+	return fmt.Sprintf("could not load type %q", string(err))
+}
+
+// NewErrUnloadableType indicates that a persist.Loader was unable to identify the given object as something it knows
+// how to Load.
+func NewErrUnloadableType(subject interface{}) ErrUnloadableType {
+	return ErrUnloadableType(reflect.TypeOf(subject).Name())
+}
 
 // LoadAncestor reads in and unmarshals a sequence of Transactions, until the main-line ancestor of the given number of
 // jumps is loaded.

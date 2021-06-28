@@ -3,10 +3,8 @@ package json
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
-	"reflect"
 )
 
 // Loader wraps a Fetcher and does just the unmarshaling portion.
@@ -16,26 +14,6 @@ type Loader struct {
 	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a Transaction needs a State.
 	// If it is not set, Loader will use itself.
 	Loopback persist.Loader
-}
-
-// ErrObjectNotFound indicates that a non-existent object was requested.
-type ErrObjectNotFound envelopes.ID
-
-func (err ErrObjectNotFound) Error() string {
-	return fmt.Sprintf("not able to find object %s", envelopes.ID(err).String())
-}
-
-// ErrUnloadableType indicates that a Loader is unable to recognize the specified type.
-type ErrUnloadableType string
-
-func (err ErrUnloadableType) Error() string {
-	return fmt.Sprintf("could not load type %q", string(err))
-}
-
-// NewErrUnloadableType indicates that a persist.Loader was unable to identify the given object as something it knows
-// how to Load.
-func NewErrUnloadableType(subject interface{}) ErrUnloadableType {
-	return ErrUnloadableType(reflect.TypeOf(subject).Name())
 }
 
 func (dl Loader) loopback() persist.Loader {
@@ -74,7 +52,7 @@ func (dl Loader) Load(ctx context.Context, id envelopes.ID, destination envelope
 	case *envelopes.Accounts:
 		return json.Unmarshal(contents, destination)
 	default:
-		return NewErrUnloadableType(destination)
+		return persist.NewErrUnloadableType(destination)
 	}
 }
 
