@@ -12,11 +12,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package persist_test
+package filesystem_test
 
 import (
 	"context"
 	"fmt"
+	"github.com/marstr/envelopes/persist/filesystem"
+	"github.com/marstr/envelopes/persist/json"
 	"math/big"
 	"os"
 	"path"
@@ -36,7 +38,7 @@ func TestFileSystem_Current(t *testing.T) {
 		"./testdata/test2",
 	}
 
-	repo, err := persist.NewDefaultFileSystemRepository("")
+	repo, err := json.NewFileSystemRepository("")
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,7 +90,7 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 		{Amount: envelopes.Balance{"USD": big.NewRat(1729, 1)}},
 	}
 
-	repo, err := persist.NewDefaultFileSystemRepository(testLocation)
+	repo, err := json.NewFileSystemRepository(testLocation)
 	if err != nil {
 		t.Error(err)
 	}
@@ -164,7 +166,7 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 		}
 	}()
 
-	repo, err := persist.NewDefaultFileSystemRepository(testDir)
+	repo, err := json.NewFileSystemRepository(testDir)
 	if err != nil {
 		t.Error(err)
 	}
@@ -207,7 +209,7 @@ func TestFileSystem_ListBranches(t *testing.T) {
 		{"./testdata/test3/.baronial", []string{}},
 	}
 
-	subject := &persist.FileSystem{}
+	subject := &filesystem.FileSystem{}
 
 	for _, tc := range testCases {
 		t.Run(tc.location, func(t *testing.T) {
@@ -247,9 +249,11 @@ func TestFileSystem_ListBranches(t *testing.T) {
 	}
 }
 
+
+
 func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 	benchDir := path.Join("testdata", "bench", "filesystem", "roundtrip")
-	repo, err := persist.NewDefaultFileSystemRepository(benchDir)
+	repo, err := json.NewFileSystemRepository(benchDir)
 	if err != nil {
 		b.Error(err)
 	}

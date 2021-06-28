@@ -12,13 +12,14 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-package persist
+package filesystem
 
 import (
 	"bufio"
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/marstr/envelopes/persist"
 	"os"
 	"path"
 	"strings"
@@ -36,7 +37,7 @@ func (err ErrEmptyBankRecordID) Error() string {
 
 type FilesystemBankRecordIDIndex struct {
 	Root            string
-	DecoratedWriter Writer
+	DecoratedWriter persist.Writer
 }
 
 // Converts an arbitrary bank transaction ID to something that's deterministic and only contains characters safe for

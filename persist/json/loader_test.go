@@ -1,7 +1,8 @@
-package persist_test
+package json
 
 import (
 	"context"
+	"github.com/marstr/envelopes/persist/filesystem"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -23,7 +24,7 @@ func TestLoadAncestor(t *testing.T) {
 	}
 	defer os.RemoveAll(test_loc)
 
-	fs := persist.FileSystem{
+	fs := filesystem.FileSystem{
 		Root: test_loc,
 	}
 
@@ -45,7 +46,7 @@ func TestLoadAncestor(t *testing.T) {
 		},
 	}
 
-	writer := persist.DefaultWriter{
+	writer := Writer{
 		Stasher: fs,
 	}
 
@@ -58,7 +59,7 @@ func TestLoadAncestor(t *testing.T) {
 		}
 	}
 
-	subject := persist.DefaultLoader{
+	subject := Loader{
 		Fetcher: fs,
 	}
 
@@ -90,5 +91,43 @@ func TestLoadAncestor(t *testing.T) {
 				tc.original.Comment)
 			t.Fail()
 		}
+	}
+}
+
+
+func TestCache_Load_reuseHits(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	const rawTargetId = "07e72edcf913fd3ef5eababf60852216d68dbb90"
+	var targetId envelopes.ID
+	targetId.UnmarshalText([]byte(rawTargetId))
+
+	passThrough := filesystem.FileSystem{
+		Root: "../filesystem/testdata/test3/.baronial",
+	}
+
+	subject := persist.NewCache(10)
+	subject.Loader = &Loader{
+		Fetcher: passThrough,
+		Loopback: subject,
+	}
+
+	var want envelopes.State
+	err = subject.Load(ctx, targetId, &want)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	var got envelopes.State
+	err = subject.Load(ctx, targetId, &got)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if got.Budget != want.Budget {
+		t.Logf("When encountering a cache hit, the SAME Budget object should be reused")
+		t.Fail()
 	}
 }

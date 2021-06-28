@@ -3,78 +3,56 @@ package persist
 import (
 	"context"
 	"github.com/marstr/envelopes"
+	"math/big"
 	"testing"
+	"time"
 )
 
-func TestCache_Load_passThroughMiss(t *testing.T) {
-	ctx := context.Background()
-	const rawTargetId = "07e72edcf913fd3ef5eababf60852216d68dbb90"
-	var targetId envelopes.ID
-	targetId.UnmarshalText([]byte(rawTargetId))
+func TestCache_Load(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90 * time.Second)
+	defer cancel()
 
-	passThrough := FileSystem{
-		Root: "./testdata/test3/.baronial",
-	}
-
-	subject := NewCache(10)
-	subject.Loader = &DefaultLoader{
-		Fetcher: passThrough,
-		Loopback: subject,
-	}
-
-	var got envelopes.State
-	err := subject.Load(ctx, targetId, &got)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	var want envelopes.State
-	err = subject.Loader.Load(ctx, targetId, &want)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if !got.Equal(want) {
-		t.Logf("got: %s, want: %s", got.String(), want.String())
-		t.Fail()
-	}
+	t.Run("UsePassThroughOnMiss", testUsePassThroughOnMiss(ctx))
 }
 
-func TestCache_Load_reuseHits(t *testing.T) {
-	var err error
-	ctx := context.Background()
-	const rawTargetId = "07e72edcf913fd3ef5eababf60852216d68dbb90"
-	var targetId envelopes.ID
-	targetId.UnmarshalText([]byte(rawTargetId))
+func testUsePassThroughOnMiss(ctx context.Context) func(t *testing.T) {
+	return func (t * testing.T) {
+		want := envelopes.State{
+			Budget: &envelopes.Budget{
+				Balance: envelopes.Balance{"MSFT": big.NewRat(24, 1)},
+				Children: map[string]*envelopes.Budget{
+					"foo": {
+						Balance: envelopes.Balance{"TMUS": big.NewRat(35, 1)},
+					},
+				},
+			},
+			Accounts: map[string]envelopes.Balance{
+				"brokerage": envelopes.Balance{
+					"MSFT": big.NewRat(24, 1),
+					"TMUS": big.NewRat(35, 1),
+				},
+			},
+		}
 
-	passThrough := FileSystem{
-		Root: "./testdata/test3/.baronial",
-	}
+		passThrough := NewCache(10)
+		if err := passThrough.Write(ctx, want); err != nil {
+			t.Error(err)
+			return
+		}
 
-	subject := NewCache(10)
-	subject.Loader = &DefaultLoader{
-		Fetcher: passThrough,
-		Loopback: subject,
-	}
+		subject := NewCache(10)
+		subject.Loader = passThrough
 
-	var want envelopes.State
-	err = subject.Load(ctx, targetId, &want)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+		var got envelopes.State
+		err := subject.Load(ctx, want.ID(), &got)
+		if err != nil {
+			t.Error(err)
+			return
+		}
 
-	var got envelopes.State
-	err = subject.Load(ctx, targetId, &got)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	if got.Budget != want.Budget {
-		t.Logf("When encountering a cache hit, the SAME Budget object should be reused")
-		t.Fail()
+		if !got.Equal(want) {
+			t.Logf("got: %s, want: %s", got.String(), want.String())
+			t.Fail()
+		}
 	}
 }
