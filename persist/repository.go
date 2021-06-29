@@ -111,7 +111,7 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 		Loader: src,
 	}
 
-	return walker.Walk(ctx, func(ctx context.Context, transaction envelopes.Transaction) error {
+	return walker.Walk(ctx, func(ctx context.Context, _ envelopes.ID, transaction envelopes.Transaction) error {
 		return dest.Write(ctx, transaction)
 	}, heads...)
 }

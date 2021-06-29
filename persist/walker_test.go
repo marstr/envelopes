@@ -46,8 +46,7 @@ func chain(ctx context.Context) func(t *testing.T) {
 			Loader: cache,
 		}
 
-		err := texasRanger.Walk(ctx, func(ctx context.Context, transaction envelopes.Transaction) error {
-			currentId := transaction.ID()
+		err := texasRanger.Walk(ctx, func(ctx context.Context, currentId envelopes.ID, transaction envelopes.Transaction) error {
 			_, ok := expected[currentId]
 			if ok {
 				delete(expected, currentId)
@@ -116,8 +115,7 @@ func fork(ctx context.Context) func(t *testing.T) {
 			Loader: cache,
 		}
 
-		err := texasRanger.Walk(ctx, func(ctx context.Context, transaction envelopes.Transaction) error {
-			currentId := transaction.ID()
+		err := texasRanger.Walk(ctx, func(ctx context.Context, currentId envelopes.ID, transaction envelopes.Transaction) error {
 			_, ok := expected[currentId]
 			if ok {
 				delete(expected, currentId)
@@ -198,8 +196,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 			Loader: cache,
 		}
 
-		err := texasRanger.Walk(ctx, func(ctx context.Context, transaction envelopes.Transaction) error {
-			currentId := transaction.ID()
+		err := texasRanger.Walk(ctx, func(ctx context.Context, currentId envelopes.ID, transaction envelopes.Transaction) error {
 			_, ok := expected[currentId]
 
 			if ok {
