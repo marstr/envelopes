@@ -8,7 +8,7 @@ import (
 	"github.com/marstr/envelopes"
 )
 
-type WalkFunc func(ctx context.Context, transaction envelopes.Transaction) error
+type WalkFunc func(ctx context.Context, id envelopes.ID, transaction envelopes.Transaction) error
 
 // ErrSkipAncestors allows a WalkFunc to communicate that parents of this transaction shouldn't be visited.
 // If other Transactions have shared parent, but don't return ErrSkipAncestors, the shared parents will still
@@ -52,7 +52,7 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 		}
 		processed[currentId] = struct{}{}
 
-		err = action(ctx, current)
+		err = action(ctx, currentId, current)
 		if err != nil {
 			switch err.(type) {
 			case ErrSkipAncestors:
