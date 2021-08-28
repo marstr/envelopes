@@ -50,6 +50,16 @@ type Balance map[AssetType]*big.Rat
 
 var zero = big.NewRat(0, 100)
 
+// Set copies the balance of a given other balance into the target.
+func (b *Balance) Set(other Balance) {
+	*b = make(Balance, len(other))
+
+	for k, v := range other {
+		(*b)[k] = &big.Rat{}
+		(*b)[k].Set(v)
+	}
+}
+
 // Add combines two balances, summing any shared components, and including unmatched components without further
 // processing.
 // Returns a new instance of a Balance, without modifying the two original balances.
