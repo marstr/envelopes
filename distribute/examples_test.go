@@ -65,7 +65,7 @@ func ExampleBudgetRule() {
 	// USD 15.000
 }
 
-func ExamplePercentageRule() {
+func ExamplePercentageRule_credit() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
 	defer cancel()
 
@@ -98,7 +98,40 @@ func ExamplePercentageRule() {
 	// Starved: USD 12.000
 }
 
-func ExamplePriorityRule() {
+func ExamplePercentageRule_debit() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
+	defer cancel()
+
+	fed := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(100, 1),
+	}}
+
+	starved := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(10, 1),
+	}}
+
+	socialism := distribute.NewPercentageRule(2, (*distribute.BudgetRule)(&starved))
+	socialism.AddRule(.6, (*distribute.BudgetRule)(&fed))
+	socialism.AddRule(.4, (*distribute.BudgetRule)(&starved))
+
+	amountToDebit := envelopes.Balance{
+		"USD": big.NewRat(-5, 1),
+	}
+
+	if err := socialism.Distribute(ctx, amountToDebit); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", amountToDebit, err)
+		return
+	}
+
+	fmt.Println("Fed:", fed.Balance)
+	fmt.Println("Starved:", starved.Balance)
+
+	// Output:
+	// Fed: USD 97.000
+	// Starved: USD 8.000
+}
+
+func ExamplePriorityRule_credit() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
 	defer cancel()
 
@@ -128,6 +161,38 @@ func ExamplePriorityRule() {
 	// Output:
 	// Fed: USD 105.000
 	// Starved: USD 12.000
+}
+
+func ExamplePriorityRule_debit() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
+	defer cancel()
+
+	fed := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(100, 1),
+	}}
+
+	starved := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(10, 1),
+	}}
+
+	capitalism := distribute.NewPriorityRule((*distribute.BudgetRule)(&starved))
+	capitalism.AddRule((*distribute.BudgetRule)(&fed), envelopes.Balance{"USD": big.NewRat(-5, 1)})
+
+	amountToDebit := envelopes.Balance{
+		"USD": big.NewRat(-7, 1),
+	}
+
+	if err := capitalism.Distribute(ctx, amountToDebit); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", amountToDebit, err)
+		return
+	}
+
+	fmt.Println("Fed:", fed.Balance)
+	fmt.Println("Starved:", starved.Balance)
+
+	// Output:
+	// Fed: USD 95.000
+	// Starved: USD 8.000
 }
 
 func ExamplePriorityRule_Distribute_insufficientFunds() {
