@@ -11,7 +11,7 @@ import (
 	"github.com/marstr/envelopes/distribute"
 )
 
-func ExampleBringToRule_Distribute() {
+func ExampleBringToRule() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
 	defer cancel()
 
@@ -78,15 +78,15 @@ func ExamplePercentageRule_credit() {
 		"USD": big.NewRat(10, 1),
 	}}
 
-	socialism := distribute.NewPercentageRule(2, (*distribute.BudgetRule)(&starved))
-	socialism.AddRule(.6, (*distribute.BudgetRule)(&fed))
-	socialism.AddRule(.4, (*distribute.BudgetRule)(&starved))
+	subject := distribute.NewPercentageRule(2, (*distribute.BudgetRule)(&starved))
+	subject.AddRule(.6, (*distribute.BudgetRule)(&fed))
+	subject.AddRule(.4, (*distribute.BudgetRule)(&starved))
 
 	amountToCredit := envelopes.Balance{
 		"USD": big.NewRat(5, 1),
 	}
 
-	if err := socialism.Distribute(ctx, amountToCredit); err != nil {
+	if err := subject.Distribute(ctx, amountToCredit); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", amountToCredit, err)
 		return
 	}
@@ -111,15 +111,15 @@ func ExamplePercentageRule_debit() {
 		"USD": big.NewRat(10, 1),
 	}}
 
-	socialism := distribute.NewPercentageRule(2, (*distribute.BudgetRule)(&starved))
-	socialism.AddRule(.6, (*distribute.BudgetRule)(&fed))
-	socialism.AddRule(.4, (*distribute.BudgetRule)(&starved))
+	subject := distribute.NewPercentageRule(2, (*distribute.BudgetRule)(&starved))
+	subject.AddRule(.6, (*distribute.BudgetRule)(&fed))
+	subject.AddRule(.4, (*distribute.BudgetRule)(&starved))
 
 	amountToDebit := envelopes.Balance{
 		"USD": big.NewRat(-5, 1),
 	}
 
-	if err := socialism.Distribute(ctx, amountToDebit); err != nil {
+	if err := subject.Distribute(ctx, amountToDebit); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", amountToDebit, err)
 		return
 	}
@@ -144,14 +144,14 @@ func ExamplePriorityRule_credit() {
 		"USD": big.NewRat(10, 1),
 	}}
 
-	capitalism := distribute.NewPriorityRule((*distribute.BudgetRule)(&starved))
-	capitalism.AddRule((*distribute.BudgetRule)(&fed), envelopes.Balance{"USD": big.NewRat(5, 1)})
+	subject := distribute.NewPriorityRule((*distribute.BudgetRule)(&starved))
+	subject.AddRule((*distribute.BudgetRule)(&fed), envelopes.Balance{"USD": big.NewRat(5, 1)})
 
 	amountToCredit := envelopes.Balance{
 		"USD": big.NewRat(7, 1),
 	}
 
-	if err := capitalism.Distribute(ctx, amountToCredit); err != nil {
+	if err := subject.Distribute(ctx, amountToCredit); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", amountToCredit, err)
 		return
 	}
@@ -176,14 +176,14 @@ func ExamplePriorityRule_debit() {
 		"USD": big.NewRat(10, 1),
 	}}
 
-	capitalism := distribute.NewPriorityRule((*distribute.BudgetRule)(&starved))
-	capitalism.AddRule((*distribute.BudgetRule)(&fed), envelopes.Balance{"USD": big.NewRat(-5, 1)})
+	subject := distribute.NewPriorityRule((*distribute.BudgetRule)(&starved))
+	subject.AddRule((*distribute.BudgetRule)(&fed), envelopes.Balance{"USD": big.NewRat(-5, 1)})
 
 	amountToDebit := envelopes.Balance{
 		"USD": big.NewRat(-7, 1),
 	}
 
-	if err := capitalism.Distribute(ctx, amountToDebit); err != nil {
+	if err := subject.Distribute(ctx, amountToDebit); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", amountToDebit, err)
 		return
 	}
@@ -208,14 +208,14 @@ func ExamplePriorityRule_Distribute_insufficientFunds() {
 		"USD": big.NewRat(10, 1),
 	}}
 
-	capitalism := distribute.NewPriorityRule((*distribute.BudgetRule)(&starved))
-	capitalism.AddRule((*distribute.BudgetRule)(&fed), envelopes.Balance{"USD": big.NewRat(10, 1)})
+	subject := distribute.NewPriorityRule((*distribute.BudgetRule)(&starved))
+	subject.AddRule((*distribute.BudgetRule)(&fed), envelopes.Balance{"USD": big.NewRat(10, 1)})
 
 	amountToCredit := envelopes.Balance{
 		"USD": big.NewRat(6, 1),
 	}
 
-	if err := capitalism.Distribute(ctx, amountToCredit); err != nil {
+	if err := subject.Distribute(ctx, amountToCredit); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", amountToCredit, err)
 		return
 	}
