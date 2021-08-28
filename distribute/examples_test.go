@@ -26,9 +26,10 @@ func ExampleBringToRule_Distribute() {
 	subject := distribute.NewBringToRule(&grocery, envelopes.Balance{"USD": big.NewRat(100, 1)}, (*distribute.BudgetRule)(&spending))
 
 	amountToCredit := envelopes.Balance{
-		"USD": big.NewRat(200, 1),
+		"USD": big.NewRat(200, 1), // $200.00
 	}
 
+	// Expected behavior, credit $51.67 to grocery; deposit what's leftover ($148.33) in spending.
 	if err := subject.Distribute(ctx, amountToCredit); err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", amountToCredit, err)
 		return
