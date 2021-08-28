@@ -196,7 +196,7 @@ func ExamplePriorityRule_debit() {
 	// Starved: USD 8.000
 }
 
-func ExamplePriorityRule_Distribute_insufficientFunds() {
+func ExamplePriorityRule_insufficientFunds() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
 	defer cancel()
 
