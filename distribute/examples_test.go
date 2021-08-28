@@ -43,6 +43,71 @@ func ExampleBringToRule() {
 	// Spending: USD 170.510
 }
 
+func Example_nestedRules() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
+	defer cancel()
+
+	rent := envelopes.Budget{}
+	grocery := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(1489, 100),
+	}}
+	collegeSavings := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(2075699, 100),
+	}}
+	carSavings := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(9765, 1),
+	}}
+	netflix := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(1, 100),
+	}}
+	travelSavings := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(41987, 100),
+	}}
+	spending := envelopes.Budget{Balance: envelopes.Balance{
+		"USD": big.NewRat(8788, 100),
+	}}
+
+	disposable := distribute.NewPercentageRule(2, (*distribute.BudgetRule)(&spending))
+	disposable.AddRule(.8, (*distribute.BudgetRule)(&spending))
+	disposable.AddRule(.2, (*distribute.BudgetRule)(&travelSavings))
+
+	subscriptions := distribute.NewBringToRule(&netflix, envelopes.Balance{"USD": big.NewRat(1999, 100)}, disposable)
+
+	savings := distribute.NewPriorityRule(subscriptions)
+	savings.AddRule((*distribute.BudgetRule)(&collegeSavings), envelopes.Balance{"USD": big.NewRat(500,1)})
+	savings.AddRule((*distribute.BudgetRule)(&carSavings), envelopes.Balance{"USD": big.NewRat(350, 1)})
+
+	food := distribute.NewBringToRule(&grocery, envelopes.Balance{"USD": big.NewRat(500, 1)}, savings)
+
+	monthlyBudget := distribute.NewBringToRule(&rent, envelopes.Balance{"USD": big.NewRat(850, 1)}, food)
+
+	monthlyIncome := envelopes.Balance{
+		"USD": big.NewRat(2845, 1),
+	}
+
+	if err := monthlyBudget.Distribute(ctx, monthlyIncome); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "couldn't distribute %s: %v\n", monthlyIncome, err)
+		return
+	}
+
+	fmt.Println("Rent:", rent.Balance)
+	fmt.Println("Grocery:", grocery.Balance)
+	fmt.Println("College Savings:", collegeSavings.Balance)
+	fmt.Println("Car Savings:", carSavings.Balance)
+	fmt.Println("Netflix:", netflix.Balance)
+	fmt.Println("Travel Savings:", travelSavings.Balance)
+	fmt.Println("Spending:", spending.Balance)
+
+	// Output:
+	// Rent: USD 850.000
+	// Grocery: USD 500.000
+	// College Savings: USD 21256.990
+	// Car Savings: USD 10115.000
+	// Netflix: USD 19.990
+	// Travel Savings: USD 547.852
+	// Spending: USD 599.808
+}
+
 func ExampleBudgetRule() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second * 30)
 	defer cancel()
