@@ -19,6 +19,7 @@ type priorityEntry struct {
 	Distributor
 }
 
+// NewPriorityRule creates a new empty PriorityRule that will send unallocated funds to leftover.
 func NewPriorityRule(leftover Distributor) *PriorityRule {
 	return &PriorityRule{
 		priority: collection.NewLinkedList(),
@@ -26,6 +27,7 @@ func NewPriorityRule(leftover Distributor) *PriorityRule {
 	}
 }
 
+// AddRule will put a new entry at the back of the line for receiving a given amount of funds.
 func (pr PriorityRule) AddRule(rule Distributor, amount envelopes.Balance) {
 	pr.priority.AddBack(priorityEntry{
 		Amount:      amount,
@@ -33,6 +35,8 @@ func (pr PriorityRule) AddRule(rule Distributor, amount envelopes.Balance) {
 	})
 }
 
+// Distribute will step through each Distributor that was added in previous calls to AddRule. Surplus or shortfall will
+// be passed on to Leftover.
 func (pr PriorityRule) Distribute(ctx context.Context, balance envelopes.Balance) error {
 	for item := range pr.priority.Enumerate(ctx.Done()) {
 		cast := item.(priorityEntry)
