@@ -50,19 +50,6 @@ type Balance map[AssetType]*big.Rat
 
 var zero = big.NewRat(0, 100)
 
-// Copy creates a new Balance that has identical values to b.
-func (b Balance) Copy() Balance {
-
-	retval := make(Balance, len(b))
-
-	for k, v := range b {
-		retval[k] = &big.Rat{}
-		retval[k].Set(v)
-	}
-
-	return retval
-}
-
 // Add combines two balances, summing any shared components, and including unmatched components without further
 // processing.
 // Returns a new instance of a Balance, without modifying the two original balances.
