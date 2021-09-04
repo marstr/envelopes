@@ -31,13 +31,10 @@ func (pr PercentageRule) AddRule(equity float64, distributor Distributor) {
 // Distribute takes funds from balance and splits it up equitably among the rules that were previously added using
 // AddRule.
 func (pr PercentageRule) Distribute(ctx context.Context, balance envelopes.Balance) error {
-	var remaining envelopes.Balance
-	remaining.Set(balance)
+	remaining := balance.Copy()
 
 	for target, scale := range pr.Targets {
-		var current envelopes.Balance
-		current.Set(balance)
-		current = current.Scale(scale)
+		current := balance.Scale(scale)
 
 		if err := target.Distribute(ctx, current); err != nil {
 			return err
