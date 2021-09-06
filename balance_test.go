@@ -92,14 +92,14 @@ func TestBalance_String(t *testing.T) {
 		{
 			envelopes.Balance{
 				"FZROX": zero,
-				"MSFT": zero,
-				"TMUS": zero,
-				"USD": zero,
+				"MSFT":  zero,
+				"TMUS":  zero,
+				"USD":   zero,
 			},
 			"USD 0.00",
 		},
 		{envelopes.Balance{}, "USD 0.00"},
-		{envelopes.Balance{"MSFT": zero	}, "MSFT 0.000"},
+		{envelopes.Balance{"MSFT": zero}, "MSFT 0.000"},
 	}
 
 	for _, tc := range testCases {
@@ -184,38 +184,38 @@ func testParseBalance_complex(t *testing.T) {
 		{
 			"USD 10.00: FZROX 193.468",
 			envelopes.Balance{
-				"USD": big.NewRat(10, 1),
+				"USD":   big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
 			},
 		},
 		{
 			"USD10.00: FZROX193.468",
 			envelopes.Balance{
-				"USD": big.NewRat(10, 1),
+				"USD":   big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
 			},
 		},
 		{
 			"USD10.00:FZROX193.468",
 			envelopes.Balance{
-				"USD": big.NewRat(10, 1),
+				"USD":   big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
 			},
 		},
 		{
 			"USD10.00:FZROX193.468:MSFT198.890",
 			envelopes.Balance{
-				"USD": big.NewRat(10, 1),
+				"USD":   big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
-				"MSFT": big.NewRat(19889, 100),
+				"MSFT":  big.NewRat(19889, 100),
 			},
 		},
 		{
 			"USD10.00\nFZROX193.468\nMSFT198.890",
 			envelopes.Balance{
-				"USD": big.NewRat(10, 1),
+				"USD":   big.NewRat(10, 1),
 				"FZROX": big.NewRat(193468, 1000),
-				"MSFT": big.NewRat(19889, 100),
+				"MSFT":  big.NewRat(19889, 100),
 			},
 		},
 		{

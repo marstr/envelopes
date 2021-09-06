@@ -31,6 +31,12 @@ type (
 	Impact State
 )
 
+// Equal determines whether or not each component of two Impacts have the same balances. If any components are not
+// shared, the answer is false.
+func (i Impact) Equal(other Impact) bool {
+	return State(i).Equal(State(other))
+}
+
 // ID calculates the SHA1 hash of this object.
 func (s State) ID() (id ID) {
 	marshaled, err := s.MarshalText()
