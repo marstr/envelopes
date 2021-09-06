@@ -15,6 +15,7 @@
 package persist
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -36,7 +37,26 @@ type Loader interface {
 	Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error
 }
 
+type ErrNoCommonAncestor []envelopes.ID
 
+func (err ErrNoCommonAncestor) Error() string {
+	out := &bytes.Buffer{}
+	_,_ = fmt.Fprint(out, "no common ancestor found for: ")
+	for i := 0; i < len(err); i++ {
+		if i >= 6 {
+			_,_ = fmt.Fprint(out, ", ...")
+			break
+		} else {
+			_,_ = fmt.Fprintf(out, "%s", err[i])
+		}
+
+		if i < len(err)-1 {
+			_,_ = fmt.Fprint(out, ", ")
+		}
+	}
+
+	return out.String()
+}
 
 // ErrUnloadableType indicates that a Loader is unable to recognize the specified type.
 type ErrUnloadableType string
@@ -130,6 +150,9 @@ func NearestCommonAncestorMany(ctx context.Context, loader Loader, heads []envel
 		}
 
 		current, err = NearestCommonAncestor(ctx, loader, current, heads[i])
+		if _, ok := err.(ErrNoCommonAncestor); ok {
+			return envelopes.ID{}, ErrNoCommonAncestor(heads)
+		}
 		if err != nil {
 			return envelopes.ID{}, err
 		}
@@ -144,7 +167,6 @@ func NearestCommonAncestor(ctx context.Context, loader Loader, head1, head2 enve
 	seenRight := make(map[envelopes.ID]struct{})
 	toProcessLeft := collection.NewQueue(head1)
 	toProcessRight := collection.NewQueue(head2)
-
 
 	for !(toProcessLeft.IsEmpty() && toProcessRight.IsEmpty()){
 		select {
@@ -192,5 +214,5 @@ func NearestCommonAncestor(ctx context.Context, loader Loader, head1, head2 enve
 		}
 	}
 
-	return envelopes.ID{}, fmt.Errorf("no common ancestor found for %s and %s", head1, head2)
+	return envelopes.ID{}, ErrNoCommonAncestor{head1, head2}
 }
