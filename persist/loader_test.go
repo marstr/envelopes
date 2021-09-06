@@ -625,3 +625,154 @@ func TestLoadImpact_duplicateReconciled(t *testing.T) {
 		t.Errorf("got:  %v\nwant: %v\n", got, want)
 	}
 }
+
+func TestLoadImpact_noCommonAncestor(t *testing.T) {
+	ctx := context.Background()
+	var err error
+
+	gen1a := envelopes.Transaction{
+		Comment: "Gen 1 - a",
+		State: &envelopes.State{
+			Budget: &envelopes.Budget{
+				Balance: envelopes.Balance{
+					"USD": big.NewRat(35,1),
+				},
+			},
+			Accounts: map[string]envelopes.Balance{
+				"checking": {
+					"USD":big.NewRat(10,1),
+				},
+				"savings": {
+					"USD":big.NewRat(25,1),
+				},
+			},
+		},
+	}
+
+	gen1b := envelopes.Transaction{
+		Comment: "Gen 1 - b",
+		State: &envelopes.State{
+			Budget: &envelopes.Budget{
+				Balance: envelopes.Balance{
+					"USD": big.NewRat(35,1),
+				},
+			},
+			Accounts: map[string]envelopes.Balance{
+				"checking": {
+					"USD":big.NewRat(15,1),
+				},
+				"savings": {
+					"USD":big.NewRat(20,1),
+				},
+			},
+		},
+	}
+
+	gen2 := envelopes.Transaction{
+		Comment: "Gen 2",
+		State: &envelopes.State{
+			Budget: &envelopes.Budget{
+				Balance: envelopes.Balance{
+					"USD": big.NewRat(70,1),
+				},
+			},
+			Accounts: map[string]envelopes.Balance{
+				"checking": {
+					"USD":big.NewRat(25,1),
+				},
+				"savings": {
+					"USD":big.NewRat(45,1),
+				},
+			},
+		},
+		Parents: []envelopes.ID{gen1a.ID(), gen1b.ID()},
+	}
+
+	repo := NewMockRepository(0, 3)
+	err = repo.Write(ctx, gen1a)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = repo.Write(ctx, gen1b)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = repo.Write(ctx, gen2)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	var got envelopes.Impact
+	got, err = LoadImpact(ctx, repo, gen2)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	want := envelopes.Impact{}
+
+	if !got.Equal(want) {
+		t.Errorf("got:  %v\nwant: %v\n", got, want)
+	}
+}
+
+func TestLoadImpact_island(t *testing.T) {
+	ctx := context.Background()
+	var err error
+
+	gen1 := envelopes.Transaction{
+		Comment: "Gen 1",
+		State: &envelopes.State{
+			Budget: &envelopes.Budget{
+				Balance: envelopes.Balance{
+					"USD": big.NewRat(35,1),
+				},
+			},
+			Accounts: map[string]envelopes.Balance{
+				"checking": {
+					"USD":big.NewRat(10,1),
+				},
+				"savings": {
+					"USD":big.NewRat(25,1),
+				},
+			},
+		},
+	}
+
+	repo := NewMockRepository(0, 1)
+	err = repo.Write(ctx, gen1)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	var got envelopes.Impact
+	got, err = LoadImpact(ctx, repo, gen1)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	want := envelopes.Impact{
+		Budget: &envelopes.Budget{
+			Balance: envelopes.Balance{
+				"USD": big.NewRat(35, 1),
+			},
+		},
+		Accounts: map[string]envelopes.Balance{
+			"checking": {
+				"USD":big.NewRat(10,1),
+			},
+			"savings":{
+				"USD":big.NewRat(25,1),
+			},
+		},
+	}
+
+	if !got.Equal(want) {
+		t.Errorf("got:  %v\nwant: %v\n", got, want)
+	}
+}

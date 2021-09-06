@@ -100,16 +100,18 @@ func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, 
 // only a single parent, the impact is trivial: one just subtracts
 func LoadImpact(ctx context.Context, loader Loader, transaction envelopes.Transaction) (envelopes.Impact, error) {
 	var err error
+	var nca envelopes.Transaction
 	var ncaId envelopes.ID
 
 	ncaId, err = NearestCommonAncestorMany(ctx, loader, transaction.Parents)
-	if err != nil {
-		return envelopes.Impact{}, err
-	}
-
-	var nca envelopes.Transaction
-	err = loader.Load(ctx, ncaId, &nca)
-	if err != nil {
+	if err == nil {
+		err = loader.Load(ctx, ncaId, &nca)
+		if err != nil {
+			return envelopes.Impact{}, err
+		}
+	} else if _, ok := err.(ErrNoCommonAncestor); ok {
+		nca.State = &envelopes.State{}
+	} else {
 		return envelopes.Impact{}, err
 	}
 
@@ -132,7 +134,7 @@ func LoadImpact(ctx context.Context, loader Loader, transaction envelopes.Transa
 // NearestCommonAncestorMany will find the NearestCommonAncestor for a collection of one or more Transactions.
 func NearestCommonAncestorMany(ctx context.Context, loader Loader, heads []envelopes.ID) (envelopes.ID, error) {
 	if len(heads) == 0 {
-		return envelopes.ID{}, fmt.Errorf("no heads to look for nearest common ancestor")
+		return envelopes.ID{}, ErrNoCommonAncestor(heads)
 	}
 
 	if len(heads) == 1 {
