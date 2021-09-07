@@ -15,9 +15,11 @@
 package persist
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"github.com/marstr/collection"
 	"github.com/marstr/envelopes"
 	"reflect"
 )
@@ -35,7 +37,26 @@ type Loader interface {
 	Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error
 }
 
+type ErrNoCommonAncestor []envelopes.ID
 
+func (err ErrNoCommonAncestor) Error() string {
+	out := &bytes.Buffer{}
+	_,_ = fmt.Fprint(out, "no common ancestor found for: ")
+	for i := 0; i < len(err); i++ {
+		if i >= 6 {
+			_,_ = fmt.Fprint(out, ", ...")
+			break
+		} else {
+			_,_ = fmt.Fprintf(out, "%s", err[i])
+		}
+
+		if i < len(err)-1 {
+			_,_ = fmt.Fprint(out, ", ")
+		}
+	}
+
+	return out.String()
+}
 
 // ErrUnloadableType indicates that a Loader is unable to recognize the specified type.
 type ErrUnloadableType string
@@ -73,4 +94,127 @@ func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, 
 		}
 	}
 	return &result, nil
+}
+
+// LoadImpact finds the change to an envelopes.State associated with an envelopes.Transaction. When transaction has
+// only a single parent, the impact is trivial: one just subtracts
+func LoadImpact(ctx context.Context, loader Loader, transaction envelopes.Transaction) (envelopes.Impact, error) {
+	var err error
+	var nca envelopes.Transaction
+	var ncaId envelopes.ID
+
+	ncaId, err = NearestCommonAncestorMany(ctx, loader, transaction.Parents)
+	if err == nil {
+		err = loader.Load(ctx, ncaId, &nca)
+		if err != nil {
+			return envelopes.Impact{}, err
+		}
+	} else if _, ok := err.(ErrNoCommonAncestor); ok {
+		nca.State = &envelopes.State{}
+	} else {
+		return envelopes.Impact{}, err
+	}
+
+	totalDelta := transaction.State.Subtract(*nca.State)
+
+	for _, pid := range transaction.Parents {
+		var parent envelopes.Transaction
+		err = loader.Load(ctx, pid, &parent)
+		if err != nil {
+			return envelopes.Impact{}, err
+		}
+
+		parentDelta := parent.State.Subtract(*nca.State)
+		totalDelta = envelopes.State(totalDelta).Subtract(envelopes.State(parentDelta))
+	}
+
+	return totalDelta, nil
+}
+
+// NearestCommonAncestorMany will find the NearestCommonAncestor for a collection of one or more Transactions.
+func NearestCommonAncestorMany(ctx context.Context, loader Loader, heads []envelopes.ID) (envelopes.ID, error) {
+	if len(heads) == 0 {
+		return envelopes.ID{}, ErrNoCommonAncestor(heads)
+	}
+
+	if len(heads) == 1 {
+		return heads[0], nil
+	}
+
+	var err error
+	current := heads[0]
+	for i := 1; i < len(heads); i++ {
+		select {
+		case <-ctx.Done():
+			return envelopes.ID{}, ctx.Err()
+		default:
+			// Intentionally Left Blank
+		}
+
+		current, err = NearestCommonAncestor(ctx, loader, current, heads[i])
+		if _, ok := err.(ErrNoCommonAncestor); ok {
+			return envelopes.ID{}, ErrNoCommonAncestor(heads)
+		}
+		if err != nil {
+			return envelopes.ID{}, err
+		}
+	}
+	return current, nil
+}
+
+// NearestCommonAncestor walks the graph created by looking at the Parents of each envelopes.Transaction, finding the
+// nearest Transaction that is the ancestor of transactions with both head1 and head2 IDs.
+func NearestCommonAncestor(ctx context.Context, loader Loader, head1, head2 envelopes.ID) (envelopes.ID, error) {
+	seenLeft := make(map[envelopes.ID]struct{})
+	seenRight := make(map[envelopes.ID]struct{})
+	toProcessLeft := collection.NewQueue(head1)
+	toProcessRight := collection.NewQueue(head2)
+
+	for !(toProcessLeft.IsEmpty() && toProcessRight.IsEmpty()){
+		select {
+		case <-ctx.Done():
+			return envelopes.ID{}, ctx.Err()
+		default:
+			// Intentionally Left Blank
+		}
+
+		var current envelopes.Transaction
+
+		if !toProcessLeft.IsEmpty() {
+			left, _ := toProcessLeft.Next()
+			seenLeft[left.(envelopes.ID)] = struct{}{}
+
+			if _, ok := seenRight[left.(envelopes.ID)]; ok {
+				return left.(envelopes.ID), nil
+			}
+
+			if err := loader.Load(ctx, left.(envelopes.ID), &current); err != nil {
+				return envelopes.ID{}, err
+			}
+
+			for _, p := range current.Parents {
+				toProcessLeft.Add(p)
+			}
+		}
+
+		if !toProcessRight.IsEmpty() {
+
+			right, _ := toProcessRight.Next()
+			seenRight[right.(envelopes.ID)] = struct{}{}
+
+			if _, ok := seenLeft[right.(envelopes.ID)]; ok {
+				return  right.(envelopes.ID), nil
+			}
+
+			if err := loader.Load(ctx, right.(envelopes.ID), &current); err != nil {
+				return envelopes.ID{}, err
+			}
+
+			for _, p := range current.Parents {
+				toProcessRight.Add(p)
+			}
+		}
+	}
+
+	return envelopes.ID{}, ErrNoCommonAncestor{head1, head2}
 }
