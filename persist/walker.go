@@ -8,6 +8,7 @@ import (
 	"github.com/marstr/envelopes"
 )
 
+// WalkFunc will be called by a Walker as it encounters transactions.
 type WalkFunc func(ctx context.Context, id envelopes.ID, transaction envelopes.Transaction) error
 
 // ErrSkipAncestors allows a WalkFunc to communicate that parents of this transaction shouldn't be visited.
@@ -20,14 +21,28 @@ func (err ErrSkipAncestors) Error() string {
 }
 
 type Walker struct {
-	Loader Loader
+	// Loader fetches objects for further processing. This must be populated for Walker to function properly.
+	Loader   Loader
+
+	// MaxDepth controls how many generations beyond the provided heads this Walker will process. If its value is '0',
+	// no restrictions are placed, and it will walk the entire envelopes.Transaction history.
+	MaxDepth uint
 }
 
 func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.ID) error {
 	processed := make(map[envelopes.ID]struct{})
 	toProcess := collection.NewLinkedList()
+
+	type toProcessEntry struct {
+		envelopes.ID
+		Depth uint
+	}
+
 	for i := range heads {
-		toProcess.AddBack(heads[i])
+		toProcess.AddBack(toProcessEntry{
+			ID: heads[i],
+			Depth:0,
+		})
 	}
 
 	for collection.Any(toProcess) {
@@ -39,20 +54,20 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 		}
 
 		frontNode, _ := toProcess.RemoveFront()
-		currentId := frontNode.(envelopes.ID)
+		currentEntry := frontNode.(toProcessEntry)
 
-		if _, seen := processed[currentId]; seen {
+		if _, seen := processed[currentEntry.ID]; seen || (w.MaxDepth > 0 && currentEntry.Depth > w.MaxDepth) {
 			continue
 		}
 
 		var current envelopes.Transaction
-		err := w.Loader.Load(ctx, currentId, &current)
+		err := w.Loader.Load(ctx, currentEntry.ID, &current)
 		if err != nil {
 			return err
 		}
-		processed[currentId] = struct{}{}
+		processed[currentEntry.ID] = struct{}{}
 
-		err = action(ctx, currentId, current)
+		err = action(ctx, currentEntry.ID, current)
 		if err != nil {
 			switch err.(type) {
 			case ErrSkipAncestors:
@@ -63,7 +78,10 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 		}
 
 		for i := range current.Parents {
-			toProcess.AddBack(current.Parents[i])
+			toProcess.AddBack(toProcessEntry{
+				ID:current.Parents[i],
+				Depth: currentEntry.Depth + 1,
+			})
 		}
 	}
 

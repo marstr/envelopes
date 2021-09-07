@@ -221,3 +221,14 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 		}
 	}
 }
+
+func respectDepth(ctx context.Context) func(t *testing.T){
+	repo := NewMockRepository(0, 4)
+
+	gen1 := envelopes.Transaction{Comment: "Gen 1"}
+	gen1id := gen1.ID()
+
+	gen2a := envelopes.Transaction{Comment: "Gen 2a", Parents: []envelopes.ID{gen1id}}
+	gen2aid := gen2a.ID()
+	gen2b := envelopes.Transaction{Comment: "Gen 2b", Parents: []envelopes.ID{gen1id}}
+}
