@@ -18,6 +18,7 @@ package persist
 
 import (
 	"context"
+
 	"github.com/marstr/envelopes"
 )
 
@@ -109,6 +110,7 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 
 	walker := Walker{
 		Loader: src,
+		MaxDepth: options.Depth,
 	}
 
 	return walker.Walk(ctx, func(ctx context.Context, _ envelopes.ID, transaction envelopes.Transaction) error {
