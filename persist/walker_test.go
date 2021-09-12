@@ -11,6 +11,7 @@ func TestWalker_Walk(t *testing.T) {
 	t.Run("single line", chain(ctx))
 	t.Run("basic fork", fork(ctx))
 	t.Run("skip when told", respectSkipAncestors(ctx))
+	t.Run("respect depth", respectDepth(ctx))
 }
 
 func chain(ctx context.Context) func(t *testing.T) {
@@ -222,13 +223,68 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 	}
 }
 
-func respectDepth(ctx context.Context) func(t *testing.T){
-	repo := NewMockRepository(0, 4)
+func respectDepth(ctx context.Context) func(*testing.T) {
+	return func(t *testing.T) {
+		repo := NewMockRepository(0, 4)
 
-	gen1 := envelopes.Transaction{Comment: "Gen 1"}
-	gen1id := gen1.ID()
+		gen1 := envelopes.Transaction{Comment: "Gen 1"}
+		gen1id := gen1.ID()
+		if err := repo.Write(ctx, gen1); err != nil {
+			t.Error(err)
+			return
+		}
 
-	gen2a := envelopes.Transaction{Comment: "Gen 2a", Parents: []envelopes.ID{gen1id}}
-	gen2aid := gen2a.ID()
-	gen2b := envelopes.Transaction{Comment: "Gen 2b", Parents: []envelopes.ID{gen1id}}
+		gen2a := envelopes.Transaction{Comment: "Gen 2a", Parents: []envelopes.ID{gen1id}}
+		gen2aid := gen2a.ID()
+		if err := repo.Write(ctx, gen2a); err != nil {
+			t.Error(err)
+			return
+		}
+
+		gen2b := envelopes.Transaction{Comment: "Gen 2b", Parents: []envelopes.ID{gen1id}}
+		gen2bid := gen2b.ID()
+		if err := repo.Write(ctx, gen2b); err != nil {
+			t.Error(err)
+			return
+		}
+
+		gen3 := envelopes.Transaction{Comment: "Gen 3", Parents: []envelopes.ID{gen2aid, gen2bid}}
+		gen3id := gen3.ID()
+		if err := repo.Write(ctx, gen3); err != nil {
+			t.Error(err)
+			return
+		}
+
+		expected := make(map[envelopes.ID]struct{}, 3)
+		expected[gen2aid] = struct{}{}
+		expected[gen2bid] = struct{}{}
+		expected[gen3id] = struct{}{}
+
+
+		subject := Walker{Loader: repo, MaxDepth: 1}
+
+		action := func(ctx context.Context, id envelopes.ID, transaction envelopes.Transaction) error {
+			if _, ok := expected[id]; ok {
+				delete(expected, id)
+			} else {
+				t.Errorf("unexpected transaction encountered:\n\tID:   %s\n\tDesc: %s", id, transaction.Comment)
+			}
+			return nil
+		}
+
+		if err := subject.Walk(ctx, action, gen3id); err != nil {
+			t.Error(err)
+			return
+		}
+
+		for k, _ := range expected {
+			var missed envelopes.Transaction
+			if err := repo.Load(ctx, k, &missed); err != nil {
+				t.Errorf("missed expected transaction:\n\tID:   %s\n\tDesc: failed to load", k)
+				continue
+			}
+
+			t.Errorf("missed expected transaction:\n\tID:   %s\n\tDesc: %s", k, missed.Comment)
+		}
+	}
 }
