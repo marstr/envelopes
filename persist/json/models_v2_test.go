@@ -3,28 +3,29 @@ package json
 import (
 	"context"
 	"encoding/json"
-	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/persist/filesystem"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
+
+	"github.com/marstr/envelopes"
+	"github.com/marstr/envelopes/persist/filesystem"
 )
 
 func TestBalance_MarshalJSON(t *testing.T) {
 	testCases := []struct {
-		subject Balance
+		subject BalanceV2
 		want    string
 	}{
 		{
-			subject: Balance{
+			subject: BalanceV2{
 				"USD": big.NewRat(10056, 100),
 				"EUR": big.NewRat(40098, 100),
 			},
 			want: `{"EUR":400.980,"USD":100.560}`,
 		},
 		{
-			subject: Balance{
+			subject: BalanceV2{
 				"FZROX": big.NewRat(589001, 1000),
 			},
 			want: `{"FZROX":589.001}`,
@@ -45,7 +46,7 @@ func TestBalance_MarshalJSON(t *testing.T) {
 	}
 }
 
-func Test_parseRat(t *testing.T) {
+func Test_parseRatV2(t *testing.T) {
 	testCases := map[json.Number]*big.Rat{
 		"1":      big.NewRat(1, 1),
 		"1.0":    big.NewRat(1, 1),
@@ -60,7 +61,7 @@ func Test_parseRat(t *testing.T) {
 	}
 
 	for subject, want := range testCases {
-		got, err := parseRat(subject)
+		got, err := parseRatV2(subject)
 
 		if err != nil {
 			t.Error(err)
@@ -125,10 +126,10 @@ func Test_StateRoundtrip(t *testing.T) {
 		Root: tempLocation,
 	}
 
-	saver := &Writer{
+	saver := &WriterV2{
 		Stasher: fs,
 	}
-	reader := &Loader{
+	reader := &LoaderV2{
 		Fetcher: fs,
 	}
 

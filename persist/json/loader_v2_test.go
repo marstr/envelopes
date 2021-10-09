@@ -2,7 +2,6 @@ package json
 
 import (
 	"context"
-	"github.com/marstr/envelopes/persist/filesystem"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -10,6 +9,8 @@ import (
 
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
+	"github.com/marstr/envelopes/persist/filesystem"
+
 )
 
 func TestLoadAncestor(t *testing.T) {
@@ -46,7 +47,7 @@ func TestLoadAncestor(t *testing.T) {
 		},
 	}
 
-	writer := Writer{
+	writer := WriterV2{
 		Stasher: fs,
 	}
 
@@ -59,7 +60,7 @@ func TestLoadAncestor(t *testing.T) {
 		}
 	}
 
-	subject := Loader{
+	subject := LoaderV2{
 		Fetcher: fs,
 	}
 
@@ -107,7 +108,7 @@ func TestCache_Load_reuseHits(t *testing.T) {
 	}
 
 	subject := persist.NewCache(10)
-	subject.Loader = &Loader{
+	subject.Loader = &LoaderV2{
 		Fetcher: passThrough,
 		Loopback: subject,
 	}

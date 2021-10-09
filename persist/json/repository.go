@@ -8,8 +8,8 @@ import (
 
 type FileSystemRepository struct {
 	filesystem.FileSystem
-	Loader
-	Writer
+	LoaderV2
+	WriterV2
 }
 
 type FileSystemRepositoryOption func(repository *FileSystemRepository) error
@@ -20,8 +20,8 @@ type FileSystemRepositoryOption func(repository *FileSystemRepository) error
 func FileSystemRepositoryUseCache(capacity uint) FileSystemRepositoryOption {
 	cache := persist.NewCache(capacity)
 	return func(repository *FileSystemRepository) error {
-		repository.Loader.Loopback = cache
-		repository.Writer.Loopback = cache
+		repository.LoaderV2.Loopback = cache
+		repository.WriterV2.Loopback = cache
 		return nil
 	}
 }
@@ -44,11 +44,11 @@ func NewFileSystemRepository(root string, options ...FileSystemRepositoryOption)
 
 	retval := &FileSystemRepository{
 		FileSystem: fs,
-		Loader:     Loader{
+		LoaderV2:     LoaderV2{
 			Fetcher:  fs,
 			Loopback: nil,
 		},
-		Writer:     Writer{
+		WriterV2:     WriterV2{
 			Stasher:  fs,
 			Loopback: nil,
 		},

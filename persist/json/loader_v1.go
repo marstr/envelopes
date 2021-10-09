@@ -3,20 +3,21 @@ package json
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
 )
 
-// Loader wraps a Fetcher and does just the unmarshaling portion.
-type Loader struct {
+// LoaderV1 wraps a Fetcher and does just the unmarshaling portion.
+type LoaderV1 struct {
 	persist.Fetcher
 
-	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a Transaction needs a State.
-	// If it is not set, Loader will use itself.
+	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a TransactionV1 needs a StateV1.
+	// If it is not set, LoaderV1 will use itself.
 	Loopback persist.Loader
 }
 
-func (dl Loader) loopback() persist.Loader {
+func (dl LoaderV1) loopback() persist.Loader {
 	if dl.Loopback == nil {
 		return dl
 	}
@@ -26,8 +27,8 @@ func (dl Loader) loopback() persist.Loader {
 // Load fetches and parses all objects necessary to fully rehydrate `destination` from wherever it was stashed.
 //
 // See Also:
-// - Writer.Write
-func (dl Loader) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
+// - WriterV1.Write
+func (dl LoaderV1) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
 	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
 	// Must have default clause to prevent blocking.
 	select {
@@ -56,8 +57,8 @@ func (dl Loader) Load(ctx context.Context, id envelopes.ID, destination envelope
 	}
 }
 
-func (dl Loader) loadTransaction(ctx context.Context, marshaled []byte, toLoad *envelopes.Transaction) error {
-	var unmarshaled Transaction
+func (dl LoaderV1) loadTransaction(ctx context.Context, marshaled []byte, toLoad *envelopes.Transaction) error {
+	var unmarshaled TransactionV1
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
@@ -75,7 +76,7 @@ func (dl Loader) loadTransaction(ctx context.Context, marshaled []byte, toLoad *
 	toLoad.ActualTime = unmarshaled.ActualTime
 	toLoad.EnteredTime = unmarshaled.EnteredTime
 	toLoad.PostedTime = unmarshaled.PostedTime
-	toLoad.Parents = unmarshaled.Parent
+	toLoad.Parents = []envelopes.ID{unmarshaled.Parent}
 	toLoad.Amount = envelopes.Balance(unmarshaled.Amount)
 	toLoad.Committer.FullName = unmarshaled.Committer.FullName
 	toLoad.Committer.Email = unmarshaled.Committer.Email
@@ -84,8 +85,8 @@ func (dl Loader) loadTransaction(ctx context.Context, marshaled []byte, toLoad *
 	return nil
 }
 
-func (dl Loader) loadState(ctx context.Context, marshaled []byte, toLoad *envelopes.State) error {
-	var unmarshaled State
+func (dl LoaderV1) loadState(ctx context.Context, marshaled []byte, toLoad *envelopes.State) error {
+	var unmarshaled StateV1
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
@@ -106,8 +107,8 @@ func (dl Loader) loadState(ctx context.Context, marshaled []byte, toLoad *envelo
 	return nil
 }
 
-func (dl Loader) loadBudget(ctx context.Context, marshaled []byte, toLoad *envelopes.Budget) error {
-	var unmarshaled Budget
+func (dl LoaderV1) loadBudget(ctx context.Context, marshaled []byte, toLoad *envelopes.Budget) error {
+	var unmarshaled BudgetV1
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
