@@ -3,31 +3,43 @@ package json
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
 )
 
-// Loader wraps a Fetcher and does just the unmarshaling portion.
-type Loader struct {
-	persist.Fetcher
+type Loader=LoaderV2
 
-	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a Transaction needs a State.
-	// If it is not set, Loader will use itself.
-	Loopback persist.Loader
+func NewLoaderV2(fetcher persist.Fetcher) (*LoaderV2, error) {
+	retval := &LoaderV2{
+		Fetcher:  fetcher,
+	}
+	retval.loopback = retval
+	return retval, nil
 }
 
-func (dl Loader) loopback() persist.Loader {
-	if dl.Loopback == nil {
-		return dl
+func NewLoaderV2WithLoopback(fetcher persist.Fetcher, loopback persist.Loader) (*LoaderV2, error) {
+	retval := &LoaderV2{
+		Fetcher: fetcher,
+		loopback: loopback,
 	}
-	return dl.Loopback
+	return retval, nil
+}
+
+// LoaderV2 wraps a Fetcher and does just the unmarshaling portion.
+type LoaderV2 struct {
+	persist.Fetcher
+
+	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a TransactionV2 needs a StateV2.
+	// If it is not set, LoaderV2 will use itself.
+	loopback persist.Loader
 }
 
 // Load fetches and parses all objects necessary to fully rehydrate `destination` from wherever it was stashed.
 //
 // See Also:
-// - Writer.Write
-func (dl Loader) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
+// - WriterV2.Write
+func (dl LoaderV2) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
 	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
 	// Must have default clause to prevent blocking.
 	select {
@@ -56,15 +68,15 @@ func (dl Loader) Load(ctx context.Context, id envelopes.ID, destination envelope
 	}
 }
 
-func (dl Loader) loadTransaction(ctx context.Context, marshaled []byte, toLoad *envelopes.Transaction) error {
-	var unmarshaled Transaction
+func (dl LoaderV2) loadTransaction(ctx context.Context, marshaled []byte, toLoad *envelopes.Transaction) error {
+	var unmarshaled TransactionV2
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
 	}
 
 	var state envelopes.State
-	err = dl.loopback().Load(ctx, unmarshaled.State, &state)
+	err = dl.loopback.Load(ctx, unmarshaled.State, &state)
 	if err != nil {
 		return err
 	}
@@ -84,20 +96,20 @@ func (dl Loader) loadTransaction(ctx context.Context, marshaled []byte, toLoad *
 	return nil
 }
 
-func (dl Loader) loadState(ctx context.Context, marshaled []byte, toLoad *envelopes.State) error {
-	var unmarshaled State
+func (dl LoaderV2) loadState(ctx context.Context, marshaled []byte, toLoad *envelopes.State) error {
+	var unmarshaled StateV2
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
 	}
 
 	var budget envelopes.Budget
-	err = dl.loopback().Load(ctx, unmarshaled.Budget, &budget)
+	err = dl.loopback.Load(ctx, unmarshaled.Budget, &budget)
 	if err != nil {
 		return err
 	}
 
-	err = dl.loopback().Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
+	err = dl.loopback.Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
 	if err != nil {
 		return err
 	}
@@ -106,8 +118,8 @@ func (dl Loader) loadState(ctx context.Context, marshaled []byte, toLoad *envelo
 	return nil
 }
 
-func (dl Loader) loadBudget(ctx context.Context, marshaled []byte, toLoad *envelopes.Budget) error {
-	var unmarshaled Budget
+func (dl LoaderV2) loadBudget(ctx context.Context, marshaled []byte, toLoad *envelopes.Budget) error {
+	var unmarshaled BudgetV2
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
@@ -117,7 +129,7 @@ func (dl Loader) loadBudget(ctx context.Context, marshaled []byte, toLoad *envel
 	toLoad.Children = make(map[string]*envelopes.Budget, len(unmarshaled.Children))
 	for name, childID := range unmarshaled.Children {
 		var child envelopes.Budget
-		err = dl.loopback().Load(ctx, childID, &child)
+		err = dl.loopback.Load(ctx, childID, &child)
 		if err != nil {
 			return err
 		}

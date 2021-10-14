@@ -1,8 +1,7 @@
-package json
+package filesystem
 
 import (
 	"context"
-	"github.com/marstr/envelopes/persist/filesystem"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
+	"github.com/marstr/envelopes/persist/json"
 )
 
 func TestLoadAncestor(t *testing.T) {
@@ -24,7 +24,7 @@ func TestLoadAncestor(t *testing.T) {
 	}
 	defer os.RemoveAll(test_loc)
 
-	fs := filesystem.FileSystem{
+	fs := FileSystem{
 		Root: test_loc,
 	}
 
@@ -46,8 +46,10 @@ func TestLoadAncestor(t *testing.T) {
 		},
 	}
 
-	writer := Writer{
-		Stasher: fs,
+	writer, err := json.NewWriterV2(fs)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
 	toWrite := []*envelopes.Transaction{&t1, &t2, &t3}
@@ -59,8 +61,10 @@ func TestLoadAncestor(t *testing.T) {
 		}
 	}
 
-	subject := Loader{
-		Fetcher: fs,
+	subject, err := json.NewLoaderV2(fs)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
 	testCases := []struct {
@@ -102,14 +106,15 @@ func TestCache_Load_reuseHits(t *testing.T) {
 	var targetId envelopes.ID
 	targetId.UnmarshalText([]byte(rawTargetId))
 
-	passThrough := filesystem.FileSystem{
+	passThrough := FileSystem{
 		Root: "../filesystem/testdata/test3/.baronial",
 	}
 
 	subject := persist.NewCache(10)
-	subject.Loader = &Loader{
-		Fetcher: passThrough,
-		Loopback: subject,
+	subject.Loader, err = json.NewLoaderV2WithLoopback(passThrough, subject)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
 	var want envelopes.State
