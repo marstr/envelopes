@@ -20,17 +20,17 @@ package filesystem
 import (
 	"context"
 	"fmt"
-	"github.com/marstr/envelopes/persist"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/marstr/envelopes"
+	"github.com/marstr/envelopes/persist"
+
 	"github.com/marstr/collection"
 	"github.com/mitchellh/go-homedir"
-
-	"github.com/marstr/envelopes"
 )
 
 const objectsDir = "objects"

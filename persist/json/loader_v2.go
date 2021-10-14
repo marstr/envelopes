@@ -10,20 +10,29 @@ import (
 
 type Loader=LoaderV2
 
+func NewLoaderV2(fetcher persist.Fetcher) (*LoaderV2, error) {
+	retval := &LoaderV2{
+		Fetcher:  fetcher,
+	}
+	retval.loopback = retval
+	return retval, nil
+}
+
+func NewLoaderV2WithLoopback(fetcher persist.Fetcher, loopback persist.Loader) (*LoaderV2, error) {
+	retval := &LoaderV2{
+		Fetcher: fetcher,
+		loopback: loopback,
+	}
+	return retval, nil
+}
+
 // LoaderV2 wraps a Fetcher and does just the unmarshaling portion.
 type LoaderV2 struct {
 	persist.Fetcher
 
 	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a TransactionV2 needs a StateV2.
 	// If it is not set, LoaderV2 will use itself.
-	Loopback persist.Loader
-}
-
-func (dl LoaderV2) loopback() persist.Loader {
-	if dl.Loopback == nil {
-		return dl
-	}
-	return dl.Loopback
+	loopback persist.Loader
 }
 
 // Load fetches and parses all objects necessary to fully rehydrate `destination` from wherever it was stashed.
@@ -67,7 +76,7 @@ func (dl LoaderV2) loadTransaction(ctx context.Context, marshaled []byte, toLoad
 	}
 
 	var state envelopes.State
-	err = dl.loopback().Load(ctx, unmarshaled.State, &state)
+	err = dl.loopback.Load(ctx, unmarshaled.State, &state)
 	if err != nil {
 		return err
 	}
@@ -95,12 +104,12 @@ func (dl LoaderV2) loadState(ctx context.Context, marshaled []byte, toLoad *enve
 	}
 
 	var budget envelopes.Budget
-	err = dl.loopback().Load(ctx, unmarshaled.Budget, &budget)
+	err = dl.loopback.Load(ctx, unmarshaled.Budget, &budget)
 	if err != nil {
 		return err
 	}
 
-	err = dl.loopback().Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
+	err = dl.loopback.Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
 	if err != nil {
 		return err
 	}
@@ -120,7 +129,7 @@ func (dl LoaderV2) loadBudget(ctx context.Context, marshaled []byte, toLoad *env
 	toLoad.Children = make(map[string]*envelopes.Budget, len(unmarshaled.Children))
 	for name, childID := range unmarshaled.Children {
 		var child envelopes.Budget
-		err = dl.loopback().Load(ctx, childID, &child)
+		err = dl.loopback.Load(ctx, childID, &child)
 		if err != nil {
 			return err
 		}

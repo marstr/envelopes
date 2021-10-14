@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/marstr/envelopes/persist/filesystem"
-	"github.com/marstr/envelopes/persist/json"
 	"math/big"
 	"os"
 	"path"
@@ -38,7 +37,7 @@ func TestFileSystem_Current(t *testing.T) {
 		"./testdata/test2",
 	}
 
-	repo, err := json.NewFileSystemRepository("")
+	repo, err := filesystem.OpenRepository(ctx, "")
 	if err != nil {
 		t.Error(err)
 	}
@@ -90,7 +89,7 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 		{Amount: envelopes.Balance{"USD": big.NewRat(1729, 1)}},
 	}
 
-	repo, err := json.NewFileSystemRepository(testLocation)
+	repo, err := filesystem.OpenRepository(ctx, testLocation)
 	if err != nil {
 		t.Error(err)
 	}
@@ -166,7 +165,7 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 		}
 	}()
 
-	repo, err := json.NewFileSystemRepository(testDir)
+	repo, err := filesystem.OpenRepository(ctx, testDir)
 	if err != nil {
 		t.Error(err)
 	}
@@ -252,8 +251,11 @@ func TestFileSystem_ListBranches(t *testing.T) {
 
 
 func BenchmarkFileSystem_RoundTrip(b *testing.B) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	benchDir := path.Join("testdata", "bench", "filesystem", "roundtrip")
-	repo, err := json.NewFileSystemRepository(benchDir)
+	repo, err := filesystem.OpenRepository(ctx, benchDir)
 	if err != nil {
 		b.Error(err)
 	}

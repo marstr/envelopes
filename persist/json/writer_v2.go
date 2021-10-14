@@ -18,7 +18,23 @@ type WriterV2 struct {
 	persist.Stasher
 
 	// Allow recursive calls to Write to invoke the top-level WriterV2. If this is nil, WriterV2 uses itself.
-	Loopback persist.Writer
+	loopback persist.Writer
+}
+
+func NewWriterV2(stasher persist.Stasher) (*WriterV2, error) {
+	retval := &WriterV2{
+		Stasher: stasher,
+	}
+	retval.loopback = retval
+	return retval, nil
+}
+
+func NewWriterV2WithLoopback(stasher persist.Stasher, loopback persist.Writer) (*WriterV2, error) {
+	retval := &WriterV2{
+		Stasher:  stasher,
+		loopback: loopback,
+	}
+	return retval, nil
 }
 
 // Write uses the persist.Stasher it is composed of to write the given Envelopes object to a persistent storage space.
@@ -54,13 +70,6 @@ func (dw WriterV2) Write(ctx context.Context, subject envelopes.IDer) error {
 	}
 }
 
-func (dw WriterV2) loopback() persist.Writer {
-	if dw.Loopback == nil {
-		return dw
-	}
-	return dw.Loopback
-}
-
 func (dw WriterV2) writeTransaction(ctx context.Context, subject envelopes.Transaction) error {
 	if subject.State == nil {
 		subject.State = &envelopes.State{}
@@ -79,7 +88,7 @@ func (dw WriterV2) writeTransaction(ctx context.Context, subject envelopes.Trans
 	toMarshal.Committer.Email = subject.Committer.Email
 	toMarshal.RecordId = BankRecordIDV2(subject.RecordID)
 
-	err := dw.loopback().Write(ctx, subject.State)
+	err := dw.loopback.Write(ctx, subject.State)
 	if err != nil {
 		return err
 	}
@@ -96,7 +105,7 @@ func (dw WriterV2) writeState(ctx context.Context, subject envelopes.State) erro
 	if subject.Accounts == nil {
 		subject.Accounts = make(envelopes.Accounts, 0)
 	}
-	err := dw.loopback().Write(ctx, subject.Accounts)
+	err := dw.loopback.Write(ctx, subject.Accounts)
 	if err != nil {
 		return err
 	}
@@ -104,7 +113,7 @@ func (dw WriterV2) writeState(ctx context.Context, subject envelopes.State) erro
 	if subject.Budget == nil {
 		subject.Budget = &envelopes.Budget{}
 	}
-	err = dw.loopback().Write(ctx, subject.Budget)
+	err = dw.loopback.Write(ctx, subject.Budget)
 	if err != nil {
 		return err
 	}
@@ -126,7 +135,7 @@ func (dw WriterV2) writeBudget(ctx context.Context, subject envelopes.Budget) er
 		subject.Children = make(map[string]*envelopes.Budget, 0)
 	}
 	for _, child := range subject.Children {
-		err := dw.loopback().Write(ctx, child)
+		err := dw.loopback.Write(ctx, child)
 		if err != nil {
 			return err
 		}

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/marstr/envelopes"
-	"github.com/marstr/envelopes/persist/filesystem"
+	"github.com/marstr/envelopes/persist"
 )
 
 func TestBalance_MarshalJSON(t *testing.T) {
@@ -122,15 +122,19 @@ func Test_StateRoundtrip(t *testing.T) {
 	}
 	defer os.RemoveAll(tempLocation)
 
-	fs := filesystem.FileSystem{
-		Root: tempLocation,
-	}
+	md := make(mockDisk)
 
-	saver := &WriterV2{
-		Stasher: fs,
+	var saver *WriterV2
+	saver, err = NewWriterV2(md)
+	if err != nil {
+		t.Error(err)
+		return
 	}
-	reader := &LoaderV2{
-		Fetcher: fs,
+	var reader *LoaderV2
+	reader, err = NewLoaderV2(md)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
 	for name, subject := range testCases {
@@ -154,5 +158,19 @@ func Test_StateRoundtrip(t *testing.T) {
 			t.Fail()
 		}
 	}
+}
+
+type mockDisk map[envelopes.ID][]byte
+
+func (md mockDisk) Stash(_ context.Context, id envelopes.ID, payload []byte) error {
+	md[id] = payload
+	return nil
+}
+
+func (md mockDisk) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
+	if val, ok := md[id]; ok {
+		return val, nil
+	}
+	return []byte{}, persist.ErrObjectNotFound(id)
 }
 

@@ -14,14 +14,23 @@ type LoaderV1 struct {
 
 	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a TransactionV1 needs a StateV1.
 	// If it is not set, LoaderV1 will use itself.
-	Loopback persist.Loader
+	loopback persist.Loader
 }
 
-func (dl LoaderV1) loopback() persist.Loader {
-	if dl.Loopback == nil {
-		return dl
+func NewLoaderV1(fetcher persist.Fetcher) (*LoaderV1, error) {
+	retval :=  &LoaderV1{
+		Fetcher: fetcher,
 	}
-	return dl.Loopback
+	retval.loopback = retval
+
+	return retval, nil
+}
+
+func NewLoaderV1WithLoopback(fetcher persist.Fetcher, loopback persist.Loader) (*LoaderV1, error) {
+	return &LoaderV1{
+		Fetcher: fetcher,
+		loopback: loopback,
+	}, nil
 }
 
 // Load fetches and parses all objects necessary to fully rehydrate `destination` from wherever it was stashed.
@@ -65,7 +74,7 @@ func (dl LoaderV1) loadTransaction(ctx context.Context, marshaled []byte, toLoad
 	}
 
 	var state envelopes.State
-	err = dl.loopback().Load(ctx, unmarshaled.State, &state)
+	err = dl.loopback.Load(ctx, unmarshaled.State, &state)
 	if err != nil {
 		return err
 	}
@@ -76,7 +85,11 @@ func (dl LoaderV1) loadTransaction(ctx context.Context, marshaled []byte, toLoad
 	toLoad.ActualTime = unmarshaled.ActualTime
 	toLoad.EnteredTime = unmarshaled.EnteredTime
 	toLoad.PostedTime = unmarshaled.PostedTime
-	toLoad.Parents = []envelopes.ID{unmarshaled.Parent}
+	if unmarshaled.Parent.Equal(envelopes.ID{}) {
+		toLoad.Parents = []envelopes.ID{}
+	} else {
+		toLoad.Parents = []envelopes.ID{unmarshaled.Parent}
+	}
 	toLoad.Amount = envelopes.Balance(unmarshaled.Amount)
 	toLoad.Committer.FullName = unmarshaled.Committer.FullName
 	toLoad.Committer.Email = unmarshaled.Committer.Email
@@ -93,12 +106,12 @@ func (dl LoaderV1) loadState(ctx context.Context, marshaled []byte, toLoad *enve
 	}
 
 	var budget envelopes.Budget
-	err = dl.loopback().Load(ctx, unmarshaled.Budget, &budget)
+	err = dl.loopback.Load(ctx, unmarshaled.Budget, &budget)
 	if err != nil {
 		return err
 	}
 
-	err = dl.loopback().Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
+	err = dl.loopback.Load(ctx, unmarshaled.Accounts, &toLoad.Accounts)
 	if err != nil {
 		return err
 	}
@@ -118,7 +131,7 @@ func (dl LoaderV1) loadBudget(ctx context.Context, marshaled []byte, toLoad *env
 	toLoad.Children = make(map[string]*envelopes.Budget, len(unmarshaled.Children))
 	for name, childID := range unmarshaled.Children {
 		var child envelopes.Budget
-		err = dl.loopback().Load(ctx, childID, &child)
+		err = dl.loopback.Load(ctx, childID, &child)
 		if err != nil {
 			return err
 		}
