@@ -80,7 +80,7 @@ func (fs FileSystem) SetCurrent(_ context.Context, current persist.RefSpec) erro
 //
 // See Also:
 // - FileSystem.Stash
-func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error) {
+func (fs FileSystem) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
 	p, err := fs.path(id)
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func (fs FileSystem) Fetch(ctx context.Context, id envelopes.ID) ([]byte, error)
 //
 // See Also:
 // - FileSystem.Fetch
-func (fs FileSystem) Stash(ctx context.Context, id envelopes.ID, payload []byte) error {
+func (fs FileSystem) Stash(_ context.Context, id envelopes.ID, payload []byte) error {
 	loc, err := fs.path(id)
 	if err != nil {
 		return err

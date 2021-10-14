@@ -9,6 +9,8 @@ import (
 
 	"github.com/marstr/envelopes/persist"
 	persistJson "github.com/marstr/envelopes/persist/json"
+
+	"github.com/marstr/collection"
 )
 
 // ConfigFilename is the path relative to the filesystem root where the JSON based configuration file can be found.
@@ -83,9 +85,20 @@ func OpenRepositoryWithCache(ctx context.Context, loc string, cacheSize uint, op
 func openRepository(ctx context.Context, loc string, cache *persist.Cache, options ...RepositoryOption) (*Repository, error) {
 	var err error
 	var config *RepositoryConfig
-	config, err = LoadConfig(ctx, loc)
-	if err != nil {
-		return nil, err
+	var creatingRepo bool
+
+	objDir := collection.Directory{
+		Location: path.Join(loc, objectsDir),
+	}
+
+	if collection.Any(objDir) {
+		config, err = LoadConfig(ctx, loc)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		config = &defaultConfiguration
+		creatingRepo = true
 	}
 
 	fs := FileSystem{
@@ -160,6 +173,13 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 		}
 	}
 
+	if creatingRepo {
+		err = writeConfig(ctx, fs.Root, config, fs.getCreatePermissions())
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &retval, nil
 }
 
@@ -181,4 +201,13 @@ func LoadConfig(_ context.Context, loc string) (*RepositoryConfig, error) {
 	}
 
 	return &config, nil
+}
+
+func writeConfig(_ context.Context, loc string, config *RepositoryConfig, mode os.FileMode) error {
+	marshaled, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path.Join(loc, ConfigFilename), marshaled, mode)
 }
