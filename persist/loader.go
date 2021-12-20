@@ -19,11 +19,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/marstr/collection"
+	"github.com/marstr/collection/v2"
 	"github.com/marstr/envelopes"
 	"reflect"
 )
-
 
 // ErrObjectNotFound indicates that a non-existent object was requested.
 type ErrObjectNotFound envelopes.ID
@@ -41,17 +40,17 @@ type ErrNoCommonAncestor []envelopes.ID
 
 func (err ErrNoCommonAncestor) Error() string {
 	out := &bytes.Buffer{}
-	_,_ = fmt.Fprint(out, "no common ancestor found for: ")
+	_, _ = fmt.Fprint(out, "no common ancestor found for: ")
 	for i := 0; i < len(err); i++ {
 		if i >= 6 {
-			_,_ = fmt.Fprint(out, ", ...")
+			_, _ = fmt.Fprint(out, ", ...")
 			break
 		} else {
-			_,_ = fmt.Fprintf(out, "%s", err[i])
+			_, _ = fmt.Fprintf(out, "%s", err[i])
 		}
 
 		if i < len(err)-1 {
-			_,_ = fmt.Fprint(out, ", ")
+			_, _ = fmt.Fprint(out, ", ")
 		}
 	}
 
@@ -167,10 +166,10 @@ func NearestCommonAncestorMany(ctx context.Context, loader Loader, heads []envel
 func NearestCommonAncestor(ctx context.Context, loader Loader, head1, head2 envelopes.ID) (envelopes.ID, error) {
 	seenLeft := make(map[envelopes.ID]struct{})
 	seenRight := make(map[envelopes.ID]struct{})
-	toProcessLeft := collection.NewQueue(head1)
-	toProcessRight := collection.NewQueue(head2)
+	toProcessLeft := collection.NewQueue[envelopes.ID](head1)
+	toProcessRight := collection.NewQueue[envelopes.ID](head2)
 
-	for !(toProcessLeft.IsEmpty() && toProcessRight.IsEmpty()){
+	for !(toProcessLeft.IsEmpty() && toProcessRight.IsEmpty()) {
 		select {
 		case <-ctx.Done():
 			return envelopes.ID{}, ctx.Err()
@@ -182,13 +181,13 @@ func NearestCommonAncestor(ctx context.Context, loader Loader, head1, head2 enve
 
 		if !toProcessLeft.IsEmpty() {
 			left, _ := toProcessLeft.Next()
-			seenLeft[left.(envelopes.ID)] = struct{}{}
+			seenLeft[left] = struct{}{}
 
-			if _, ok := seenRight[left.(envelopes.ID)]; ok {
-				return left.(envelopes.ID), nil
+			if _, ok := seenRight[left]; ok {
+				return left, nil
 			}
 
-			if err := loader.Load(ctx, left.(envelopes.ID), &current); err != nil {
+			if err := loader.Load(ctx, left, &current); err != nil {
 				return envelopes.ID{}, err
 			}
 
@@ -200,13 +199,13 @@ func NearestCommonAncestor(ctx context.Context, loader Loader, head1, head2 enve
 		if !toProcessRight.IsEmpty() {
 
 			right, _ := toProcessRight.Next()
-			seenRight[right.(envelopes.ID)] = struct{}{}
+			seenRight[right] = struct{}{}
 
-			if _, ok := seenLeft[right.(envelopes.ID)]; ok {
-				return  right.(envelopes.ID), nil
+			if _, ok := seenLeft[right]; ok {
+				return right, nil
 			}
 
-			if err := loader.Load(ctx, right.(envelopes.ID), &current); err != nil {
+			if err := loader.Load(ctx, right, &current); err != nil {
 				return envelopes.ID{}, err
 			}
 

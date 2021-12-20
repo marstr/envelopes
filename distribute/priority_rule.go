@@ -2,7 +2,7 @@ package distribute
 
 import (
 	"context"
-	"github.com/marstr/collection"
+	"github.com/marstr/collection/v2"
 	"github.com/marstr/envelopes"
 )
 
@@ -10,7 +10,7 @@ import (
 // given balance. It will stop its walk when the balance is exhausted, or there is only one remaining priority. The last
 // priority will receive all remaining funds.
 type PriorityRule struct {
-	priority *collection.LinkedList
+	priority *collection.LinkedList[priorityEntry]
 	Leftover Distributor
 }
 
@@ -22,7 +22,7 @@ type priorityEntry struct {
 // NewPriorityRule creates a new empty PriorityRule that will send unallocated funds to leftover.
 func NewPriorityRule(leftover Distributor) *PriorityRule {
 	return &PriorityRule{
-		priority: collection.NewLinkedList(),
+		priority: collection.NewLinkedList[priorityEntry](),
 		Leftover: leftover,
 	}
 }
@@ -38,13 +38,12 @@ func (pr PriorityRule) AddRule(rule Distributor, amount envelopes.Balance) {
 // Distribute will step through each Distributor that was added in previous calls to AddRule. Surplus or shortfall will
 // be passed on to Leftover.
 func (pr PriorityRule) Distribute(ctx context.Context, balance envelopes.Balance) error {
-	for item := range pr.priority.Enumerate(ctx.Done()) {
-		cast := item.(priorityEntry)
-		if err := cast.Distribute(ctx, cast.Amount); err != nil {
+	for item := range pr.priority.Enumerate(ctx) {
+		if err := item.Distribute(ctx, item.Amount); err != nil {
 			return err
 		}
 
-		balance = balance.Sub(cast.Amount)
+		balance = balance.Sub(item.Amount)
 	}
 
 	return pr.Leftover.Distribute(ctx, balance)

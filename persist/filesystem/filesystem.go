@@ -20,6 +20,7 @@ package filesystem
 import (
 	"context"
 	"fmt"
+	"github.com/marstr/collection/v2"
 	"io/ioutil"
 	"os"
 	"path"
@@ -29,7 +30,6 @@ import (
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
 
-	"github.com/marstr/collection"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -40,7 +40,6 @@ type FileSystem struct {
 	Root              string
 	CreatePermissions os.FileMode
 }
-
 
 func (fs FileSystem) getCreatePermissions() os.FileMode {
 	if fs.CreatePermissions == 0 {
@@ -182,6 +181,10 @@ func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID
 
 // ListBranches fetches the distinct names of the branches that exist in a repository.
 func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
+	var cancel context.CancelFunc
+	ctx, cancel = context.WithCancel(ctx)
+	defer cancel()
+
 	absRoot, err := filepath.Abs(path.Dir(fs.branchPath("any_branch_name")))
 	if err != nil {
 		return nil, err
@@ -192,7 +195,7 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 		Options:  collection.DirectoryOptionsExcludeDirectories | collection.DirectoryOptionsRecursive,
 	}
 
-	rawResults := dir.Enumerate(ctx.Done())
+	rawResults := dir.Enumerate(ctx)
 
 	prefix := absRoot + "/"
 	prefix = strings.Replace(prefix, "\\", "/", -1)
@@ -201,8 +204,8 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 		defer close(castResults)
 
 		for entry := range rawResults {
-			entry = strings.Replace(entry.(string), "\\", "/", -1)
-			trimmed := strings.TrimPrefix(entry.(string), prefix)
+			entry = strings.Replace(entry, "\\", "/", -1)
+			trimmed := strings.TrimPrefix(entry, prefix)
 			select {
 			case <-ctx.Done():
 				return

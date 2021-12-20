@@ -3,14 +3,14 @@ package persist
 import (
 	"context"
 	"fmt"
-	"github.com/marstr/collection"
+	"github.com/marstr/collection/v2"
 	"github.com/marstr/envelopes"
 	"reflect"
 )
 
 // ErrTypeMismatch is when an
 type ErrTypeMismatch struct {
-	Got reflect.Type
+	Got  reflect.Type
 	Want reflect.Type
 }
 
@@ -28,7 +28,7 @@ func (err ErrTypeMismatch) Error() string {
 // Cache provides a place to stash objects between calls to an actual Loader/Writer which are presumably more expensive.
 // It can be used without setting a backing Loader/Writer.
 type Cache struct {
-	lruCache *collection.LRUCache
+	lruCache *collection.LRUCache[envelopes.ID, envelopes.IDer]
 	Loader
 	Writer
 }
@@ -36,7 +36,7 @@ type Cache struct {
 // NewCache creates a new empty cache of IDers.
 func NewCache(capacity uint) *Cache {
 	return &Cache{
-		lruCache: collection.NewLRUCache(capacity),
+		lruCache: collection.NewLRUCache[envelopes.ID, envelopes.IDer](capacity),
 	}
 }
 
@@ -58,7 +58,7 @@ func (c Cache) Write(ctx context.Context, subject envelopes.IDer) error {
 		subject = &cast
 	}
 
-	c.lruCache.Put(subject.ID().String(), subject)
+	c.lruCache.Put(subject.ID(), subject)
 
 	if c.Writer == nil {
 		return nil
@@ -71,7 +71,7 @@ func (c Cache) Write(ctx context.Context, subject envelopes.IDer) error {
 // doesn't invoke Loader. If it is not present, and Loader is not nil, it invokes Loader and adds the result to the
 // cache.
 func (c Cache) Load(ctx context.Context, subject envelopes.ID, destination envelopes.IDer) error {
-	cached, ok := c.lruCache.Get(subject.String())
+	cached, ok := c.lruCache.Get(subject)
 	if !ok {
 		return c.miss(ctx, subject, destination)
 	}
@@ -85,7 +85,7 @@ func (c Cache) miss(ctx context.Context, subject envelopes.ID, destination envel
 
 	err := c.Loader.Load(ctx, subject, destination)
 	if err == nil {
-		c.lruCache.Put(subject.String(), destination)
+		c.lruCache.Put(subject, destination)
 	}
 	return err
 }
@@ -112,7 +112,7 @@ func (c Cache) hit(_ context.Context, cached interface{}, destination envelopes.
 		*(destination).(*envelopes.State) = *cast
 	case *envelopes.Accounts:
 		cast, ok := cached.(*envelopes.Accounts)
-		if ! ok {
+		if !ok {
 			return NewErrTypeMismatch(cached, destination)
 		}
 		*(destination).(*envelopes.Accounts) = *cast
