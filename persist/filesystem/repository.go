@@ -10,19 +10,19 @@ import (
 	"github.com/marstr/envelopes/persist"
 	persistJson "github.com/marstr/envelopes/persist/json"
 
-	"github.com/marstr/collection"
+	"github.com/marstr/collection/v2"
 )
 
 // ConfigFilename is the path relative to the filesystem root where the JSON based configuration file can be found.
 const ConfigFilename = "config.json"
 
 type RepositoryConfigEntry struct {
-	Format string `json:"format"`
-	Version uint `json:"version"`
+	Format  string `json:"format"`
+	Version uint   `json:"version"`
 }
 
 type RepositoryConfig struct {
-	Objects RepositoryConfigEntry `json:"objects"`
+	Objects  RepositoryConfigEntry `json:"objects"`
 	Branches RepositoryConfigEntry `json:"branches"`
 }
 
@@ -91,7 +91,7 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 		Location: path.Join(loc, objectsDir),
 	}
 
-	if collection.Any(objDir) {
+	if collection.Any[string](objDir) {
 		config, err = LoadConfig(ctx, loc)
 		if err != nil {
 			return nil, err
@@ -105,7 +105,7 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 		Root: loc,
 	}
 
-	retval := Repository {
+	retval := Repository{
 		FileSystem: fs,
 		Loader:     nil,
 		Writer:     nil,

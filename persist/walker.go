@@ -4,7 +4,7 @@ package persist
 
 import (
 	"context"
-	"github.com/marstr/collection"
+	"github.com/marstr/collection/v2"
 	"github.com/marstr/envelopes"
 )
 
@@ -22,7 +22,7 @@ func (err ErrSkipAncestors) Error() string {
 
 type Walker struct {
 	// Loader fetches objects for further processing. This must be populated for Walker to function properly.
-	Loader   Loader
+	Loader Loader
 
 	// MaxDepth controls how many generations beyond the provided heads this Walker will process. If its value is '0',
 	// no restrictions are placed, and it will walk the entire envelopes.Transaction history.
@@ -30,22 +30,22 @@ type Walker struct {
 }
 
 func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.ID) error {
-	processed := make(map[envelopes.ID]struct{})
-	toProcess := collection.NewLinkedList()
-
 	type toProcessEntry struct {
 		envelopes.ID
 		Depth uint
 	}
 
+	processed := make(map[envelopes.ID]struct{})
+	toProcess := collection.NewLinkedList[toProcessEntry]()
+
 	for i := range heads {
 		toProcess.AddBack(toProcessEntry{
-			ID: heads[i],
-			Depth:0,
+			ID:    heads[i],
+			Depth: 0,
 		})
 	}
 
-	for collection.Any(toProcess) {
+	for collection.Any[toProcessEntry](toProcess) {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
@@ -53,8 +53,7 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 			// Intentionally Left Blank
 		}
 
-		frontNode, _ := toProcess.RemoveFront()
-		currentEntry := frontNode.(toProcessEntry)
+		currentEntry, _ := toProcess.RemoveFront()
 
 		if _, seen := processed[currentEntry.ID]; seen || (w.MaxDepth > 0 && currentEntry.Depth > w.MaxDepth) {
 			continue
@@ -79,7 +78,7 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 
 		for i := range current.Parents {
 			toProcess.AddBack(toProcessEntry{
-				ID:current.Parents[i],
+				ID:    current.Parents[i],
 				Depth: currentEntry.Depth + 1,
 			})
 		}
