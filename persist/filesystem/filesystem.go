@@ -34,12 +34,14 @@ import (
 	"github.com/mitchellh/go-homedir"
 )
 
-const objectsDir = "objects"
+// ObjectsDir is the name of the directory that holds marshaled IDer objects.
+const ObjectsDir = "objects"
 
 // FileSystem allows an easy mechanism for reading and writing raw Budget related objects to and from a hard drive.
 type FileSystem struct {
 	Root              string
 	CreatePermissions os.FileMode
+	ObjectLayout      uint
 }
 
 func (fs FileSystem) getCreatePermissions() os.FileMode {
@@ -127,7 +129,16 @@ func (fs FileSystem) path(id envelopes.ID) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Join(exp, objectsDir, id.String()+".json"), nil
+
+	switch fs.ObjectLayout {
+	case 0:
+		return path.Join(exp, ObjectsDir, id.String()+".json"), nil
+	case 1:
+		full := id.String()
+		return path.Join(exp, ObjectsDir, full[:2], full[2:]+".json"), nil
+	default:
+		return "", fmt.Errorf("unrecognized object layout %v", fs.ObjectLayout)
+	}
 }
 
 func (fs FileSystem) branchPath(name string) string {
