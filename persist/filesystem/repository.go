@@ -3,6 +3,7 @@ package filesystem
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -22,8 +23,9 @@ type RepositoryConfigEntry struct {
 }
 
 type RepositoryConfig struct {
-	Objects  RepositoryConfigEntry `json:"objects"`
-	Branches RepositoryConfigEntry `json:"branches"`
+	Objects         RepositoryConfigEntry `json:"objects"`
+	ObjectLocations uint                  `json:"objectLocs"`
+	Branches        RepositoryConfigEntry `json:"branches"`
 }
 
 const (
@@ -44,6 +46,7 @@ var defaultConfiguration = RepositoryConfig{
 		Format:  FormatJson,
 		Version: 2,
 	},
+	ObjectLocations: 1,
 }
 
 type ErrUnsupportedConfiguration RepositoryConfig
@@ -69,6 +72,17 @@ func RepositoryFileMode(mode os.FileMode) RepositoryOption {
 	}
 }
 
+// RepositoryObjectLoc creates a RepositoryOption that sets the layout of the object files in the filesystem.
+func RepositoryObjectLoc(layout uint) RepositoryOption {
+	return func(repository *Repository) error {
+		if repository.FileSystem.ObjectLayout != defaultConfiguration.ObjectLocations {
+			return fmt.Errorf("repository object layout is already set to %v", repository.FileSystem.ObjectLayout)
+		}
+		repository.FileSystem.ObjectLayout = layout
+		return nil
+	}
+}
+
 // OpenRepository creates a handle for interacting with an existing filesystem-based repository.
 func OpenRepository(ctx context.Context, loc string, options ...RepositoryOption) (*Repository, error) {
 	return openRepository(ctx, loc, nil, options...)
@@ -88,7 +102,7 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 	var creatingRepo bool
 
 	objDir := collection.Directory{
-		Location: path.Join(loc, objectsDir),
+		Location: path.Join(loc, ObjectsDir),
 	}
 
 	if collection.Any[string](objDir) {
@@ -102,7 +116,8 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 	}
 
 	fs := FileSystem{
-		Root: loc,
+		Root:         loc,
+		ObjectLayout: config.ObjectLocations,
 	}
 
 	retval := Repository{
