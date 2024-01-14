@@ -20,12 +20,13 @@ package filesystem
 import (
 	"context"
 	"fmt"
-	"github.com/marstr/collection/v2"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+
+	"github.com/marstr/collection/v2"
 
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
@@ -181,10 +182,6 @@ func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID
 
 // ListBranches fetches the distinct names of the branches that exist in a repository.
 func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
-	var cancel context.CancelFunc
-	ctx, cancel = context.WithCancel(ctx)
-	defer cancel()
-
 	absRoot, err := filepath.Abs(path.Dir(fs.branchPath("any_branch_name")))
 	if err != nil {
 		return nil, err
