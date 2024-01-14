@@ -52,6 +52,7 @@ func (u User) String() string {
 	return string(result)
 }
 
+// Equal returns true when two User instances have matching names and email addresses.
 func (u User) Equal(other User) bool {
 	return u.FullName == other.FullName && u.Email == other.Email
 }
