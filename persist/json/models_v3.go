@@ -56,6 +56,10 @@ type (
 	Balance = BalanceV3
 	// BalanceV3 is a copy of envelopes.Balance for ORM purposes.
 	BalanceV3 map[envelopes.AssetType]*big.Rat
+
+	Accounts = AccountsV3
+	// AccountsV3 is a copy of envelopes.Accounts for ORM purposes.
+	AccountsV3 map[string]BalanceV3
 )
 
 var jsonNumberPatternV3 = regexp.MustCompile(`^(?P<sign>-?)(?P<number>\d+)(?:\.(?P<fraction>\d+))?(?:[eE](?P<exponent>[\-+]?\d+))?$`)

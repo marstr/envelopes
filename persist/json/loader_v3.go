@@ -86,12 +86,14 @@ func (dl LoaderV3) LoadState(ctx context.Context, id envelopes.ID, toLoad *envel
 		return err
 	}
 
-	err = dl.loopback.LoadAccounts(ctx, unmarshaled.Accounts, &toLoad.Accounts)
+	var accounts envelopes.Accounts
+	err = dl.loopback.LoadAccounts(ctx, unmarshaled.Accounts, &accounts)
 	if err != nil {
 		return err
 	}
 
 	toLoad.Budget = &budget
+	toLoad.Accounts = accounts
 	return nil
 }
 
@@ -127,5 +129,16 @@ func (dl LoaderV3) LoadAccounts(ctx context.Context, id envelopes.ID, toLoad *en
 		return err
 	}
 
-	return json.Unmarshal(marshaled, toLoad)
+	var unmarshaled AccountsV3
+	err = json.Unmarshal(marshaled, &unmarshaled)
+	if err != nil {
+		return err
+	}
+
+	*toLoad = make(envelopes.Accounts, len(unmarshaled))
+	for k, v := range unmarshaled {
+		(*toLoad)[k] = envelopes.Balance(v)
+	}
+
+	return nil
 }
