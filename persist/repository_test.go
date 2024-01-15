@@ -209,7 +209,7 @@ func bareRepositoriesEqual(ctx context.Context, left, right BareRepositoryReader
 	walker := Walker{Loader: left}
 	var current envelopes.Transaction
 	err = walker.Walk(ctx, func(ctx context.Context, id envelopes.ID, transaction envelopes.Transaction) error {
-		err = right.Load(ctx, id, &current)
+		err = right.LoadTransaction(ctx, id, &current)
 		if err != nil {
 			return err
 		}
@@ -222,7 +222,7 @@ func bareRepositoriesEqual(ctx context.Context, left, right BareRepositoryReader
 	// Walk through all transactions in the right repository, and make sure they're all present in the left repository.
 	walker.Loader = right
 	err = walker.Walk(ctx, func(ctx context.Context, id envelopes.ID, transaction envelopes.Transaction) error {
-		err = left.Load(ctx, id, &current)
+		err = left.LoadTransaction(ctx, id, &current)
 		if err != nil {
 			return err
 		}

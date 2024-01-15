@@ -183,7 +183,7 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 			}
 
 			var loaded envelopes.Transaction
-			err = repo.Load(ctx, tc.ID(), &loaded)
+			err = repo.LoadTransaction(ctx, tc.ID(), &loaded)
 			if err != nil {
 				t.Error(err)
 				return
@@ -282,7 +282,7 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 			return
 		}
 		var loaded envelopes.Budget
-		err = repo.Load(context.Background(), currentBudget.ID(), &loaded)
+		err = repo.LoadBudget(context.Background(), currentBudget.ID(), &loaded)
 		if err != nil {
 			b.Error(err)
 			return

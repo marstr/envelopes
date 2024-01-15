@@ -116,14 +116,14 @@ func TestCache_Load_reuseHits(t *testing.T) {
 	}
 
 	var want envelopes.State
-	err = subject.Load(ctx, targetId, &want)
+	err = subject.LoadState(ctx, targetId, &want)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
 	var got envelopes.State
-	err = subject.Load(ctx, targetId, &got)
+	err = subject.LoadState(ctx, targetId, &got)
 	if err != nil {
 		t.Error(err)
 		return

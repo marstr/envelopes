@@ -146,7 +146,7 @@ func Test_StateRoundtrip(t *testing.T) {
 		}
 
 		var rehydrated envelopes.State
-		err = reader.Load(ctx, want, &rehydrated)
+		err = reader.LoadState(ctx, want, &rehydrated)
 		if err != nil {
 			t.Errorf("(%s) unable to read subject: %v", name, err)
 			continue

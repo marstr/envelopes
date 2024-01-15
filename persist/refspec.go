@@ -161,7 +161,7 @@ func resolveTransactionRefSpec(ctx context.Context, loader Loader, subject RefSp
 	}
 
 	var target envelopes.Transaction
-	err = loader.Load(ctx, result, &target)
+	err = loader.LoadTransaction(ctx, result, &target)
 	if err != nil {
 		return envelopes.ID{}, err
 	}

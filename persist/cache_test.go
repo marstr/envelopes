@@ -45,7 +45,7 @@ func testUsePassThroughOnMiss(ctx context.Context) func(t *testing.T) {
 		subject.Loader = passThrough
 
 		var got envelopes.State
-		err := subject.Load(ctx, want.ID(), &got)
+		err := subject.LoadState(ctx, want.ID(), &got)
 		if err != nil {
 			t.Error(err)
 			return
