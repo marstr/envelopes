@@ -277,7 +277,7 @@ func respectDepth(ctx context.Context) func(*testing.T) {
 			return
 		}
 
-		for k, _ := range expected {
+		for k := range expected {
 			var missed envelopes.Transaction
 			if err := repo.LoadTransaction(ctx, k, &missed); err != nil {
 				t.Errorf("missed expected transaction:\n\tID:   %s\n\tDesc: failed to load", k)
