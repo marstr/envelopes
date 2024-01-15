@@ -43,7 +43,7 @@ var missingConfiguration = RepositoryConfig{
 var defaultConfiguration = RepositoryConfig{
 	Objects: RepositoryConfigEntry{
 		Format:  FormatJson,
-		Version: 2,
+		Version: 3,
 	},
 	ObjectLocations: 1,
 }
@@ -162,6 +162,26 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 					return nil, err
 				}
 				retval.Writer, err = persistJson.NewWriterV2WithLoopback(&fs, cache)
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else if config.Objects.Version == 3 {
+			if cache == nil {
+				retval.Loader, err = persistJson.NewLoaderV3(&fs)
+				if err != nil {
+					return nil, err
+				}
+				retval.Writer, err = persistJson.NewWriterV3(&fs)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				retval.Loader, err = persistJson.NewLoaderV3WithLoopback(&fs, cache)
+				if err != nil {
+					return nil, err
+				}
+				retval.Writer, err = persistJson.NewWriterV3WithLoopback(&fs, cache)
 				if err != nil {
 					return nil, err
 				}
