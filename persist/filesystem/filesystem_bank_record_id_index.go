@@ -19,12 +19,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/marstr/envelopes/persist"
 	"os"
 	"path"
 	"strings"
 
 	"github.com/marstr/envelopes"
+	"github.com/marstr/envelopes/persist"
 )
 
 type ErrEmptyBankRecordID struct{}

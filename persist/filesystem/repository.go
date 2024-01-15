@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 
@@ -202,7 +201,7 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 func LoadConfig(_ context.Context, loc string) (*RepositoryConfig, error) {
 	var err error
 	var configContents []byte
-	configContents, err = ioutil.ReadFile(path.Join(loc, ConfigFilename))
+	configContents, err = os.ReadFile(path.Join(loc, ConfigFilename))
 	if os.IsNotExist(err) {
 		return &missingConfiguration, nil
 	} else if err != nil {
@@ -224,5 +223,5 @@ func writeConfig(_ context.Context, loc string, config *RepositoryConfig, mode o
 		return err
 	}
 
-	return ioutil.WriteFile(path.Join(loc, ConfigFilename), marshaled, mode)
+	return os.WriteFile(path.Join(loc, ConfigFilename), marshaled, mode)
 }

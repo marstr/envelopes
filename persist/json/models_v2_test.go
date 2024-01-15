@@ -3,7 +3,6 @@ package json
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"math/big"
 	"os"
 	"testing"
@@ -115,7 +114,7 @@ func Test_StateRoundtrip(t *testing.T) {
 		},
 	}
 
-	tempLocation, err := ioutil.TempDir("", "envelopes_id_tests")
+	tempLocation, err := os.MkdirTemp("", "envelopes_id_tests")
 	if err != nil {
 		t.Errorf("unable to create test location")
 		return
@@ -173,4 +172,3 @@ func (md mockDisk) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
 	}
 	return []byte{}, persist.ErrObjectNotFound(id)
 }
-
