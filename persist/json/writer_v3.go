@@ -43,8 +43,8 @@ func (dw WriterV3) WriteTransaction(ctx context.Context, subject envelopes.Trans
 		subject.State = &envelopes.State{}
 	}
 
-	var toMarshal TransactionV2
-	toMarshal.Amount = BalanceV2(subject.Amount)
+	var toMarshal TransactionV3
+	toMarshal.Amount = BalanceV3(subject.Amount)
 	toMarshal.Parent = subject.Parents
 	toMarshal.State = subject.State.ID()
 	toMarshal.Comment = subject.Comment
@@ -54,7 +54,7 @@ func (dw WriterV3) WriteTransaction(ctx context.Context, subject envelopes.Trans
 	toMarshal.PostedTime = subject.PostedTime
 	toMarshal.Committer.FullName = subject.Committer.FullName
 	toMarshal.Committer.Email = subject.Committer.Email
-	toMarshal.RecordId = BankRecordIDV2(subject.RecordID)
+	toMarshal.RecordId = BankRecordIDV3(subject.RecordID)
 
 	err := dw.loopback.WriteState(ctx, *subject.State)
 	if err != nil {
@@ -86,7 +86,7 @@ func (dw WriterV3) WriteState(ctx context.Context, subject envelopes.State) erro
 		return err
 	}
 
-	var toMarshal StateV2
+	var toMarshal StateV3
 	toMarshal.Accounts = subject.Accounts.ID()
 	toMarshal.Budget = subject.Budget.ID()
 
@@ -109,8 +109,8 @@ func (dw WriterV3) WriteBudget(ctx context.Context, subject envelopes.Budget) er
 		}
 	}
 
-	var toMarshal BudgetV2
-	toMarshal.Balance = BalanceV2(subject.Balance)
+	var toMarshal BudgetV3
+	toMarshal.Balance = BalanceV3(subject.Balance)
 	toMarshal.Children = make(map[string]envelopes.ID, len(subject.Children))
 	for name, child := range subject.Children {
 		toMarshal.Children[name] = child.ID()
