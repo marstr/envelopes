@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -30,7 +29,7 @@ func Test_segmentNormalizedName(t *testing.T) {
 
 func TestFilesystemBankRecordIDIndex_AppendBankRecordID(t *testing.T) {
 	bankRecordId := envelopes.BankRecordID("20201212 575073 2,000 202,012,128,756")
-	tempDir, err := ioutil.TempDir("", "bankRecordID_index_test")
+	tempDir, err := os.MkdirTemp("", "bankRecordID_index_test")
 	if err != nil {
 		t.Error(err)
 		return
@@ -110,7 +109,7 @@ func TestFilesystemBankRecordIDIndex_AppendBankRecordID(t *testing.T) {
 
 func TestFilesystemBankRecordIDIndex_WriteBankRecordID(t *testing.T) {
 	bankRecordId := envelopes.BankRecordID("20201212 575073 2,000 202,012,128,756")
-	tempDir, err := ioutil.TempDir("", "bankRecordID_index_test")
+	tempDir, err := os.MkdirTemp("", "bankRecordID_index_test")
 	if err != nil {
 		t.Error(err)
 		return

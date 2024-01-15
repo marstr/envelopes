@@ -17,7 +17,6 @@ package filesystem_test
 import (
 	"context"
 	"fmt"
-	"github.com/marstr/envelopes/persist/filesystem"
 	"math/big"
 	"os"
 	"path"
@@ -26,6 +25,7 @@ import (
 
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
+	"github.com/marstr/envelopes/persist/filesystem"
 )
 
 func TestFileSystem_Current(t *testing.T) {
@@ -53,6 +53,9 @@ func TestFileSystem_Current(t *testing.T) {
 			}
 
 			headId, err := persist.Resolve(ctx, repo, head)
+			if err != nil {
+				t.Error(err)
+			}
 
 			for i := range headId {
 				if headId[i] != 0 {
@@ -247,8 +250,6 @@ func TestFileSystem_ListBranches(t *testing.T) {
 		})
 	}
 }
-
-
 
 func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())

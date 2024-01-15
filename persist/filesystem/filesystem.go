@@ -20,17 +20,15 @@ package filesystem
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/marstr/collection/v2"
-
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
 
+	"github.com/marstr/collection/v2"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -58,7 +56,7 @@ func (fs FileSystem) Current(_ context.Context) (result persist.RefSpec, err err
 		return
 	}
 
-	raw, err := ioutil.ReadFile(p)
+	raw, err := os.ReadFile(p)
 	if err != nil {
 		return
 	}
@@ -75,7 +73,7 @@ func (fs FileSystem) SetCurrent(_ context.Context, current persist.RefSpec) erro
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(p, []byte(current), fs.getCreatePermissions())
+	return os.WriteFile(p, []byte(current), fs.getCreatePermissions())
 }
 
 // Fetch is able to read into memory the marshaled form of a Budget related object.
@@ -87,7 +85,7 @@ func (fs FileSystem) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return ioutil.ReadFile(p)
+	return os.ReadFile(p)
 }
 
 // Stash commits the provided payload to disk at a place that it can retreive again if asked for the ID specified here.

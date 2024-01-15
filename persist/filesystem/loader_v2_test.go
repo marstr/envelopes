@@ -2,7 +2,6 @@ package filesystem
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ func TestLoadAncestor(t *testing.T) {
 	// ctx, cancel := context.Background(), context.CancelFunc(func() {})
 	defer cancel()
 
-	test_loc, err := ioutil.TempDir("", "envelopes_TestLoadAncestor_")
+	test_loc, err := os.MkdirTemp("", "envelopes_TestLoadAncestor_")
 	if err != nil {
 		t.Error(err)
 		return
@@ -97,7 +96,6 @@ func TestLoadAncestor(t *testing.T) {
 		}
 	}
 }
-
 
 func TestCache_Load_reuseHits(t *testing.T) {
 	var err error
