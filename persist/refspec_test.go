@@ -37,7 +37,7 @@ func Test_Resolve(t *testing.T) {
 		Comment: "A!",
 	}
 	aid := transactions[0].ID()
-	err := mockRepo.Write(ctx, transactions[0])
+	err := mockRepo.WriteTransaction(ctx, transactions[0])
 	if err != nil {
 		t.Error(err)
 		return
@@ -50,7 +50,7 @@ func Test_Resolve(t *testing.T) {
 		},
 	}
 	bid := transactions[1].ID()
-	err = mockRepo.Write(ctx, transactions[1])
+	err = mockRepo.WriteTransaction(ctx, transactions[1])
 	if err != nil {
 		t.Error(err)
 		return
@@ -68,7 +68,7 @@ func Test_Resolve(t *testing.T) {
 		},
 	}
 	cid := transactions[2].ID()
-	err = mockRepo.Write(ctx, transactions[2])
+	err = mockRepo.WriteTransaction(ctx, transactions[2])
 	if err != nil {
 		t.Error(err)
 		return
@@ -81,7 +81,7 @@ func Test_Resolve(t *testing.T) {
 		},
 	}
 	did := transactions[3].ID()
-	err = mockRepo.Write(ctx, transactions[3])
+	err = mockRepo.WriteTransaction(ctx, transactions[3])
 	if err != nil {
 		t.Error(err)
 		return

@@ -3,9 +3,11 @@ package persist
 import (
 	"context"
 	"fmt"
-	"github.com/marstr/collection/v2"
-	"github.com/marstr/envelopes"
 	"reflect"
+
+	"github.com/marstr/envelopes"
+
+	"github.com/marstr/collection/v2"
 )
 
 // ErrTypeMismatch is when an
@@ -40,50 +42,128 @@ func NewCache(capacity uint) *Cache {
 	}
 }
 
-// Write adds an IDer to this cache. If Writer isn't nil, it is immediately invoked.
-func (c Cache) Write(ctx context.Context, subject envelopes.IDer) error {
-	// Ensure we cache a pointer, and not a copy of the object.
-	switch subject.(type) {
-	case envelopes.Transaction:
-		cast := subject.(envelopes.Transaction)
-		subject = &cast
-	case envelopes.State:
-		cast := subject.(envelopes.State)
-		subject = &cast
-	case envelopes.Budget:
-		cast := subject.(envelopes.Budget)
-		subject = &cast
-	case envelopes.Accounts:
-		cast := subject.(envelopes.Accounts)
-		subject = &cast
-	}
-
-	c.lruCache.Put(subject.ID(), subject)
-
+// WriteTransaction adds a Transaction to this cache. If Writer isn't nil, it is immediately invoked.
+func (c Cache) WriteTransaction(ctx context.Context, subject envelopes.Transaction) error {
+	c.lruCache.Put(subject.ID(), &subject)
 	if c.Writer == nil {
 		return nil
 	}
-
-	return c.Writer.Write(ctx, subject)
+	return c.Writer.WriteTransaction(ctx, subject)
 }
 
-// Load copies the desired object from the Cache into destination. If the requested option is present in the cache, it
-// doesn't invoke Loader. If it is not present, and Loader is not nil, it invokes Loader and adds the result to the
-// cache.
-func (c Cache) Load(ctx context.Context, subject envelopes.ID, destination envelopes.IDer) error {
+// WriteState adds a State to this cache. If Writer isn't nil, it is immediately invoked.
+func (c Cache) WriteState(ctx context.Context, subject envelopes.State) error {
+	c.lruCache.Put(subject.ID(), &subject)
+	if c.Writer == nil {
+		return nil
+	}
+	return c.Writer.WriteState(ctx, subject)
+}
+
+// WriteBudget adds a Budget to this cache. If Writer isn't nil, it is immediately invoked.
+func (c Cache) WriteBudget(ctx context.Context, subject envelopes.Budget) error {
+	c.lruCache.Put(subject.ID(), &subject)
+	if c.Writer == nil {
+		return nil
+	}
+	return c.Writer.WriteBudget(ctx, subject)
+}
+
+// WriteAccounts adds an instance of Accounts to this cache. If Writer isn't nil, it is immediately invoked.
+func (c Cache) WriteAccounts(ctx context.Context, subject envelopes.Accounts) error {
+	c.lruCache.Put(subject.ID(), subject)
+	if c.Writer == nil {
+		return nil
+	}
+	return c.Writer.WriteAccounts(ctx, subject)
+}
+
+// LoadTransaction copies the desired object from the Cache into destination. If the requested option is present in the
+// cache, it doesn't invoke Loader. If it is not present, and Loader is not nil, it invokes Loader and adds the result
+// to the cache.
+func (c Cache) LoadTransaction(ctx context.Context, subject envelopes.ID, destination *envelopes.Transaction) error {
 	cached, ok := c.lruCache.Get(subject)
 	if !ok {
-		return c.miss(ctx, subject, destination)
+		return c.missTransaction(ctx, subject, destination)
 	}
 	return c.hit(ctx, cached, destination)
 }
 
-func (c Cache) miss(ctx context.Context, subject envelopes.ID, destination envelopes.IDer) error {
+func (c Cache) missTransaction(ctx context.Context, subject envelopes.ID, destination *envelopes.Transaction) error {
 	if c.Loader == nil {
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.Load(ctx, subject, destination)
+	err := c.Loader.LoadTransaction(ctx, subject, destination)
+	if err == nil {
+		c.lruCache.Put(subject, destination)
+	}
+	return err
+}
+
+// LoadState copies the desired object from the Cache into destination. If the requested option is present in the
+// cache, it doesn't invoke Loader. If it is not present, and Loader is not nil, it invokes Loader and adds the result
+// to the cache.
+func (c Cache) LoadState(ctx context.Context, subject envelopes.ID, destination *envelopes.State) error {
+	cached, ok := c.lruCache.Get(subject)
+	if !ok {
+		return c.missState(ctx, subject, destination)
+	}
+	return c.hit(ctx, cached, destination)
+}
+
+func (c Cache) missState(ctx context.Context, subject envelopes.ID, destination *envelopes.State) error {
+	if c.Loader == nil {
+		return ErrObjectNotFound(subject)
+	}
+
+	err := c.Loader.LoadState(ctx, subject, destination)
+	if err == nil {
+		c.lruCache.Put(subject, destination)
+	}
+	return err
+}
+
+// LoadBudget copies the desired object from the Cache into destination. If the requested option is present in the
+// cache, it doesn't invoke Loader. If it is not present, and Loader is not nil, it invokes Loader and adds the result
+// to the cache.
+func (c Cache) LoadBudget(ctx context.Context, subject envelopes.ID, destination *envelopes.Budget) error {
+	cached, ok := c.lruCache.Get(subject)
+	if !ok {
+		return c.missBudget(ctx, subject, destination)
+	}
+	return c.hit(ctx, cached, destination)
+}
+
+func (c Cache) missBudget(ctx context.Context, subject envelopes.ID, destination *envelopes.Budget) error {
+	if c.Loader == nil {
+		return ErrObjectNotFound(subject)
+	}
+
+	err := c.Loader.LoadBudget(ctx, subject, destination)
+	if err == nil {
+		c.lruCache.Put(subject, destination)
+	}
+	return err
+}
+
+// LoadAccounts copies the desired object from the Cache into destination. If the requested option is present in the
+// cache, it doesn't invoke Loader. If it is not present, and Loader is not nil, it invokes Loader and adds the result
+// to the cache.
+func (c Cache) LoadAccounts(ctx context.Context, subject envelopes.ID, destination *envelopes.Accounts) error {
+	cached, ok := c.lruCache.Get(subject)
+	if !ok {
+		return c.missAccounts(ctx, subject, destination)
+	}
+	return c.hit(ctx, cached, destination)
+}
+
+func (c Cache) missAccounts(ctx context.Context, subject envelopes.ID, destination *envelopes.Accounts) error {
+	if c.Loader == nil {
+		return ErrObjectNotFound(subject)
+	}
+
+	err := c.Loader.LoadAccounts(ctx, subject, destination)
 	if err == nil {
 		c.lruCache.Put(subject, destination)
 	}

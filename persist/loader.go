@@ -19,9 +19,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/marstr/collection/v2"
-	"github.com/marstr/envelopes"
 	"reflect"
+
+	"github.com/marstr/envelopes"
+
+	"github.com/marstr/collection/v2"
 )
 
 // ErrObjectNotFound indicates that a non-existent object was requested.
@@ -33,7 +35,10 @@ func (err ErrObjectNotFound) Error() string {
 
 // Loader can instantiate core envelopes objects given just an ID.
 type Loader interface {
-	Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error
+	LoadTransaction(ctx context.Context, id envelopes.ID, destination *envelopes.Transaction) error
+	LoadState(ctx context.Context, id envelopes.ID, destination *envelopes.State) error
+	LoadBudget(ctx context.Context, id envelopes.ID, destination *envelopes.Budget) error
+	LoadAccounts(ctx context.Context, id envelopes.ID, destination *envelopes.Accounts) error
 }
 
 type ErrNoCommonAncestor []envelopes.ID
@@ -83,7 +88,7 @@ func LoadAncestor(ctx context.Context, loader Loader, transaction envelopes.ID, 
 		default:
 			// Intentionally Left Blank
 		}
-		if err := loader.Load(ctx, transaction, &result); err != nil {
+		if err := loader.LoadTransaction(ctx, transaction, &result); err != nil {
 			return nil, err
 		}
 		if len(result.Parents) > 0 {
@@ -104,7 +109,7 @@ func LoadImpact(ctx context.Context, loader Loader, transaction envelopes.Transa
 
 	ncaId, err = NearestCommonAncestorMany(ctx, loader, transaction.Parents)
 	if err == nil {
-		err = loader.Load(ctx, ncaId, &nca)
+		err = loader.LoadTransaction(ctx, ncaId, &nca)
 		if err != nil {
 			return envelopes.Impact{}, err
 		}
@@ -118,7 +123,7 @@ func LoadImpact(ctx context.Context, loader Loader, transaction envelopes.Transa
 
 	for _, pid := range transaction.Parents {
 		var parent envelopes.Transaction
-		err = loader.Load(ctx, pid, &parent)
+		err = loader.LoadTransaction(ctx, pid, &parent)
 		if err != nil {
 			return envelopes.Impact{}, err
 		}
@@ -187,7 +192,7 @@ func NearestCommonAncestor(ctx context.Context, loader Loader, head1, head2 enve
 				return left, nil
 			}
 
-			if err := loader.Load(ctx, left, &current); err != nil {
+			if err := loader.LoadTransaction(ctx, left, &current); err != nil {
 				return envelopes.ID{}, err
 			}
 
@@ -205,7 +210,7 @@ func NearestCommonAncestor(ctx context.Context, loader Loader, head1, head2 enve
 				return right, nil
 			}
 
-			if err := loader.Load(ctx, right, &current); err != nil {
+			if err := loader.LoadTransaction(ctx, right, &current); err != nil {
 				return envelopes.ID{}, err
 			}
 

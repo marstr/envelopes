@@ -4,6 +4,7 @@ package persist
 
 import (
 	"context"
+
 	"github.com/marstr/collection/v2"
 	"github.com/marstr/envelopes"
 )
@@ -60,7 +61,7 @@ func (w *Walker) Walk(ctx context.Context, action WalkFunc, heads ...envelopes.I
 		}
 
 		var current envelopes.Transaction
-		err := w.Loader.Load(ctx, currentEntry.ID, &current)
+		err := w.Loader.LoadTransaction(ctx, currentEntry.ID, &current)
 		if err != nil {
 			return err
 		}

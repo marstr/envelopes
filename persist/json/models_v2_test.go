@@ -139,14 +139,14 @@ func Test_StateRoundtrip(t *testing.T) {
 	for name, subject := range testCases {
 		want := subject.ID()
 
-		err := saver.Write(ctx, subject)
+		err := saver.WriteState(ctx, subject)
 		if err != nil {
 			t.Errorf("(%s) unable to write subject: %v", name, err)
 			continue
 		}
 
 		var rehydrated envelopes.State
-		err = reader.Load(ctx, want, &rehydrated)
+		err = reader.LoadState(ctx, want, &rehydrated)
 		if err != nil {
 			t.Errorf("(%s) unable to read subject: %v", name, err)
 			continue

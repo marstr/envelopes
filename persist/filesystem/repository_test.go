@@ -40,7 +40,7 @@ func TestOpenRepositoryLayout1(t *testing.T) {
 	}
 
 	var head envelopes.Transaction
-	err = repo.Load(ctx, headId, &head)
+	err = repo.LoadTransaction(ctx, headId, &head)
 	if err != nil {
 		t.Error(err)
 	}
@@ -75,7 +75,7 @@ func TestCreateRepositoryLayout1(t *testing.T) {
 		},
 	}
 
-	err = repo.Write(ctx, exampleTransaction)
+	err = repo.WriteTransaction(ctx, exampleTransaction)
 	if err != nil {
 		t.Error(err)
 	}

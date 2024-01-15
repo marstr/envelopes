@@ -20,7 +20,7 @@ func TestWriterV3_writeAccounts(t *testing.T) {
 
 	mockStore := make(mockDisk)
 	subject := WriterV3{Stasher: mockStore}
-	err := subject.Write(ctx, exampleAccounts)
+	err := subject.WriteAccounts(ctx, exampleAccounts)
 	if err != nil {
 		t.Error(err)
 	}

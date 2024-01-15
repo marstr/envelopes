@@ -51,9 +51,9 @@ func TestLoadAncestor(t *testing.T) {
 		return
 	}
 
-	toWrite := []*envelopes.Transaction{&t1, &t2, &t3}
+	toWrite := []envelopes.Transaction{t1, t2, t3}
 	for _, entry := range toWrite {
-		err = writer.Write(ctx, entry)
+		err = writer.WriteTransaction(ctx, entry)
 		if err != nil {
 			t.Error(err)
 			return
@@ -116,14 +116,14 @@ func TestCache_Load_reuseHits(t *testing.T) {
 	}
 
 	var want envelopes.State
-	err = subject.Load(ctx, targetId, &want)
+	err = subject.LoadState(ctx, targetId, &want)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
 	var got envelopes.State
-	err = subject.Load(ctx, targetId, &got)
+	err = subject.LoadState(ctx, targetId, &got)
 	if err != nil {
 		t.Error(err)
 		return
