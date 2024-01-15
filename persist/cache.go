@@ -3,9 +3,11 @@ package persist
 import (
 	"context"
 	"fmt"
-	"github.com/marstr/collection/v2"
-	"github.com/marstr/envelopes"
 	"reflect"
+
+	"github.com/marstr/envelopes"
+
+	"github.com/marstr/collection/v2"
 )
 
 // ErrTypeMismatch is when an
@@ -40,31 +42,40 @@ func NewCache(capacity uint) *Cache {
 	}
 }
 
-// Write adds an IDer to this cache. If Writer isn't nil, it is immediately invoked.
-func (c Cache) Write(ctx context.Context, subject envelopes.IDer) error {
-	// Ensure we cache a pointer, and not a copy of the object.
-	switch subject.(type) {
-	case envelopes.Transaction:
-		cast := subject.(envelopes.Transaction)
-		subject = &cast
-	case envelopes.State:
-		cast := subject.(envelopes.State)
-		subject = &cast
-	case envelopes.Budget:
-		cast := subject.(envelopes.Budget)
-		subject = &cast
-	case envelopes.Accounts:
-		cast := subject.(envelopes.Accounts)
-		subject = &cast
-	}
-
-	c.lruCache.Put(subject.ID(), subject)
-
+// WriteTransaction adds a Transaction to this cache. If Writer isn't nil, it is immediately invoked.
+func (c Cache) WriteTransaction(ctx context.Context, subject envelopes.Transaction) error {
+	c.lruCache.Put(subject.ID(), &subject)
 	if c.Writer == nil {
 		return nil
 	}
+	return c.Writer.WriteTransaction(ctx, subject)
+}
 
-	return c.Writer.Write(ctx, subject)
+// WriteState adds a State to this cache. If Writer isn't nil, it is immediately invoked.
+func (c Cache) WriteState(ctx context.Context, subject envelopes.State) error {
+	c.lruCache.Put(subject.ID(), &subject)
+	if c.Writer == nil {
+		return nil
+	}
+	return c.Writer.WriteState(ctx, subject)
+}
+
+// WriteBudget adds a Budget to this cache. If Writer isn't nil, it is immediately invoked.
+func (c Cache) WriteBudget(ctx context.Context, subject envelopes.Budget) error {
+	c.lruCache.Put(subject.ID(), &subject)
+	if c.Writer == nil {
+		return nil
+	}
+	return c.Writer.WriteBudget(ctx, subject)
+}
+
+// WriteAccounts adds an instance of Accounts to this cache. If Writer isn't nil, it is immediately invoked.
+func (c Cache) WriteAccounts(ctx context.Context, subject envelopes.Accounts) error {
+	c.lruCache.Put(subject.ID(), subject)
+	if c.Writer == nil {
+		return nil
+	}
+	return c.Writer.WriteAccounts(ctx, subject)
 }
 
 // Load copies the desired object from the Cache into destination. If the requested option is present in the cache, it

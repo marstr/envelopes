@@ -75,7 +75,7 @@ func TestCreateRepositoryLayout1(t *testing.T) {
 		},
 	}
 
-	err = repo.Write(ctx, exampleTransaction)
+	err = repo.WriteTransaction(ctx, exampleTransaction)
 	if err != nil {
 		t.Error(err)
 	}

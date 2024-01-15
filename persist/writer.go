@@ -16,12 +16,22 @@ package persist
 
 import (
 	"context"
+
 	"github.com/marstr/envelopes"
 )
 
 // Writer defines a contract that allows an object to express that it knows how to persist
 // an object so that it can be recalled using an instance of an object that satisfies `persist.Fetch`.
 type Writer interface {
-	// Write persists an object in durable storage where it can be retrieved later.
-	Write(ctx context.Context, subject envelopes.IDer) error
+	// WriteTransaction persists a Transaction, and all objects composing it, in durable storage where it can be retrieved later.
+	WriteTransaction(ctx context.Context, subject envelopes.Transaction) error
+
+	// WriteState persists a State, and all objects composing it, in durable storage where it can be retrieved later.
+	WriteState(ctx context.Context, subject envelopes.State) error
+
+	// WriteBudget persists a Budget, and all objects composing it, in durable storage where it can be retrieved later.
+	WriteBudget(ctx context.Context, subject envelopes.Budget) error
+
+	// WriteAccounts persist an instance of Accounts in durable storage where it can be retrieved later.
+	WriteAccounts(ctx context.Context, subject envelopes.Accounts) error
 }

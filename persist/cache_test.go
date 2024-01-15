@@ -2,21 +2,22 @@ package persist
 
 import (
 	"context"
-	"github.com/marstr/envelopes"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/marstr/envelopes"
 )
 
 func TestCache_Load(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 90 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
 	t.Run("UsePassThroughOnMiss", testUsePassThroughOnMiss(ctx))
 }
 
 func testUsePassThroughOnMiss(ctx context.Context) func(t *testing.T) {
-	return func (t * testing.T) {
+	return func(t *testing.T) {
 		want := envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{"MSFT": big.NewRat(24, 1)},
@@ -27,7 +28,7 @@ func testUsePassThroughOnMiss(ctx context.Context) func(t *testing.T) {
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
-				"brokerage": envelopes.Balance{
+				"brokerage": {
 					"MSFT": big.NewRat(24, 1),
 					"TMUS": big.NewRat(35, 1),
 				},
@@ -35,7 +36,7 @@ func testUsePassThroughOnMiss(ctx context.Context) func(t *testing.T) {
 		}
 
 		passThrough := NewCache(10)
-		if err := passThrough.Write(ctx, want); err != nil {
+		if err := passThrough.WriteState(ctx, want); err != nil {
 			t.Error(err)
 			return
 		}

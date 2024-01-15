@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"reflect"
 	"sort"
 
 	"github.com/marstr/envelopes"
@@ -39,40 +38,7 @@ func NewWriterV3WithLoopback(stasher persist.Stasher, loopback persist.Writer) (
 	return retval, nil
 }
 
-// Write uses the persist.Stasher it is composed of to write the given Envelopes object to a persistent storage space.
-func (dw WriterV3) Write(ctx context.Context, subject envelopes.IDer) error {
-	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
-	// Must have default clause to prevent blocking.
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-		// Intentionally Left Blank
-	}
-
-	switch subject.(type) {
-	case envelopes.Transaction:
-		return dw.writeTransaction(ctx, subject.(envelopes.Transaction))
-	case *envelopes.Transaction:
-		return dw.writeTransaction(ctx, *subject.(*envelopes.Transaction))
-	case envelopes.State:
-		return dw.writeState(ctx, subject.(envelopes.State))
-	case *envelopes.State:
-		return dw.writeState(ctx, *subject.(*envelopes.State))
-	case envelopes.Budget:
-		return dw.writeBudget(ctx, subject.(envelopes.Budget))
-	case *envelopes.Budget:
-		return dw.writeBudget(ctx, *subject.(*envelopes.Budget))
-	case envelopes.Accounts:
-		return dw.writeAccounts(ctx, subject.(envelopes.Accounts))
-	case *envelopes.Accounts:
-		return dw.writeAccounts(ctx, *subject.(*envelopes.Accounts))
-	default:
-		return fmt.Errorf("unknown type: %s", reflect.TypeOf(subject).Name())
-	}
-}
-
-func (dw WriterV3) writeTransaction(ctx context.Context, subject envelopes.Transaction) error {
+func (dw WriterV3) WriteTransaction(ctx context.Context, subject envelopes.Transaction) error {
 	if subject.State == nil {
 		subject.State = &envelopes.State{}
 	}
@@ -90,7 +56,7 @@ func (dw WriterV3) writeTransaction(ctx context.Context, subject envelopes.Trans
 	toMarshal.Committer.Email = subject.Committer.Email
 	toMarshal.RecordId = BankRecordIDV2(subject.RecordID)
 
-	err := dw.loopback.Write(ctx, subject.State)
+	err := dw.loopback.WriteState(ctx, *subject.State)
 	if err != nil {
 		return err
 	}
@@ -103,11 +69,11 @@ func (dw WriterV3) writeTransaction(ctx context.Context, subject envelopes.Trans
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw WriterV3) writeState(ctx context.Context, subject envelopes.State) error {
+func (dw WriterV3) WriteState(ctx context.Context, subject envelopes.State) error {
 	if subject.Accounts == nil {
 		subject.Accounts = make(envelopes.Accounts, 0)
 	}
-	err := dw.loopback.Write(ctx, subject.Accounts)
+	err := dw.loopback.WriteAccounts(ctx, subject.Accounts)
 	if err != nil {
 		return err
 	}
@@ -115,7 +81,7 @@ func (dw WriterV3) writeState(ctx context.Context, subject envelopes.State) erro
 	if subject.Budget == nil {
 		subject.Budget = &envelopes.Budget{}
 	}
-	err = dw.loopback.Write(ctx, subject.Budget)
+	err = dw.loopback.WriteBudget(ctx, *subject.Budget)
 	if err != nil {
 		return err
 	}
@@ -132,12 +98,12 @@ func (dw WriterV3) writeState(ctx context.Context, subject envelopes.State) erro
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw WriterV3) writeBudget(ctx context.Context, subject envelopes.Budget) error {
+func (dw WriterV3) WriteBudget(ctx context.Context, subject envelopes.Budget) error {
 	if subject.Children == nil {
 		subject.Children = make(map[string]*envelopes.Budget, 0)
 	}
 	for _, child := range subject.Children {
-		err := dw.loopback.Write(ctx, child)
+		err := dw.loopback.WriteBudget(ctx, *child)
 		if err != nil {
 			return err
 		}
@@ -158,7 +124,7 @@ func (dw WriterV3) writeBudget(ctx context.Context, subject envelopes.Budget) er
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw WriterV3) writeAccounts(ctx context.Context, subject envelopes.Accounts) error {
+func (dw WriterV3) WriteAccounts(ctx context.Context, subject envelopes.Accounts) error {
 	accountNames := make([]string, 0, len(subject))
 	for k := range subject {
 		accountNames = append(accountNames, k)

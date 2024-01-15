@@ -51,9 +51,9 @@ func TestLoadAncestor(t *testing.T) {
 		return
 	}
 
-	toWrite := []*envelopes.Transaction{&t1, &t2, &t3}
+	toWrite := []envelopes.Transaction{t1, t2, t3}
 	for _, entry := range toWrite {
-		err = writer.Write(ctx, entry)
+		err = writer.WriteTransaction(ctx, entry)
 		if err != nil {
 			t.Error(err)
 			return

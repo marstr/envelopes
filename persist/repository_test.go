@@ -2,13 +2,14 @@ package persist
 
 import (
 	"context"
-	"github.com/marstr/envelopes"
 	"testing"
 	"time"
+
+	"github.com/marstr/envelopes"
 )
 
 func TestBareClone(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 90 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
 	t.Run("linear", testBareCloneLinear(ctx))
@@ -24,24 +25,24 @@ func testBareCloneLinear(ctx context.Context) func(*testing.T) {
 		expected := make(map[envelopes.ID]envelopes.Transaction)
 
 		a := envelopes.Transaction{Comment: "Deepest"}
-		if err := src.Write(ctx, a); err != nil {
+		if err := src.WriteTransaction(ctx, a); err != nil {
 			t.Error(err)
 		}
 
 		b := envelopes.Transaction{Comment: "Deeper", Parents: []envelopes.ID{a.ID()}}
-		if err := src.Write(ctx, b); err != nil {
+		if err := src.WriteTransaction(ctx, b); err != nil {
 			t.Error(err)
 		}
 		expected[b.Parents[0]] = a
 
 		c := envelopes.Transaction{Comment: "Deep", Parents: []envelopes.ID{b.ID()}}
-		if err := src.Write(ctx, c); err != nil {
+		if err := src.WriteTransaction(ctx, c); err != nil {
 			t.Error(err)
 		}
 		expected[c.Parents[0]] = b
 
 		d := envelopes.Transaction{Comment: "Shallow", Parents: []envelopes.ID{c.ID()}}
-		if err := src.Write(ctx, d); err != nil {
+		if err := src.WriteTransaction(ctx, d); err != nil {
 			t.Error(err)
 		}
 		expected[d.Parents[0]] = c
@@ -77,25 +78,25 @@ func testBareCloneDiamond(ctx context.Context) func(*testing.T) {
 		src := NewMockRepository(branchCount, transactionCount)
 
 		a := envelopes.Transaction{Comment: "Deepest"}
-		if err := src.Write(ctx, a); err != nil {
+		if err := src.WriteTransaction(ctx, a); err != nil {
 			t.Error(err)
 		}
 		aId := a.ID()
 
 		b := envelopes.Transaction{Comment: "Deeper", Parents: []envelopes.ID{aId}}
-		if err := src.Write(ctx, b); err != nil {
+		if err := src.WriteTransaction(ctx, b); err != nil {
 			t.Error(err)
 		}
 		bId := b.ID()
 
 		c := envelopes.Transaction{Comment: "Deep", Parents: []envelopes.ID{aId}}
-		if err := src.Write(ctx, c); err != nil {
+		if err := src.WriteTransaction(ctx, c); err != nil {
 			t.Error(err)
 		}
 		cId := c.ID()
 
 		d := envelopes.Transaction{Comment: "Shallow", Parents: []envelopes.ID{cId, bId}}
-		if err := src.Write(ctx, d); err != nil {
+		if err := src.WriteTransaction(ctx, d); err != nil {
 			t.Error(err)
 		}
 		dId := d.ID()
@@ -129,19 +130,19 @@ func testBareCloneFork(ctx context.Context) func(*testing.T) {
 		src := NewMockRepository(branchCount, transactionCount)
 
 		b := envelopes.Transaction{Comment: "Deeper", Parents: []envelopes.ID{}}
-		if err := src.Write(ctx, b); err != nil {
+		if err := src.WriteTransaction(ctx, b); err != nil {
 			t.Error(err)
 		}
 		bId := b.ID()
 
 		c := envelopes.Transaction{Comment: "Deep", Parents: []envelopes.ID{}}
-		if err := src.Write(ctx, c); err != nil {
+		if err := src.WriteTransaction(ctx, c); err != nil {
 			t.Error(err)
 		}
 		cId := c.ID()
 
 		d := envelopes.Transaction{Comment: "Shallow", Parents: []envelopes.ID{cId, bId}}
-		if err := src.Write(ctx, d); err != nil {
+		if err := src.WriteTransaction(ctx, d); err != nil {
 			t.Error(err)
 		}
 		dId := d.ID()

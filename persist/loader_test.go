@@ -34,42 +34,42 @@ func TestNearestCommonAncestor_noCommonAncestor(t *testing.T) {
 	gen3bid := gen3b.ID()
 
 	repo := NewMockRepository(0, 8)
-	err = repo.Write(ctx, gen1a)
+	err = repo.WriteTransaction(ctx, gen1a)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen1b)
+	err = repo.WriteTransaction(ctx, gen1b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2aa)
+	err = repo.WriteTransaction(ctx, gen2aa)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2ab)
+	err = repo.WriteTransaction(ctx, gen2ab)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2ba)
+	err = repo.WriteTransaction(ctx, gen2ba)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2bb)
+	err = repo.WriteTransaction(ctx, gen2bb)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen3a)
+	err = repo.WriteTransaction(ctx, gen3a)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen3b)
+	err = repo.WriteTransaction(ctx, gen3b)
 	if err != nil {
 		t.Error(err)
 		return
@@ -147,19 +147,19 @@ func TestNearestCommonAncestor_sharedParent(t *testing.T) {
 	gen1bid := gen1b.ID()
 
 	repo := NewMockRepository(0, 4)
-	err = repo.Write(ctx, root)
+	err = repo.WriteTransaction(ctx, root)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen1a)
+	err = repo.WriteTransaction(ctx, gen1a)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen1b)
+	err = repo.WriteTransaction(ctx, gen1b)
 	if err != nil {
 		t.Error(err)
 		return
@@ -186,13 +186,13 @@ func TestNearestCommonAncestor_parentAndChild(t *testing.T) {
 	cid := child.ID()
 
 	repo := NewMockRepository(0, 2)
-	err = repo.Write(ctx, parent)
+	err = repo.WriteTransaction(ctx, parent)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, child)
+	err = repo.WriteTransaction(ctx, child)
 	if err != nil {
 		t.Error(err)
 		return
@@ -234,58 +234,56 @@ func TestNearestCommonAncestor_multipleYs(t *testing.T) {
 	gen3b := envelopes.Transaction{Comment: "Gen3 - B", Parents: []envelopes.ID{gen2baid, gen2bbid}}
 	gen3bid := gen3b.ID()
 
-
 	repo := NewMockRepository(0, 9)
-	err = repo.Write(ctx, root)
+	err = repo.WriteTransaction(ctx, root)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen1a)
+	err = repo.WriteTransaction(ctx, gen1a)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen1b)
+	err = repo.WriteTransaction(ctx, gen1b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen2aa)
+	err = repo.WriteTransaction(ctx, gen2aa)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen2ab)
+	err = repo.WriteTransaction(ctx, gen2ab)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen2ba)
+	err = repo.WriteTransaction(ctx, gen2ba)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen2bb)
+	err = repo.WriteTransaction(ctx, gen2bb)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	err = repo.Write(ctx, gen3a)
+	err = repo.WriteTransaction(ctx, gen3a)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-
-	err = repo.Write(ctx, gen3b)
+	err = repo.WriteTransaction(ctx, gen3b)
 	if err != nil {
 		t.Error(err)
 		return
@@ -311,12 +309,12 @@ func TestLoadImpact_simple(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(10,1),
+					"USD": big.NewRat(10, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(10,1),
+					"USD": big.NewRat(10, 1),
 				},
 			},
 		},
@@ -328,12 +326,12 @@ func TestLoadImpact_simple(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(15,1),
+					"USD": big.NewRat(15, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(15,1),
+					"USD": big.NewRat(15, 1),
 				},
 			},
 		},
@@ -341,12 +339,12 @@ func TestLoadImpact_simple(t *testing.T) {
 	}
 
 	repo := NewMockRepository(0, 2)
-	err = repo.Write(ctx, parent)
+	err = repo.WriteTransaction(ctx, parent)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, child)
+	err = repo.WriteTransaction(ctx, child)
 	if err != nil {
 		t.Error(err)
 		return
@@ -362,12 +360,12 @@ func TestLoadImpact_simple(t *testing.T) {
 	want := envelopes.Impact{
 		Budget: &envelopes.Budget{
 			Balance: envelopes.Balance{
-				"USD":big.NewRat(5,1),
+				"USD": big.NewRat(5, 1),
 			},
 		},
 		Accounts: map[string]envelopes.Balance{
-			"checking":{
-				"USD": big.NewRat(5,1),
+			"checking": {
+				"USD": big.NewRat(5, 1),
 			},
 		},
 	}
@@ -385,15 +383,15 @@ func TestLoadImpact_noImpactMerge(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(30,1),
+					"USD": big.NewRat(30, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(10,1),
+					"USD": big.NewRat(10, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(20, 1),
+					"USD": big.NewRat(20, 1),
 				},
 			},
 		},
@@ -405,15 +403,15 @@ func TestLoadImpact_noImpactMerge(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(35,1),
+					"USD": big.NewRat(35, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(15,1),
+					"USD": big.NewRat(15, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(20,1),
+					"USD": big.NewRat(20, 1),
 				},
 			},
 		},
@@ -425,15 +423,15 @@ func TestLoadImpact_noImpactMerge(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(35,1),
+					"USD": big.NewRat(35, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(10,1),
+					"USD": big.NewRat(10, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(25,1),
+					"USD": big.NewRat(25, 1),
 				},
 			},
 		},
@@ -445,15 +443,15 @@ func TestLoadImpact_noImpactMerge(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(40,1),
+					"USD": big.NewRat(40, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(15,1),
+					"USD": big.NewRat(15, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(25,1),
+					"USD": big.NewRat(25, 1),
 				},
 			},
 		},
@@ -461,22 +459,22 @@ func TestLoadImpact_noImpactMerge(t *testing.T) {
 	}
 
 	repo := NewMockRepository(0, 4)
-	err = repo.Write(ctx, gen1)
+	err = repo.WriteTransaction(ctx, gen1)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2a)
+	err = repo.WriteTransaction(ctx, gen2a)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2b)
+	err = repo.WriteTransaction(ctx, gen2b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen3)
+	err = repo.WriteTransaction(ctx, gen3)
 	if err != nil {
 		t.Error(err)
 		return
@@ -504,15 +502,15 @@ func TestLoadImpact_duplicateReconciled(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(30,1),
+					"USD": big.NewRat(30, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(10,1),
+					"USD": big.NewRat(10, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(20, 1),
+					"USD": big.NewRat(20, 1),
 				},
 			},
 		},
@@ -524,15 +522,15 @@ func TestLoadImpact_duplicateReconciled(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(35,1),
+					"USD": big.NewRat(35, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(15,1),
+					"USD": big.NewRat(15, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(20,1),
+					"USD": big.NewRat(20, 1),
 				},
 			},
 		},
@@ -544,15 +542,15 @@ func TestLoadImpact_duplicateReconciled(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(35,1),
+					"USD": big.NewRat(35, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(15,1),
+					"USD": big.NewRat(15, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(20,1),
+					"USD": big.NewRat(20, 1),
 				},
 			},
 		},
@@ -564,15 +562,15 @@ func TestLoadImpact_duplicateReconciled(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(35,1),
+					"USD": big.NewRat(35, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(15,1),
+					"USD": big.NewRat(15, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(20,1),
+					"USD": big.NewRat(20, 1),
 				},
 			},
 		},
@@ -580,22 +578,22 @@ func TestLoadImpact_duplicateReconciled(t *testing.T) {
 	}
 
 	repo := NewMockRepository(0, 4)
-	err = repo.Write(ctx, gen1)
+	err = repo.WriteTransaction(ctx, gen1)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2a)
+	err = repo.WriteTransaction(ctx, gen2a)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2b)
+	err = repo.WriteTransaction(ctx, gen2b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen3)
+	err = repo.WriteTransaction(ctx, gen3)
 	if err != nil {
 		t.Error(err)
 		return
@@ -611,12 +609,12 @@ func TestLoadImpact_duplicateReconciled(t *testing.T) {
 	want := envelopes.Impact{
 		Budget: &envelopes.Budget{
 			Balance: envelopes.Balance{
-				"USD": big.NewRat(-5,1),
+				"USD": big.NewRat(-5, 1),
 			},
 		},
 		Accounts: map[string]envelopes.Balance{
 			"checking": {
-				"USD":big.NewRat(-5,1),
+				"USD": big.NewRat(-5, 1),
 			},
 		},
 	}
@@ -635,15 +633,15 @@ func TestLoadImpact_noCommonAncestor(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(35,1),
+					"USD": big.NewRat(35, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(10,1),
+					"USD": big.NewRat(10, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(25,1),
+					"USD": big.NewRat(25, 1),
 				},
 			},
 		},
@@ -654,15 +652,15 @@ func TestLoadImpact_noCommonAncestor(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(35,1),
+					"USD": big.NewRat(35, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(15,1),
+					"USD": big.NewRat(15, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(20,1),
+					"USD": big.NewRat(20, 1),
 				},
 			},
 		},
@@ -673,15 +671,15 @@ func TestLoadImpact_noCommonAncestor(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(70,1),
+					"USD": big.NewRat(70, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(25,1),
+					"USD": big.NewRat(25, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(45,1),
+					"USD": big.NewRat(45, 1),
 				},
 			},
 		},
@@ -689,17 +687,17 @@ func TestLoadImpact_noCommonAncestor(t *testing.T) {
 	}
 
 	repo := NewMockRepository(0, 3)
-	err = repo.Write(ctx, gen1a)
+	err = repo.WriteTransaction(ctx, gen1a)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen1b)
+	err = repo.WriteTransaction(ctx, gen1b)
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	err = repo.Write(ctx, gen2)
+	err = repo.WriteTransaction(ctx, gen2)
 	if err != nil {
 		t.Error(err)
 		return
@@ -728,22 +726,22 @@ func TestLoadImpact_island(t *testing.T) {
 		State: &envelopes.State{
 			Budget: &envelopes.Budget{
 				Balance: envelopes.Balance{
-					"USD": big.NewRat(35,1),
+					"USD": big.NewRat(35, 1),
 				},
 			},
 			Accounts: map[string]envelopes.Balance{
 				"checking": {
-					"USD":big.NewRat(10,1),
+					"USD": big.NewRat(10, 1),
 				},
 				"savings": {
-					"USD":big.NewRat(25,1),
+					"USD": big.NewRat(25, 1),
 				},
 			},
 		},
 	}
 
 	repo := NewMockRepository(0, 1)
-	err = repo.Write(ctx, gen1)
+	err = repo.WriteTransaction(ctx, gen1)
 	if err != nil {
 		t.Error(err)
 		return
@@ -764,10 +762,10 @@ func TestLoadImpact_island(t *testing.T) {
 		},
 		Accounts: map[string]envelopes.Balance{
 			"checking": {
-				"USD":big.NewRat(10,1),
+				"USD": big.NewRat(10, 1),
 			},
-			"savings":{
-				"USD":big.NewRat(25,1),
+			"savings": {
+				"USD": big.NewRat(25, 1),
 			},
 		},
 	}

@@ -2,8 +2,9 @@ package persist
 
 import (
 	"context"
-	"github.com/marstr/envelopes"
 	"testing"
+
+	"github.com/marstr/envelopes"
 )
 
 func TestWalker_Walk(t *testing.T) {
@@ -20,7 +21,7 @@ func chain(ctx context.Context) func(t *testing.T) {
 		Comment: "First!",
 	}
 	aid := a.ID()
-	err := cache.Write(ctx, a)
+	err := cache.WriteTransaction(ctx, a)
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +33,7 @@ func chain(ctx context.Context) func(t *testing.T) {
 		},
 	}
 	bid := b.ID()
-	err = cache.Write(ctx, b)
+	err = cache.WriteTransaction(ctx, b)
 	if err != nil {
 		panic(err)
 	}
@@ -73,7 +74,7 @@ func fork(ctx context.Context) func(t *testing.T) {
 		Comment: "First!",
 	}
 	aid := a.ID()
-	err := cache.Write(ctx, a)
+	err := cache.WriteTransaction(ctx, a)
 	if err != nil {
 		panic(err)
 	}
@@ -85,7 +86,7 @@ func fork(ctx context.Context) func(t *testing.T) {
 		},
 	}
 	bid := b.ID()
-	err = cache.Write(ctx, b)
+	err = cache.WriteTransaction(ctx, b)
 	if err != nil {
 		panic(err)
 	}
@@ -97,7 +98,7 @@ func fork(ctx context.Context) func(t *testing.T) {
 		},
 	}
 	cid := c.ID() // Eastern Iowa Airport shout-out
-	err = cache.Write(ctx, c)
+	err = cache.WriteTransaction(ctx, c)
 	if err != nil {
 		panic(err)
 	}
@@ -142,7 +143,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 		Comment: "First!",
 	}
 	aid := a.ID()
-	err := cache.Write(ctx, a)
+	err := cache.WriteTransaction(ctx, a)
 	if err != nil {
 		panic(err)
 	}
@@ -154,7 +155,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 		},
 	}
 	bid := b.ID()
-	err = cache.Write(ctx, b)
+	err = cache.WriteTransaction(ctx, b)
 	if err != nil {
 		panic(err)
 	}
@@ -166,7 +167,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 		},
 	}
 	cid := c.ID() // Eastern Iowa Airport shout-out
-	err = cache.Write(ctx, c)
+	err = cache.WriteTransaction(ctx, c)
 	if err != nil {
 		panic(err)
 	}
@@ -178,7 +179,7 @@ func respectSkipAncestors(ctx context.Context) func(t *testing.T) {
 		},
 	}
 	did := d.ID()
-	err = cache.Write(ctx, d)
+	err = cache.WriteTransaction(ctx, d)
 	if err != nil {
 		panic(err)
 	}
@@ -229,28 +230,28 @@ func respectDepth(ctx context.Context) func(*testing.T) {
 
 		gen1 := envelopes.Transaction{Comment: "Gen 1"}
 		gen1id := gen1.ID()
-		if err := repo.Write(ctx, gen1); err != nil {
+		if err := repo.WriteTransaction(ctx, gen1); err != nil {
 			t.Error(err)
 			return
 		}
 
 		gen2a := envelopes.Transaction{Comment: "Gen 2a", Parents: []envelopes.ID{gen1id}}
 		gen2aid := gen2a.ID()
-		if err := repo.Write(ctx, gen2a); err != nil {
+		if err := repo.WriteTransaction(ctx, gen2a); err != nil {
 			t.Error(err)
 			return
 		}
 
 		gen2b := envelopes.Transaction{Comment: "Gen 2b", Parents: []envelopes.ID{gen1id}}
 		gen2bid := gen2b.ID()
-		if err := repo.Write(ctx, gen2b); err != nil {
+		if err := repo.WriteTransaction(ctx, gen2b); err != nil {
 			t.Error(err)
 			return
 		}
 
 		gen3 := envelopes.Transaction{Comment: "Gen 3", Parents: []envelopes.ID{gen2aid, gen2bid}}
 		gen3id := gen3.ID()
-		if err := repo.Write(ctx, gen3); err != nil {
+		if err := repo.WriteTransaction(ctx, gen3); err != nil {
 			t.Error(err)
 			return
 		}
@@ -259,7 +260,6 @@ func respectDepth(ctx context.Context) func(*testing.T) {
 		expected[gen2aid] = struct{}{}
 		expected[gen2bid] = struct{}{}
 		expected[gen3id] = struct{}{}
-
 
 		subject := Walker{Loader: repo, MaxDepth: 1}
 

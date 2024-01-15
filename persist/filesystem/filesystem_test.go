@@ -99,7 +99,7 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			err := repo.Write(ctx, tc)
+			err := repo.WriteTransaction(ctx, tc)
 			if err != nil {
 				t.Error(err)
 				return
@@ -176,7 +176,7 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%T/%s", tc, tc.ID()), func(t *testing.T) {
 
-			err := repo.Write(ctx, tc)
+			err := repo.WriteTransaction(ctx, tc)
 			if err != nil {
 				t.Error(err)
 				return
@@ -276,7 +276,7 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		currentBudget := envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(int64(i), 1)}}
-		err = repo.Write(context.Background(), currentBudget)
+		err = repo.WriteBudget(context.Background(), currentBudget)
 		if err != nil {
 			b.Error(err)
 			return

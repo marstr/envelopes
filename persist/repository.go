@@ -94,7 +94,7 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 		return err
 	}
 
-	heads := make([]envelopes.ID,0)
+	heads := make([]envelopes.ID, 0)
 
 	for branch := range rawBranches {
 		val, err := src.ReadBranch(ctx, branch)
@@ -109,11 +109,11 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 	}
 
 	walker := Walker{
-		Loader: src,
+		Loader:   src,
 		MaxDepth: options.Depth,
 	}
 
 	return walker.Walk(ctx, func(ctx context.Context, _ envelopes.ID, transaction envelopes.Transaction) error {
-		return dest.Write(ctx, transaction)
+		return dest.WriteTransaction(ctx, transaction)
 	}, heads...)
 }

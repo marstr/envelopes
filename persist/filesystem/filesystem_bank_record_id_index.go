@@ -58,24 +58,51 @@ func segmentNormalizedName(id normalizedBankRecordID) []string {
 	return retval
 }
 
-// Write associates the given Transaction with it's BankRecordID if applicable, then passes the call along to the next
-// Writer.
+// WriteTransaction associates the given Transaction with it's BankRecordID if applicable, then passes the call along
+// to the next Writer.
 //
-// If subject is not a Transaction, or subject is a Transaction but does not have a BankRecordID, the association step
-// is skipped altogether, and this continues to call the DecoratedWriter.
+// If subject does not have a BankRecordID, the association step is skipped altogether, and this continues to call the
+// DecoratedWriter.
 //
 // If DecoratedWriter is nil, the association step will still happen if applicable, but then nothing more happens.
-func (index FilesystemBankRecordIDIndex) Write(ctx context.Context, subject envelopes.IDer) error {
-	transaction, ok := subject.(envelopes.Transaction)
-	if ok && transaction.RecordID != "" {
-		err := index.AppendBankRecordID(transaction.RecordID, transaction.ID())
+func (index FilesystemBankRecordIDIndex) WriteTransaction(ctx context.Context, subject envelopes.Transaction) error {
+	if subject.RecordID != "" {
+		err := index.AppendBankRecordID(subject.RecordID, subject.ID())
 		if err != nil {
 			return err
 		}
 	}
 
 	if index.DecoratedWriter != nil {
-		return index.DecoratedWriter.Write(ctx, subject)
+		return index.DecoratedWriter.WriteTransaction(ctx, subject)
+	}
+
+	return nil
+}
+
+// WriteState passes the request along to the DecoratedWriter, if applicable. If there is no DecoratedWriter, nil is
+// returned.
+func (index FilesystemBankRecordIDIndex) WriteState(ctx context.Context, subject envelopes.State) error {
+	if index.DecoratedWriter != nil {
+		return index.DecoratedWriter.WriteState(ctx, subject)
+	}
+	return nil
+}
+
+// WriteBudget passes the request along to the DecoratedWriter, if applicable. If there is no DecoratedWriter, nil is
+// returned.
+func (index FilesystemBankRecordIDIndex) WriteBudget(ctx context.Context, subject envelopes.Budget) error {
+	if index.DecoratedWriter != nil {
+		return index.DecoratedWriter.WriteBudget(ctx, subject)
+	}
+	return nil
+}
+
+// WriteAccounts passes the request along to the DecoratedWriter, if applicable. If there is no DecoratedWriter, nil is
+// returned.
+func (index FilesystemBankRecordIDIndex) WriteAccounts(ctx context.Context, subject envelopes.Accounts) error {
+	if index.DecoratedWriter != nil {
+		return index.DecoratedWriter.WriteAccounts(ctx, subject)
 	}
 
 	return nil
