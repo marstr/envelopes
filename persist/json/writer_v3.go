@@ -1,34 +1,38 @@
 package json
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
 )
 
-// WriterV2 knows how to navigate the envelopes object model and stash each individual component of an object.
-type WriterV2 struct {
+type Writer = WriterV3
+
+// WriterV3 knows how to navigate the envelopes object model and stash each individual component of an object.
+type WriterV3 struct {
 	// Writes the serialized form of an object to persistent memory. Must not be nil.
 	persist.Stasher
 
-	// Allow recursive calls to Write to invoke the top-level WriterV2. If this is nil, WriterV2 uses itself.
+	// Allow recursive calls to Write to invoke the top-level WriterV3. If this is nil, WriterV3 uses itself.
 	loopback persist.Writer
 }
 
-func NewWriterV2(stasher persist.Stasher) (*WriterV2, error) {
-	retval := &WriterV2{
+func NewWriterV3(stasher persist.Stasher) (*WriterV3, error) {
+	retval := &WriterV3{
 		Stasher: stasher,
 	}
 	retval.loopback = retval
 	return retval, nil
 }
 
-func NewWriterV2WithLoopback(stasher persist.Stasher, loopback persist.Writer) (*WriterV2, error) {
-	retval := &WriterV2{
+func NewWriterV3WithLoopback(stasher persist.Stasher, loopback persist.Writer) (*WriterV3, error) {
+	retval := &WriterV3{
 		Stasher:  stasher,
 		loopback: loopback,
 	}
@@ -36,7 +40,7 @@ func NewWriterV2WithLoopback(stasher persist.Stasher, loopback persist.Writer) (
 }
 
 // Write uses the persist.Stasher it is composed of to write the given Envelopes object to a persistent storage space.
-func (dw WriterV2) Write(ctx context.Context, subject envelopes.IDer) error {
+func (dw WriterV3) Write(ctx context.Context, subject envelopes.IDer) error {
 	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
 	// Must have default clause to prevent blocking.
 	select {
@@ -68,7 +72,7 @@ func (dw WriterV2) Write(ctx context.Context, subject envelopes.IDer) error {
 	}
 }
 
-func (dw WriterV2) writeTransaction(ctx context.Context, subject envelopes.Transaction) error {
+func (dw WriterV3) writeTransaction(ctx context.Context, subject envelopes.Transaction) error {
 	if subject.State == nil {
 		subject.State = &envelopes.State{}
 	}
@@ -99,7 +103,7 @@ func (dw WriterV2) writeTransaction(ctx context.Context, subject envelopes.Trans
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw WriterV2) writeState(ctx context.Context, subject envelopes.State) error {
+func (dw WriterV3) writeState(ctx context.Context, subject envelopes.State) error {
 	if subject.Accounts == nil {
 		subject.Accounts = make(envelopes.Accounts, 0)
 	}
@@ -128,7 +132,7 @@ func (dw WriterV2) writeState(ctx context.Context, subject envelopes.State) erro
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw WriterV2) writeBudget(ctx context.Context, subject envelopes.Budget) error {
+func (dw WriterV3) writeBudget(ctx context.Context, subject envelopes.Budget) error {
 	if subject.Children == nil {
 		subject.Children = make(map[string]*envelopes.Budget, 0)
 	}
@@ -154,11 +158,50 @@ func (dw WriterV2) writeBudget(ctx context.Context, subject envelopes.Budget) er
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
 
-func (dw WriterV2) writeAccounts(ctx context.Context, subject envelopes.Accounts) error {
-	marshaled, err := json.Marshal(subject)
+func (dw WriterV3) writeAccounts(ctx context.Context, subject envelopes.Accounts) error {
+	accountNames := make([]string, 0, len(subject))
+	for k := range subject {
+		accountNames = append(accountNames, k)
+	}
+	sort.Strings(accountNames)
+
+	buf := &bytes.Buffer{}
+	encoder := json.NewEncoder(buf)
+
+	var err error
+	_, err = fmt.Fprint(buf, "{")
 	if err != nil {
 		return err
 	}
 
-	return dw.Stash(ctx, subject.ID(), marshaled)
+	for i := range accountNames {
+		err = encoder.Encode(accountNames[i])
+		if err != nil {
+			return err
+		}
+		buf.Truncate(buf.Len() - 1)
+		_, err = fmt.Fprint(buf, ":")
+		if err != nil {
+			return err
+		}
+
+		err = encoder.Encode(BalanceV3(subject[accountNames[i]]))
+		if err != nil {
+			return err
+		}
+		buf.Truncate(buf.Len() - 1)
+		_, err = fmt.Fprint(buf, ",")
+		if err != nil {
+			return err
+		}
+	}
+	if buf.Len() > 1 {
+		buf.Truncate(buf.Len() - 1)
+	}
+	_, err = fmt.Fprint(buf, "}")
+	if err != nil {
+		return err
+	}
+
+	return dw.Stash(ctx, subject.ID(), buf.Bytes())
 }

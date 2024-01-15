@@ -15,48 +15,53 @@ import (
 )
 
 type (
-	BankRecordIDV2 string
+	BankRecordIDV3 string
 
-	// BudgetV2 is copy of envelopes.Budget for ORM purposes.
-	BudgetV2 struct {
-		Balance  BalanceV2               `json:"balance"`
+	Budget = BudgetV3
+	// BudgetV3 is copy of envelopes.Budget for ORM purposes.
+	BudgetV3 struct {
+		Balance  BalanceV3               `json:"balance"`
 		Children map[string]envelopes.ID `json:"children"`
 	}
 
-	// TransactionV2 is a copy of envelopes.Transaction for ORM purposes.
-	TransactionV2 struct {
+	Transaction = TransactionV3
+	// TransactionV3 is a copy of envelopes.Transaction for ORM purposes.
+	TransactionV3 struct {
 		State       envelopes.ID   `json:"state"`
 		PostedTime  time.Time      `json:"postedTime"`
 		ActualTime  time.Time      `json:"actualTime,omitempty"`
 		EnteredTime time.Time      `json:"enteredTime,omitempty"`
-		Amount      BalanceV2      `json:"amount"`
+		Amount      BalanceV3      `json:"amount"`
 		Merchant    string         `json:"merchant"`
 		Comment     string         `json:"comment"`
-		Committer   UserV2         `json:"committer,omitempty"`
-		RecordId    BankRecordIDV2 `json:"recordId,omitempty"`
+		Committer   UserV3         `json:"committer,omitempty"`
+		RecordId    BankRecordIDV3 `json:"recordId,omitempty"`
 		Parent      []envelopes.ID `json:"parent"`
 	}
 
-	// StateV2 is a copy of envelopes.State for ORM purposes.
-	StateV2 struct {
+	State = StateV3
+	// StateV3 is a copy of envelopes.State for ORM purposes.
+	StateV3 struct {
 		Budget   envelopes.ID `json:"budget"`
 		Accounts envelopes.ID `json:"accounts"`
 	}
 
-	// UserV2 is a copy of envelopes.User for ORM purposes.
-	UserV2 struct {
+	User = UserV3
+	// UserV3 is a copy of envelopes.User for ORM purposes.
+	UserV3 struct {
 		FullName string `json:"fullName"`
 		Email    string `json:"email"`
 	}
 
-	// BalanceV2 is a copy of envelopes.Balance for ORM purposes.
-	BalanceV2 map[envelopes.AssetType]*big.Rat
+	Balance = BalanceV3
+	// BalanceV3 is a copy of envelopes.Balance for ORM purposes.
+	BalanceV3 map[envelopes.AssetType]*big.Rat
 )
 
-var jsonNumberPatternV2 = regexp.MustCompile(`^(?P<sign>-?)(?P<number>\d+)(?:\.(?P<fraction>\d+))?(?:[eE](?P<exponent>[\-+]?\d+))?$`)
+var jsonNumberPatternV3 = regexp.MustCompile(`^(?P<sign>-?)(?P<number>\d+)(?:\.(?P<fraction>\d+))?(?:[eE](?P<exponent>[\-+]?\d+))?$`)
 
-// MarshalJSON converts a BalanceV2 into a serialized JSON object which can be round-tripped back to a BalanceV2.
-func (b BalanceV2) MarshalJSON() ([]byte, error) {
+// MarshalJSON converts a BalanceV3 into a serialized JSON object which can be round-tripped back to a BalanceV3.
+func (b BalanceV3) MarshalJSON() ([]byte, error) {
 	assetTypes := make([]string, 0, len(b))
 	for k := range b {
 		assetTypes = append(assetTypes, string(k))
@@ -81,12 +86,15 @@ func (b BalanceV2) MarshalJSON() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = encoder.Encode(formatRatV2(b[envelopes.AssetType(assetTypes[i])]))
+		err = encoder.Encode(formatRatV3(b[envelopes.AssetType(assetTypes[i])]))
 		if err != nil {
 			return nil, err
 		}
 		buf.Truncate(buf.Len() - 1)
 		_, err = fmt.Fprint(buf, ",")
+		if err != nil {
+			return nil, err
+		}
 	}
 	if buf.Len() > 1 {
 		buf.Truncate(buf.Len() - 1)
@@ -98,8 +106,8 @@ func (b BalanceV2) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// UnmarshalJSON reconstitutes a BalanceV2 that had previously been converted into a JSON object by MarshalJSON.
-func (b *BalanceV2) UnmarshalJSON(text []byte) error {
+// UnmarshalJSON reconstitutes a BalanceV3 that had previously been converted into a JSON object by MarshalJSON.
+func (b *BalanceV3) UnmarshalJSON(text []byte) error {
 	type RawBalance map[envelopes.AssetType]json.Number
 
 	unmarshaled := RawBalance{}
@@ -110,12 +118,12 @@ func (b *BalanceV2) UnmarshalJSON(text []byte) error {
 		return err
 	}
 
-	retval := make(BalanceV2, len(unmarshaled))
+	retval := make(BalanceV3, len(unmarshaled))
 	*b = retval
 
 	for k, v := range unmarshaled {
 		var parsed *big.Rat
-		parsed, err = parseRatV2(v)
+		parsed, err = parseRatV3(v)
 		if err != nil {
 			return err
 		}
@@ -124,17 +132,17 @@ func (b *BalanceV2) UnmarshalJSON(text []byte) error {
 	return nil
 }
 
-func formatRatV2(rat *big.Rat) json.Number {
+func formatRatV3(rat *big.Rat) json.Number {
 	return json.Number(rat.FloatString(3))
 }
 
-func parseRatV2(input json.Number) (*big.Rat, error) {
+func parseRatV3(input json.Number) (*big.Rat, error) {
 	var err error
 	numerator := int64(0)
 	denominator := int64(1)
 	var sign int64 = 1
 
-	match := jsonNumberPatternV2.FindStringSubmatch(string(input))
+	match := jsonNumberPatternV3.FindStringSubmatch(string(input))
 	if len(match) == 0 {
 		return nil, fmt.Errorf("did not recognize %q as a JSON Number", input)
 	}
