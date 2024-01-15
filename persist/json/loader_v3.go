@@ -8,36 +8,38 @@ import (
 	"github.com/marstr/envelopes/persist"
 )
 
-func NewLoaderV2(fetcher persist.Fetcher) (*LoaderV2, error) {
-	retval := &LoaderV2{
+type Loader = LoaderV3
+
+func NewLoaderV3(fetcher persist.Fetcher) (*LoaderV3, error) {
+	retval := &LoaderV3{
 		Fetcher: fetcher,
 	}
 	retval.loopback = retval
 	return retval, nil
 }
 
-func NewLoaderV2WithLoopback(fetcher persist.Fetcher, loopback persist.Loader) (*LoaderV2, error) {
-	retval := &LoaderV2{
+func NewLoaderV3WithLoopback(fetcher persist.Fetcher, loopback persist.Loader) (*LoaderV3, error) {
+	retval := &LoaderV3{
 		Fetcher:  fetcher,
 		loopback: loopback,
 	}
 	return retval, nil
 }
 
-// LoaderV2 wraps a Fetcher and does just the unmarshaling portion.
-type LoaderV2 struct {
+// LoaderV3 wraps a Fetcher and does just the unmarshaling portion.
+type LoaderV3 struct {
 	persist.Fetcher
 
-	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a TransactionV2 needs a StateV2.
-	// If it is not set, LoaderV2 will use itself.
+	// Loopback will be called when retrieving sub-object. i.e. It will be invoked when a TransactionV3 needs a StateV3.
+	// If it is not set, LoaderV3 will use itself.
 	loopback persist.Loader
 }
 
 // Load fetches and parses all objects necessary to fully rehydrate `destination` from wherever it was stashed.
 //
 // See Also:
-// - WriterV2.Write
-func (dl LoaderV2) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
+// - WriterV3.Write
+func (dl LoaderV3) Load(ctx context.Context, id envelopes.ID, destination envelopes.IDer) error {
 	// In recursive methods, it is easy to detect that a context has been cancelled between calls to itself.
 	// Must have default clause to prevent blocking.
 	select {
@@ -66,8 +68,8 @@ func (dl LoaderV2) Load(ctx context.Context, id envelopes.ID, destination envelo
 	}
 }
 
-func (dl LoaderV2) loadTransaction(ctx context.Context, marshaled []byte, toLoad *envelopes.Transaction) error {
-	var unmarshaled TransactionV2
+func (dl LoaderV3) loadTransaction(ctx context.Context, marshaled []byte, toLoad *envelopes.Transaction) error {
+	var unmarshaled TransactionV3
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
@@ -94,8 +96,8 @@ func (dl LoaderV2) loadTransaction(ctx context.Context, marshaled []byte, toLoad
 	return nil
 }
 
-func (dl LoaderV2) loadState(ctx context.Context, marshaled []byte, toLoad *envelopes.State) error {
-	var unmarshaled StateV2
+func (dl LoaderV3) loadState(ctx context.Context, marshaled []byte, toLoad *envelopes.State) error {
+	var unmarshaled StateV3
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
@@ -116,8 +118,8 @@ func (dl LoaderV2) loadState(ctx context.Context, marshaled []byte, toLoad *enve
 	return nil
 }
 
-func (dl LoaderV2) loadBudget(ctx context.Context, marshaled []byte, toLoad *envelopes.Budget) error {
-	var unmarshaled BudgetV2
+func (dl LoaderV3) loadBudget(ctx context.Context, marshaled []byte, toLoad *envelopes.Budget) error {
+	var unmarshaled BudgetV3
 	err := json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
 		return err
