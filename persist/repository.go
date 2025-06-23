@@ -117,3 +117,46 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 		return dest.WriteTransaction(ctx, transaction)
 	}, heads...)
 }
+
+// Commit assigns the currently checked out commit as the parent of the provided transaction, writes that transaction,
+// then updates the reference to the currently checkout out branch as appropriate.
+func Commit(ctx context.Context, repo RepositoryReaderWriter, transaction envelopes.Transaction) error {
+	head, err := repo.Current(ctx)
+	if err != nil {
+		return err
+	}
+
+	var parent envelopes.ID
+	if head != "" {
+		parent, err = Resolve(ctx, repo, head)
+		if err != nil {
+			return err
+		}
+	}
+
+	if parent.Equal(envelopes.ID{}) {
+		transaction.Parents = []envelopes.ID{}
+	} else {
+		transaction.Parents = []envelopes.ID{parent}
+	}
+
+	err = repo.WriteTransaction(ctx, transaction)
+	if err != nil {
+		return err
+	}
+
+	_, err = repo.ReadBranch(ctx, string(head))
+	if err == nil {
+		err = repo.WriteBranch(ctx, string(head), transaction.ID())
+		if err != nil {
+			return err
+		}
+	} else {
+		err = repo.SetCurrent(ctx, RefSpec(transaction.ID().String()))
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}

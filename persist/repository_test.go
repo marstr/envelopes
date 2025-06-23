@@ -234,3 +234,272 @@ func bareRepositoriesEqual(ctx context.Context, left, right BareRepositoryReader
 
 	return true, nil
 }
+
+func TestCommit(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	t.Run("firstHeadless", testFirstHeadlessCommit(ctx))
+	t.Run("firstBranched", testFirstBranchedCommit(ctx))
+	t.Run("secondHeadless", testSecondHeadlessCommit(ctx))
+	t.Run("secondBranched", testSecondBranchedCommit(ctx))
+}
+
+func testFirstHeadlessCommit(ctx context.Context) func(*testing.T) {
+	return func(t *testing.T) {
+		src := NewMockRepository(1, 1)
+
+		const comment = "First Transaction"
+		transaction := envelopes.Transaction{Comment: comment}
+
+		expected := envelopes.Transaction{Comment: comment, Parents: []envelopes.ID{}}
+
+		err := Commit(ctx, src, transaction)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		// Make sure it actually wrote the transaction
+		var actualTransaction envelopes.Transaction
+		err = src.LoadTransaction(ctx, expected.ID(), &actualTransaction)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !expected.Equal(actualTransaction) {
+			t.Error("didn't get the expected transaction")
+		}
+
+		// Make sure Current was set to the transaction's ID
+		current, err := src.Current(ctx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if string(current) != expected.ID().String() {
+			t.Errorf("Current wasn't set correctly.\ngot:  \"%s\"\nwant: \"%s\"", string(current), expected.ID().String())
+		}
+
+		// Make sure it doesn't create any branches
+		readBranches, err := src.ListBranches(ctx)
+		if err != nil {
+			t.Error(err)
+		}
+
+		actualBranches := []string{}
+		for branch := range readBranches {
+			actualBranches = append(actualBranches, branch)
+		}
+
+		if len(actualBranches) > 0 {
+			t.Errorf("There should have been no branches but instead it had the following %d: %v", len(actualBranches), actualBranches)
+		}
+	}
+}
+
+func testFirstBranchedCommit(ctx context.Context) func(*testing.T) {
+	return func(t *testing.T) {
+		const defaultBranch = "kirk"
+		src := NewMockRepository(1, 1)
+		err := src.WriteBranch(ctx, defaultBranch, envelopes.ID{})
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		src.SetCurrent(ctx, defaultBranch)
+
+		const comment = "First Transaction"
+		transaction := envelopes.Transaction{Comment: comment}
+
+		expected := envelopes.Transaction{Comment: comment, Parents: []envelopes.ID{}}
+		expectedId := expected.ID()
+
+		err = Commit(ctx, src, transaction)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		// Make sure it actually wrote the transaction
+		var actualTransaction envelopes.Transaction
+		err = src.LoadTransaction(ctx, expectedId, &actualTransaction)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !expected.Equal(actualTransaction) {
+			t.Error("didn't get the expected transaction")
+		}
+
+		// Make sure Current is still set to the default branch.
+		current, err := src.Current(ctx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if string(current) != defaultBranch {
+			t.Errorf("Current wasn't set correctly.\ngot:  \"%s\"\nwant: \"%s\"", string(current), defaultBranch)
+		}
+
+		// Make sure the branch got updated
+
+		actualId, err := src.ReadBranch(ctx, defaultBranch)
+		if err != nil {
+			t.Error(err)
+		}
+		if !actualId.Equal(expectedId) {
+			t.Errorf("the branch didn't get updated as expected.\ngot:  %q\nwant: %q", actualId.String(), expectedId.String())
+		}
+
+		// Make sure it doesn't change the branches in the repository
+		readBranches, err := src.ListBranches(ctx)
+		if err != nil {
+			t.Error(err)
+		}
+
+		actualBranches := []string{}
+		for branch := range readBranches {
+			actualBranches = append(actualBranches, branch)
+		}
+
+		if len(actualBranches) != 1 {
+			t.Errorf("There should have been exactly one branch but instead it had the following %d: %v", len(actualBranches), actualBranches)
+			return
+		}
+
+		if actualBranches[0] != defaultBranch {
+			t.Errorf("It renamed the branch to %q when it should have been %q", actualBranches[0], defaultBranch)
+		}
+	}
+}
+
+func testSecondHeadlessCommit(ctx context.Context) func(*testing.T) {
+	return func(t *testing.T) {
+		// Setup
+		src := NewMockRepository(2, 2)
+		root := envelopes.Transaction{Comment: "First Transaction", Parents: []envelopes.ID{}}
+		src.WriteTransaction(ctx, root)
+		err := src.SetCurrent(ctx, RefSpec(root.ID().String()))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		const addComment = "Second Transaction"
+		added := envelopes.Transaction{Comment: addComment}
+
+		err = Commit(ctx, src, added)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		// Make sure it actually wrote the transaction
+		expected := envelopes.Transaction{Comment: addComment, Parents: []envelopes.ID{root.ID()}}
+		expectedId := expected.ID()
+		var actualTransaction envelopes.Transaction
+		err = src.LoadTransaction(ctx, expectedId, &actualTransaction)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !expected.Equal(actualTransaction) {
+			t.Error("didn't get the expected transaction")
+		}
+
+		// Make sure Current was set to the transaction's ID
+		current, err := src.Current(ctx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if string(current) != expectedId.String() {
+			t.Errorf("Current wasn't set correctly.\ngot:  \"%s\"\nwant: \"%s\"", string(current), expectedId.String())
+		}
+	}
+}
+
+func testSecondBranchedCommit(ctx context.Context) func(*testing.T) {
+	return func(t *testing.T) {
+		// Setup
+		const defaultBranch = "picard"
+		src := NewMockRepository(2, 2)
+		root := envelopes.Transaction{Comment: "First Transaction", Parents: []envelopes.ID{}}
+		rootId := root.ID()
+		src.WriteTransaction(ctx, root)
+		src.WriteBranch(ctx, defaultBranch, rootId)
+		err := src.SetCurrent(ctx, defaultBranch)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		const addComment = "Second Transaction"
+		added := envelopes.Transaction{Comment: addComment}
+
+		// Execute
+		err = Commit(ctx, src, added)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		// Make sure it actually wrote the transaction
+		expected := envelopes.Transaction{Comment: addComment, Parents: []envelopes.ID{root.ID()}}
+		expectedId := expected.ID()
+		var actualTransaction envelopes.Transaction
+		err = src.LoadTransaction(ctx, expectedId, &actualTransaction)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !expected.Equal(actualTransaction) {
+			t.Error("didn't get the expected transaction")
+		}
+
+		// Make sure Current is still set to the default branch.
+		current, err := src.Current(ctx)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if string(current) != defaultBranch {
+			t.Errorf("Current wasn't set correctly.\ngot:  \"%s\"\nwant: \"%s\"", string(current), defaultBranch)
+		}
+
+		// Make sure the branch got updated
+
+		actualId, err := src.ReadBranch(ctx, defaultBranch)
+		if err != nil {
+			t.Error(err)
+		}
+		if !actualId.Equal(expectedId) {
+			t.Errorf("the branch didn't get updated as expected.\ngot:  %q\nwant: %q", actualId.String(), expectedId.String())
+		}
+
+		// Make sure it doesn't change the branches in the repository
+		readBranches, err := src.ListBranches(ctx)
+		if err != nil {
+			t.Error(err)
+		}
+
+		actualBranches := []string{}
+		for branch := range readBranches {
+			actualBranches = append(actualBranches, branch)
+		}
+
+		if len(actualBranches) != 1 {
+			t.Errorf("There should have been exactly one branch but instead it had the following %d: %v", len(actualBranches), actualBranches)
+			return
+		}
+
+		if actualBranches[0] != defaultBranch {
+			t.Errorf("It renamed the branch to %q when it should have been %q", actualBranches[0], defaultBranch)
+		}
+	}
+}
