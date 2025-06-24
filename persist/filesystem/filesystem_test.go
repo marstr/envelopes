@@ -153,6 +153,22 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 				},
 			},
 		},
+		{
+			Reverts: envelopes.Transaction{Comment: "Not very good"}.ID(),
+			State: &envelopes.State{
+				Budget: &envelopes.Budget{
+					Balance: envelopes.Balance{"USD": big.NewRat(100, 1)},
+					Children: map[string]*envelopes.Budget{
+						"groceries": {
+							Balance: envelopes.Balance{"USD": big.NewRat(15000, 1)},
+						},
+					},
+				},
+				Accounts: envelopes.Accounts{
+					"checking": envelopes.Balance{"USD": big.NewRat(15100, 1)},
+				},
+			},
+		},
 	}
 
 	testDir := path.Join("testdata", "test", "filesystem", "roundtrip")

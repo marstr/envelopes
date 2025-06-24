@@ -34,6 +34,7 @@ type Transaction struct {
 	Comment     string
 	RecordID    BankRecordID
 	Parents     []ID
+	Reverts     ID
 }
 
 // ID fetches a SHA1 hash of this object that will uniquely identify it.
@@ -93,6 +94,10 @@ func (t Transaction) Equal(other Transaction) bool {
 	}
 
 	if t.RecordID != other.RecordID {
+		return false
+	}
+
+	if !t.Reverts.Equal(other.Reverts) {
 		return false
 	}
 
@@ -168,6 +173,12 @@ func (t Transaction) MarshalText() ([]byte, error) {
 	}
 	if t.RecordID != "" {
 		_, err = fmt.Fprintf(identityBuilder, "record %s\n", t.RecordID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if !t.Reverts.Equal(ID{}) {
+		_, err = fmt.Fprintf(identityBuilder, "reverts %s\n", t.Reverts.String())
 		if err != nil {
 			return nil, err
 		}

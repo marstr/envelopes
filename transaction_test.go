@@ -115,6 +115,36 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 				},
 				Expected: "ebad5097e0013577f9926fa2f5f5bec385608794",
 			},
+			{
+				Subject: envelopes.Transaction{
+					Amount:     envelopes.Balance{"USD": big.NewRat(9807, 100)},
+					Merchant:   "Target",
+					PostedTime: authorTime,
+					Comment:    "Shoes",
+					Parents: []envelopes.ID{
+						envelopes.Transaction{}.ID(),
+					},
+					RecordID: "20201212 575073 2,000 202,012,128,756",
+					Reverts:  envelopes.Transaction{Comment: "Clearly erroneous"}.ID(),
+					State: &envelopes.State{
+						Budget: &envelopes.Budget{
+							Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},
+							Children: map[string]*envelopes.Budget{
+								"grocery": {
+									Balance: envelopes.Balance{"USD": big.NewRat(6709, 100)},
+								},
+								"restaurants": {
+									Balance: envelopes.Balance{"USD": big.NewRat(12933, 100)},
+								},
+							},
+						},
+						Accounts: envelopes.Accounts{
+							"checking": envelopes.Balance{"USD": big.NewRat(24153, 100)},
+						},
+					},
+				},
+				Expected: "0d186bf4bc88d299b483c3d3d8e2b0147529e50e",
+			},
 		}
 
 		for _, tc := range testCases {
