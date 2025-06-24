@@ -55,6 +55,10 @@ func (dw WriterV3) WriteTransaction(ctx context.Context, subject envelopes.Trans
 	toMarshal.Committer.FullName = subject.Committer.FullName
 	toMarshal.Committer.Email = subject.Committer.Email
 	toMarshal.RecordId = BankRecordIDV3(subject.RecordID)
+	if !subject.Reverts.Equal(envelopes.ID{}) {
+		var temp envelopes.ID = subject.Reverts
+		toMarshal.Reverts = &temp
+	}
 
 	err := dw.loopback.WriteState(ctx, *subject.State)
 	if err != nil {
