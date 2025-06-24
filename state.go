@@ -213,7 +213,20 @@ func (s State) subtractBudget(other State) *Budget {
 	return helper(s.Budget, other.Budget)
 }
 
-func CaluclateAmount(original, updated State) Balance {
+// CalculateAmount looks at the difference between two states, and boils down the changes
+// into a single number that captures the magnitude of the operation(s) that occured between
+// the two.
+//
+// For simple cases, that number is quite obvious. If you buy a coffee for three
+// bucks, the Amount suggested here should be three bucks. But other examples are trickier.
+// Shifting money from one part of your budget to another? Is that zero since no money moved
+// accounts, or is it the amount that moved? The answer doesn't necessarily matter since the
+// full truth can be found by looking at the difference between the two states. But having a
+// single consistent answer that is recommended by this platform has value and will help
+// shape users intuition over time. In the earlier example, the library would argue that the
+// more useful answer is the amount that moved between budgets, so thats what this function
+// returns.
+func CalculateAmount(original, updated State) Balance {
 	if changed := findAccountAmount(original, updated); !changed.Equal(Balance{}) {
 		return changed
 	}

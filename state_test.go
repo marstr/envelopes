@@ -288,7 +288,7 @@ func testSimpleDebitsAndCredits(before, after int64) func(*testing.T) {
 			},
 		}
 
-		actual := envelopes.CaluclateAmount(preOp, postOp)
+		actual := envelopes.CalculateAmount(preOp, postOp)
 
 		if !actual.Equal(expected) {
 			t.Errorf("got:  %q\nwant: %q", actual, expected)
@@ -318,7 +318,7 @@ func renameBudget(t *testing.T) {
 		},
 	}
 
-	actual := envelopes.CaluclateAmount(preOp, postOp)
+	actual := envelopes.CalculateAmount(preOp, postOp)
 	expected := accBalance
 
 	if !actual.Equal(expected) {
@@ -355,7 +355,7 @@ func distributeFunds(t *testing.T) {
 		},
 	}
 
-	actual := envelopes.CaluclateAmount(preOp, postOp)
+	actual := envelopes.CalculateAmount(preOp, postOp)
 	expected := toDistribute
 
 	if !actual.Equal(expected) {
@@ -390,7 +390,7 @@ func threeWay(t *testing.T) {
 		},
 	}
 
-	actual := envelopes.CaluclateAmount(preOp, postOp)
+	actual := envelopes.CalculateAmount(preOp, postOp)
 	// Do I love this number, or think it's a good answer to this situation? No, not especially.
 	// But capturing the behavior the current implementation has so that it doesn't accidentally
 	// change is valuable. It's also good evidence for why tools built on this library might
