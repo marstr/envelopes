@@ -16,10 +16,11 @@ package envelopes_test
 
 import (
 	"context"
-	"github.com/marstr/envelopes"
 	"math/big"
 	"testing"
 	"time"
+
+	"github.com/marstr/envelopes"
 )
 
 func TestState_ID(t *testing.T) {
@@ -243,5 +244,160 @@ func TestState_Subtract(t *testing.T) {
 
 			t.Logf("\ntest case: %q\ngot:\n%s\nwant:\n%s\n", tc.Name, string(gotRawMarshaled), string(wantRawMarshaled))
 		}
+	}
+}
+
+func TestCalculateAmount(t *testing.T) {
+	t.Run("simpleDebit", testSimpleDebitsAndCredits(10, 7))
+	t.Run("simpleCredit", testSimpleDebitsAndCredits(7, 10))
+	t.Run("growPastZero", testSimpleDebitsAndCredits(-100, 100))
+	t.Run("fallPastZero", testSimpleDebitsAndCredits(100, -100))
+	t.Run("allNegative", testSimpleDebitsAndCredits(-100, -50))
+
+	t.Run("renameBudget", renameBudget)
+	t.Run("distributeFunds", distributeFunds)
+	t.Run("threeWay", threeWay)
+}
+
+func testSimpleDebitsAndCredits(before, after int64) func(*testing.T) {
+	return func(t *testing.T) {
+		const currency = "USD"
+		const accName = "checking"
+		beforeBal := big.NewRat(before, 1)
+		afterBal := big.NewRat(after, 1)
+
+		expectedBal := big.NewRat(0, 1)
+		expectedBal.Sub(afterBal, beforeBal)
+		expected := envelopes.Balance{currency: expectedBal}
+
+		preOp := envelopes.State{
+			Accounts: envelopes.Accounts{
+				accName: envelopes.Balance{currency: beforeBal},
+			},
+			Budget: &envelopes.Budget{
+				Balance: envelopes.Balance{currency: beforeBal},
+			},
+		}
+
+		postOp := envelopes.State{
+			Accounts: envelopes.Accounts{
+				accName: envelopes.Balance{currency: afterBal},
+			},
+			Budget: &envelopes.Budget{
+				Balance: envelopes.Balance{currency: afterBal},
+			},
+		}
+
+		actual := envelopes.CaluclateAmount(preOp, postOp)
+
+		if !actual.Equal(expected) {
+			t.Errorf("got:  %q\nwant: %q", actual, expected)
+		}
+	}
+}
+
+func renameBudget(t *testing.T) {
+	const currency = "USD"
+	const accName = "checking"
+	accBalance := envelopes.Balance{currency: big.NewRat(100000, 1)}
+	preOp := envelopes.State{
+		Accounts: envelopes.Accounts{accName: accBalance},
+		Budget: &envelopes.Budget{
+			Children: map[string]*envelopes.Budget{
+				"tweedleDee": {Balance: accBalance},
+			},
+		},
+	}
+
+	postOp := envelopes.State{
+		Accounts: envelopes.Accounts{accName: accBalance},
+		Budget: &envelopes.Budget{
+			Children: map[string]*envelopes.Budget{
+				"tweedleDum": {Balance: accBalance},
+			},
+		},
+	}
+
+	actual := envelopes.CaluclateAmount(preOp, postOp)
+	expected := accBalance
+
+	if !actual.Equal(expected) {
+		t.Errorf("got:  %q\nwant: %q", actual, expected)
+	}
+}
+
+func distributeFunds(t *testing.T) {
+	const currency = "USD"
+	const accName = "checking"
+	accBalance := envelopes.Balance{currency: big.NewRat(1111, 1)}
+	toDistribute := envelopes.Balance{currency: big.NewRat(1000, 1)}
+	preOp := envelopes.State{
+		Accounts: envelopes.Accounts{accName: accBalance},
+		Budget: &envelopes.Budget{
+			Children: map[string]*envelopes.Budget{
+				"pocket":  {Balance: envelopes.Balance{currency: big.NewRat(1, 1)}},
+				"grocery": {Balance: envelopes.Balance{currency: big.NewRat(10, 1)}},
+				"savings": {Balance: envelopes.Balance{currency: big.NewRat(100, 1)}},
+				"queue":   {Balance: toDistribute},
+			},
+		},
+	}
+
+	postOp := envelopes.State{
+		Accounts: envelopes.Accounts{accName: accBalance},
+		Budget: &envelopes.Budget{
+			Children: map[string]*envelopes.Budget{
+				"pocket":  {Balance: envelopes.Balance{currency: big.NewRat(51, 1)}},
+				"grocery": {Balance: envelopes.Balance{currency: big.NewRat(460, 1)}},
+				"savings": {Balance: envelopes.Balance{currency: big.NewRat(600, 1)}},
+				"queue":   {Balance: envelopes.Balance{currency: big.NewRat(0, 1)}},
+			},
+		},
+	}
+
+	actual := envelopes.CaluclateAmount(preOp, postOp)
+	expected := toDistribute
+
+	if !actual.Equal(expected) {
+		t.Errorf("got:  %q\nwant: %q", actual, expected)
+	}
+}
+
+func threeWay(t *testing.T) {
+	const currency = "USD"
+	const accName = "checking"
+	accBalance := envelopes.Balance{currency: big.NewRat(1111, 1)}
+
+	preOp := envelopes.State{
+		Accounts: envelopes.Accounts{accName: accBalance},
+		Budget: &envelopes.Budget{
+			Children: map[string]*envelopes.Budget{
+				"pocket":  {Balance: envelopes.Balance{currency: big.NewRat(1, 1)}},
+				"grocery": {Balance: envelopes.Balance{currency: big.NewRat(10, 1)}},
+				"savings": {Balance: envelopes.Balance{currency: big.NewRat(100, 1)}},
+			},
+		},
+	}
+
+	postOp := envelopes.State{
+		Accounts: envelopes.Accounts{accName: accBalance},
+		Budget: &envelopes.Budget{
+			Children: map[string]*envelopes.Budget{
+				"pocket":  {Balance: envelopes.Balance{currency: big.NewRat(100, 1)}},
+				"grocery": {Balance: envelopes.Balance{currency: big.NewRat(1, 1)}},
+				"savings": {Balance: envelopes.Balance{currency: big.NewRat(10, 1)}},
+			},
+		},
+	}
+
+	actual := envelopes.CaluclateAmount(preOp, postOp)
+	// Do I love this number, or think it's a good answer to this situation? No, not especially.
+	// But capturing the behavior the current implementation has so that it doesn't accidentally
+	// change is valuable. It's also good evidence for why tools built on this library might
+	// want to allow users an escape hatch to override whatever this comes up with.
+	expected := envelopes.Balance{currency: big.NewRat(99, 1)}
+
+	if !actual.Equal(expected) {
+		t.Errorf("got:  %q\nwant: %q", actual, expected)
 	}
 }
