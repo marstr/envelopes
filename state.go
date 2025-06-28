@@ -97,35 +97,17 @@ func (s State) String() string {
 // Subtract removes the balances of another State, and returns what changed between the two.
 func (s State) Subtract(other State) Impact {
 	return Impact{
-		Accounts: s.subtractAccounts(other),
+		Accounts: s.Accounts.Sub(other.Accounts),
 		Budget:   s.Budget.Subtract(other.Budget),
 	}
 }
 
-func (s State) subtractAccounts(other State) Accounts {
-	modifiedAccounts := make(Accounts, len(s.Accounts))
-
-	unseen := make(Accounts, len(other.Accounts))
-	for otherName, otherBalance := range other.Accounts {
-		unseen[otherName] = otherBalance
+// Add combines the baalances of another State and returns the total of both.
+func (s State) Add(other State) Impact {
+	return Impact{
+		Accounts: s.Accounts.Add(other.Accounts),
+		Budget:   s.Budget.Add(other.Budget),
 	}
-
-	for currentName, currentBalance := range s.Accounts {
-		if otherBalance, ok := other.Accounts[currentName]; ok {
-			delete(unseen, currentName)
-			if !currentBalance.Equal(otherBalance) {
-				modifiedAccounts[currentName] = currentBalance.Sub(otherBalance)
-			}
-		} else {
-			modifiedAccounts[currentName] = currentBalance
-		}
-	}
-
-	for unseenName, unseenBalance := range unseen {
-		modifiedAccounts[unseenName] = unseenBalance.Negate()
-	}
-
-	return modifiedAccounts
 }
 
 // CalculateAmount looks at the difference between two states, and boils down the changes

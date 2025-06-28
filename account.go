@@ -84,3 +84,57 @@ func (accs Accounts) Balance() Balance {
 	}
 	return sum
 }
+
+// Add combines two lists of accounts. Taking the union of all distinct accounts, and where the same account appears in two places, it sums both balances.
+func (accs Accounts) Add(other Accounts) Accounts {
+	modifiedAccounts := make(Accounts, len(accs))
+
+	unseen := make(Accounts, len(other))
+	for otherName, otherBalance := range other {
+		unseen[otherName] = otherBalance
+	}
+
+	for currentName, currentBalance := range accs {
+		if otherBalance, ok := other[currentName]; ok {
+			delete(unseen, currentName)
+			if !currentBalance.Equal(otherBalance) {
+				modifiedAccounts[currentName] = currentBalance.Add(otherBalance)
+			}
+		} else {
+			modifiedAccounts[currentName] = currentBalance
+		}
+	}
+
+	for unseenName, unseenBalance := range unseen {
+		modifiedAccounts[unseenName] = unseenBalance
+	}
+
+	return modifiedAccounts
+}
+
+// Sub removes the amount from each `Balance` in other from the account it is invoked on.
+func (accs Accounts) Sub(other Accounts) Accounts {
+	modifiedAccounts := make(Accounts, len(accs))
+
+	unseen := make(Accounts, len(other))
+	for otherName, otherBalance := range other {
+		unseen[otherName] = otherBalance
+	}
+
+	for currentName, currentBalance := range accs {
+		if otherBalance, ok := other[currentName]; ok {
+			delete(unseen, currentName)
+			if !currentBalance.Equal(otherBalance) {
+				modifiedAccounts[currentName] = currentBalance.Sub(otherBalance)
+			}
+		} else {
+			modifiedAccounts[currentName] = currentBalance
+		}
+	}
+
+	for unseenName, unseenBalance := range unseen {
+		modifiedAccounts[unseenName] = unseenBalance.Negate()
+	}
+
+	return modifiedAccounts
+}
