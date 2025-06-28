@@ -146,6 +146,82 @@ func (b Budget) ChildNames() (results []string) {
 	return
 }
 
+// Add sums the amount of each balance in `other` and the Budget this was invoked on.
+func (b *Budget) Add(other *Budget) *Budget {
+
+	// helper adds the right child-budget from the left child-budget. Should be called on children with matching
+	// names
+	var helper func(*Budget, *Budget) *Budget
+	helper = func(left, right *Budget) *Budget {
+		modifiedChildren := make(map[string]*Budget)
+
+		// mark all of the children on the right, so we can decide if any got deleted after tallying all of the children
+		// on the left.
+		removedChildren := make(map[string]*Budget, len(right.Children))
+		for childName, child := range right.Children {
+			removedChildren[childName] = child
+		}
+
+		// enumerate through all of the left's children, to find any discrepancies.
+		for childName, leftChild := range left.Children {
+			if rightChild, ok := right.Children[childName]; ok {
+				// see if there are any differences between the children, only if there are should the modified child
+				// be added.
+				added := helper(leftChild, rightChild)
+				if added != nil {
+					modifiedChildren[childName] = added
+				}
+
+				// regardless of whether or not there are differences, both budgets had this child.
+				delete(removedChildren, childName)
+			} else {
+				modifiedChildren[childName] = leftChild
+			}
+		}
+
+		// make a note of all of the children who were removed.
+		for childName, child := range removedChildren {
+			temp := child.DeepCopy()
+			modifiedChildren[childName] = &temp
+		}
+
+		// finalize an object that represents the changes made, and send it up the stack.
+		var retval Budget
+
+		if len(modifiedChildren) > 0 {
+			retval.Children = modifiedChildren
+		}
+
+		if left.Balance.Equal(right.Balance) && retval.Children == nil {
+			return nil
+		}
+
+		retval.Balance = left.Balance.Add(right.Balance)
+
+		return &retval
+	}
+
+	// If there are no budgets involved... do nothing and short-circuit.
+	if b == nil && other == nil {
+		return nil
+	}
+
+	// If this has a budget, but the other doesn't, just clone this budget. This budget has been added.
+	if other == nil {
+		cloned := b.DeepCopy()
+		return &cloned
+	}
+
+	// If this doesn't have a budget, but the other does, clone and negate that budget. That budget has been removed.
+	if b == nil {
+		cloned := other.DeepCopy()
+		return &cloned
+	}
+
+	// Changes have been made to this budget. Call helper to get the differences figured out.
+	return helper(b, other)
+}
+
 // Subtract removes the amount of each balance in `other` from the Budget this was invoked on.
 func (b *Budget) Subtract(other *Budget) *Budget {
 	// negate reverses the balances of all balances in a budget recursively.
