@@ -110,6 +110,15 @@ func (s State) Add(other State) Impact {
 	}
 }
 
+// DeepCopy creates a duplicate state that can be modified without fear of modifying the original.
+func (s State) DeepCopy() State {
+	copiedBudget := s.Budget.DeepCopy()
+	return State{
+		Accounts: s.Accounts.DeepCopy(),
+		Budget:   &copiedBudget,
+	}
+}
+
 // CalculateAmount looks at the difference between two states, and boils down the changes
 // into a single number that captures the magnitude of the operation(s) that occured between
 // the two.

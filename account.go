@@ -138,3 +138,11 @@ func (accs Accounts) Sub(other Accounts) Accounts {
 
 	return modifiedAccounts
 }
+
+func (accs Accounts) DeepCopy() Accounts {
+	retval := make(Accounts, len(accs))
+	for k, v := range accs {
+		retval[k] = v.DeepCopy()
+	}
+	return retval
+}
