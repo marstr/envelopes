@@ -44,13 +44,16 @@ type Budget struct {
 	Children map[string]*Budget
 }
 
-func (b Budget) deepCopy() Budget {
+// DeepCopy creates a new budget identical used to the one to invoke it, but
+// that is a totally separate instance. This allows you to edit the copied or
+// original without impacting the other.
+func (b Budget) DeepCopy() Budget {
 	var clone Budget
 	clone.Balance = b.Balance
 	clone.Children = make(map[string]*Budget, len(b.Children))
 
 	for childName, child := range b.Children {
-		clonedChild := child.deepCopy()
+		clonedChild := child.DeepCopy()
 		clone.Children[childName] = &clonedChild
 	}
 	return clone
@@ -120,7 +123,8 @@ func (b Budget) Equal(other Budget) bool {
 // RecursiveBalance finds the balance of a `Budget` and all of its children.
 //
 // See Also:
-// 	Budget.Balance
+//
+//	Budget.Balance
 func (b Budget) RecursiveBalance() (sum Balance) {
 	sum = b.Balance
 	for _, child := range b.Children {

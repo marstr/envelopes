@@ -170,7 +170,7 @@ func (s State) subtractBudget(other State) *Budget {
 
 		// make a note of all of the children who were removed.
 		for childName, child := range removedChildren {
-			childClone := child.deepCopy()
+			childClone := child.DeepCopy()
 			negate(&childClone)
 			modifiedChildren[childName] = &childClone
 		}
@@ -198,13 +198,13 @@ func (s State) subtractBudget(other State) *Budget {
 
 	// If this has a budget, but the other doesn't, just clone this budget. This budget has been added.
 	if other.Budget == nil {
-		cloned := s.Budget.deepCopy()
+		cloned := s.Budget.DeepCopy()
 		return &cloned
 	}
 
 	// If this doesn't have a budget, but the other does, clone and negate that budget. That budget has been removed.
 	if s.Budget == nil {
-		cloned := other.Budget.deepCopy()
+		cloned := other.Budget.DeepCopy()
 		negate(&cloned)
 		return &cloned
 	}
