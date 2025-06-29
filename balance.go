@@ -191,6 +191,16 @@ func (b Balance) Normalize(rates Exchange) (*big.Rat, error) {
 	return sum, nil
 }
 
+func (b Balance) DeepCopy() Balance {
+	retval := make(Balance, len(b))
+
+	for k, v := range b {
+		retval[k] = v
+	}
+
+	return retval
+}
+
 func (b Balance) String() string {
 	const defaultResult = "USD 0.00"
 	const precision = 3

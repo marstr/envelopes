@@ -79,6 +79,30 @@ func Resolve(ctx context.Context, repo RepositoryReader, subject RefSpec) (envel
 	return envelopes.ID{}, ErrNoRefSpec(subject)
 }
 
+// ResolveMany interprets each of the RefSpec's provided, finding the envelopes.Transaction ID they are referring to. The resulting array matches the order of the provided array.
+func ResolveMany(ctx context.Context, repo RepositoryReader, refs []RefSpec) ([]envelopes.ID, error) {
+	resolved := make([]envelopes.ID, 0, len(refs))
+	for _, current := range refs {
+		select {
+		case <-ctx.Done():
+			return []envelopes.ID{}, ctx.Err()
+		default:
+			// Intentionally Left Blank
+		}
+
+		var currentID envelopes.ID
+		var err error
+		currentID, err = Resolve(ctx, repo, current)
+		if err != nil {
+			return []envelopes.ID{}, err
+		}
+
+		resolved = append(resolved, currentID)
+	}
+
+	return resolved, nil
+}
+
 // resolveBranchRefSpec find the ID of the Transaction a branch is pointing to.
 func resolveBranchRefSpec(ctx context.Context, reader BranchReader, subject RefSpec) (envelopes.ID, error) {
 	return reader.ReadBranch(ctx, string(subject))
