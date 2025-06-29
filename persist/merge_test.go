@@ -77,8 +77,7 @@ func TestMerge_Simple(t *testing.T) {
 	}
 
 	var got envelopes.State
-	var conflicts []persist.Conflict
-	got, conflicts, err = persist.Merge(ctx, repo, []persist.RefSpec{mainLine, feature})
+	got, err = persist.Merge(ctx, repo, []persist.RefSpec{mainLine, feature})
 	if err != nil {
 		fmt.Println("Failed: ", err)
 		return
@@ -91,10 +90,6 @@ func TestMerge_Simple(t *testing.T) {
 
 	if !got.Budget.Balance.Equal(expected) {
 		t.Errorf("incorrect budget balance\n\tgot:  %s\n\twant: %s", got, expected)
-	}
-
-	if len(conflicts) != 0 {
-		t.Errorf("unexpected conflicts: %v", len(conflicts))
 	}
 }
 
@@ -187,8 +182,7 @@ func TestMerge_Threeway(t *testing.T) {
 	}
 
 	var got envelopes.State
-	var conflicts []persist.Conflict
-	got, conflicts, err = persist.Merge(ctx, repo, []persist.RefSpec{mainLine, feature1, feature2})
+	got, err = persist.Merge(ctx, repo, []persist.RefSpec{mainLine, feature1, feature2})
 	if err != nil {
 		fmt.Println("Failed: ", err)
 		return
@@ -201,9 +195,5 @@ func TestMerge_Threeway(t *testing.T) {
 
 	if !got.Budget.Balance.Equal(expected) {
 		t.Errorf("incorrect budget balance\n\tgot:  %s\n\twant: %s", got, expected)
-	}
-
-	if len(conflicts) != 0 {
-		t.Errorf("unexpected conflicts: %v", len(conflicts))
 	}
 }
