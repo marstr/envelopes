@@ -39,6 +39,14 @@ func (i Impact) Equal(other Impact) bool {
 	return State(i).Equal(State(other))
 }
 
+// Negate reverses the sign of all balances in an Impact.
+func (i Impact) Negate() Impact {
+	return Impact{
+		Budget:   i.Budget.Negate(),
+		Accounts: i.Accounts.Negate(),
+	}
+}
+
 // ID calculates the SHA1 hash of this object.
 func (s State) ID() (id ID) {
 	marshaled, err := s.MarshalText()
