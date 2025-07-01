@@ -139,6 +139,15 @@ func (accs Accounts) Sub(other Accounts) Accounts {
 	return modifiedAccounts
 }
 
+// Negates reverses the sign of each balance stored.
+func (accs Accounts) Negate() Accounts {
+	retval := make(Accounts, len(accs))
+	for k, v := range accs {
+		retval[k] = v.Negate()
+	}
+	return retval
+}
+
 func (accs Accounts) DeepCopy() Accounts {
 	retval := make(Accounts, len(accs))
 	for k, v := range accs {

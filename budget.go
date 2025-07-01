@@ -146,6 +146,19 @@ func (b Budget) ChildNames() (results []string) {
 	return
 }
 
+// Negate reverses the sign of each balance in a budget.
+func (b *Budget) Negate() *Budget {
+	retval := &Budget{
+		Balance:  b.Balance.Negate(),
+		Children: make(map[string]*Budget),
+	}
+
+	for name, child := range b.Children {
+		retval.Children[name] = child.Negate()
+	}
+	return retval
+}
+
 // Add sums the amount of each balance in `other` and the Budget this was invoked on.
 func (b *Budget) Add(other *Budget) *Budget {
 
