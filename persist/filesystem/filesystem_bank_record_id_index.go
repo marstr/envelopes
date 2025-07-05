@@ -20,7 +20,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/marstr/envelopes"
@@ -115,7 +115,7 @@ func (index FilesystemBankRecordIDIndex) bankRecordIdFilename(bankRecordID envel
 	normalized := normalizeBankRecordID(bankRecordID)
 	segmented := segmentNormalizedName(normalized)
 	dirName := strings.Join(segmented, string(os.PathSeparator))
-	dirName = path.Join(index.Root, dirName)
+	dirName = filepath.Join(index.Root, dirName)
 	return dirName + ".txt", nil
 }
 
@@ -173,7 +173,9 @@ func (index FilesystemBankRecordIDIndex) processBankRecordID(flag int, bankRecor
 		return err
 	}
 
-	err = os.MkdirAll(path.Dir(fileName), os.ModePerm)
+	path := filepath.Dir(fileName)
+
+	err = os.MkdirAll(path, os.ModePerm)
 	if err != nil {
 		return err
 	}
