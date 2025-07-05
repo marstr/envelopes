@@ -30,6 +30,7 @@ func Test_segmentNormalizedName(t *testing.T) {
 func TestFilesystemBankRecordIDIndex_AppendBankRecordID(t *testing.T) {
 	bankRecordId := envelopes.BankRecordID("20201212 575073 2,000 202,012,128,756")
 	tempDir, err := os.MkdirTemp("", "bankRecordID_index_test")
+
 	if err != nil {
 		t.Error(err)
 		return
