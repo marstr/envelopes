@@ -4,7 +4,7 @@ import (
 	"context"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -82,7 +82,7 @@ func TestCreateRepositoryLayout1(t *testing.T) {
 
 	id := exampleTransaction.ID().String()
 
-	handle, err := os.Open(path.Join(testDir, filesystem.ObjectsDir, id[:2], id[2:]+".json"))
+	handle, err := os.Open(filepath.Join(testDir, filesystem.ObjectsDir, id[:2], id[2:]+".json"))
 	if err != nil {
 		t.Error(err)
 	}
