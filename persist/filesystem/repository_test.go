@@ -14,8 +14,16 @@ import (
 )
 
 func TestOpenRepositoryLayout1(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	var ctx context.Context
+
+	if deadline, ok := t.Deadline(); ok {
+		const deleteFilesTime = -3 * time.Second
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline.Add(deleteFilesTime))
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
 
 	repo, err := filesystem.OpenRepository(ctx, "./testdata/test5/.baronial")
 	if err != nil {
@@ -53,8 +61,16 @@ func TestOpenRepositoryLayout1(t *testing.T) {
 }
 
 func TestCreateRepositoryLayout1(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	var ctx context.Context
+
+	if deadline, ok := t.Deadline(); ok {
+		const deleteFilesTime = -3 * time.Second
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline.Add(deleteFilesTime))
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
 
 	testDir, err := os.MkdirTemp("", "envelopes")
 	if err != nil {

@@ -3,6 +3,7 @@ package filesystem
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -12,9 +13,16 @@ import (
 )
 
 func TestLoadAncestor(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	// ctx, cancel := context.Background(), context.CancelFunc(func() {})
-	defer cancel()
+	var ctx context.Context
+
+	if deadline, ok := t.Deadline(); ok {
+		const deleteFilesTime = -3 * time.Second
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline.Add(deleteFilesTime))
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
 
 	test_loc, err := os.MkdirTemp("", "envelopes_TestLoadAncestor_")
 	if err != nil {
@@ -99,13 +107,23 @@ func TestLoadAncestor(t *testing.T) {
 
 func TestCache_Load_reuseHits(t *testing.T) {
 	var err error
-	ctx := context.Background()
+	var ctx context.Context
+
+	if deadline, ok := t.Deadline(); ok {
+		const deleteFilesTime = -3 * time.Second
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline.Add(deleteFilesTime))
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+
 	const rawTargetId = "07e72edcf913fd3ef5eababf60852216d68dbb90"
 	var targetId envelopes.ID
 	targetId.UnmarshalText([]byte(rawTargetId))
 
 	passThrough := FileSystem{
-		Root: "../filesystem/testdata/test3/.baronial",
+		Root: filepath.Join("..", "filesystem", "testdata", "test3", ".baronial"),
 	}
 
 	subject := persist.NewCache(10)
