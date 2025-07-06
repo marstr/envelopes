@@ -66,12 +66,38 @@ func Resolve(ctx context.Context, repo RepositoryReader, subject RefSpec) (envel
 		return resolved, err
 	}
 
-	resolved, err = resolveCaretRefSpec(ctx, repo, subject)
+	resolved, err = resolveCaretRefSpec(ctx, repo, subject, Resolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
-	resolved, err = resolveTildeRefSpec(ctx, repo, subject)
+	resolved, err = resolveTildeRefSpec(ctx, repo, subject, Resolve)
+	if _, ok := err.(ErrNoRefSpec); !ok {
+		return resolved, err
+	}
+
+	return envelopes.ID{}, ErrNoRefSpec(subject)
+}
+
+// BareResolve interprets a RefSpec that is provided to the envelopes.Transaction ID it is referring to, but does not support referencing the most recent checked-in transaction.
+func BareResolve(ctx context.Context, repo BareRepositoryReader, subject RefSpec) (envelopes.ID, error) {
+
+	resolved, err := resolveTransactionRefSpec(ctx, repo, subject)
+	if _, ok := err.(ErrNoRefSpec); !ok {
+		return resolved, err
+	}
+
+	resolved, err = resolveBranchRefSpec(ctx, repo, subject)
+	if err == nil {
+		return resolved, err
+	}
+
+	resolved, err = resolveCaretRefSpec(ctx, repo, subject, BareResolve)
+	if _, ok := err.(ErrNoRefSpec); !ok {
+		return resolved, err
+	}
+
+	resolved, err = resolveTildeRefSpec(ctx, repo, subject, BareResolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
@@ -109,13 +135,13 @@ func resolveBranchRefSpec(ctx context.Context, reader BranchReader, subject RefS
 }
 
 // resolveCaretRefSpec finds the parent ID of the most recent Transaction.
-func resolveCaretRefSpec(ctx context.Context, repo RepositoryReader, subject RefSpec) (envelopes.ID, error) {
+func resolveCaretRefSpec[T Loader](ctx context.Context, repo T, subject RefSpec, recurse func(context.Context, T, RefSpec) (envelopes.ID, error)) (envelopes.ID, error) {
 	matches := caretPattern().FindStringSubmatch(string(subject))
 	if len(matches) < 2 {
 		return envelopes.ID{}, ErrNoRefSpec(subject)
 	}
 
-	target, err := Resolve(ctx, repo, RefSpec(matches[1]))
+	target, err := recurse(ctx, repo, RefSpec(matches[1]))
 	if err != nil {
 		return envelopes.ID{}, err
 	}
@@ -138,12 +164,12 @@ func resolveMostRecentRefSpec(ctx context.Context, repo RepositoryReader, subjec
 		return envelopes.ID{}, err
 	}
 
-	return Resolve(ctx, repo, currentRefSpec)
+	return BareResolve(ctx, repo, currentRefSpec)
 }
 
 // resolveTildeRefSpec scrapes a count of transactions off the end of a RefSpec, resolves the left-hand side, then
 // traverses the direct descendents of the specified transactions the number of specified jumps.
-func resolveTildeRefSpec(ctx context.Context, repo RepositoryReader, subject RefSpec) (envelopes.ID, error) {
+func resolveTildeRefSpec[T Loader](ctx context.Context, repo T, subject RefSpec, recurse func(context.Context, T, RefSpec) (envelopes.ID, error)) (envelopes.ID, error) {
 	matches := tildePattern().FindStringSubmatch(string(subject))
 	if len(matches) < 3 {
 		return envelopes.ID{}, ErrNoRefSpec(subject)
@@ -154,7 +180,7 @@ func resolveTildeRefSpec(ctx context.Context, repo RepositoryReader, subject Ref
 		return envelopes.ID{}, err
 	}
 
-	target, err := Resolve(ctx, repo, RefSpec(matches[1]))
+	target, err := recurse(ctx, repo, RefSpec(matches[1]))
 	if err != nil {
 		return envelopes.ID{}, err
 	}
