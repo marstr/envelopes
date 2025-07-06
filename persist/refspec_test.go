@@ -18,17 +18,15 @@ import (
 	"context"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/marstr/envelopes"
 )
 
-func Test_Resolve(t *testing.T) {
+func TestResolve(t *testing.T) {
 	const primaryBranch = DefaultBranch
 	const secondaryBranch = "backup"
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	ctx := context.Background()
 
 	mockRepo := NewMockRepository(2, 4)
 
@@ -118,6 +116,101 @@ func Test_Resolve(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("%q", string(tc.subject)), func(t *testing.T) {
 			got, err := Resolve(ctx, mockRepo, tc.subject)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if !got.Equal(tc.expected) {
+				t.Logf("\n\tgot:  %q\n\twant: %q", got, tc.expected)
+				t.Fail()
+			}
+		})
+	}
+}
+
+func TestBareResolve(t *testing.T) {
+	const primaryBranch = DefaultBranch
+	const secondaryBranch = "backup"
+
+	ctx := context.Background()
+
+	mockRepo := NewMockRepository(2, 4)
+
+	var transactions [4]envelopes.Transaction
+	transactions[0] = envelopes.Transaction{
+		Comment: "A!",
+	}
+	aid := transactions[0].ID()
+	err := mockRepo.WriteTransaction(ctx, transactions[0])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	transactions[1] = envelopes.Transaction{
+		Comment: "B!",
+		Parents: []envelopes.ID{
+			aid,
+		},
+	}
+	bid := transactions[1].ID()
+	err = mockRepo.WriteTransaction(ctx, transactions[1])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	err = mockRepo.WriteBranch(ctx, secondaryBranch, bid)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	transactions[2] = envelopes.Transaction{
+		Comment: "C!",
+		Parents: []envelopes.ID{
+			bid,
+		},
+	}
+	cid := transactions[2].ID()
+	err = mockRepo.WriteTransaction(ctx, transactions[2])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	transactions[3] = envelopes.Transaction{
+		Comment: "D!",
+		Parents: []envelopes.ID{
+			cid,
+		},
+	}
+	did := transactions[3].ID()
+	err = mockRepo.WriteTransaction(ctx, transactions[3])
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = mockRepo.WriteBranch(ctx, primaryBranch, did)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	testCases := []struct {
+		subject  RefSpec
+		expected envelopes.ID
+	}{
+		{RefSpec(cid.String() + "^"), bid},
+		{RefSpec(did.String() + "~3"), aid},
+		{secondaryBranch, bid},
+		{primaryBranch, did},
+		{primaryBranch + "~2", bid},
+	}
+
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("%q", string(tc.subject)), func(t *testing.T) {
+			got, err := BareResolve(ctx, mockRepo, tc.subject)
 			if err != nil {
 				t.Error(err)
 				return
