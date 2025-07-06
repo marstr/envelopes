@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -98,7 +97,7 @@ func (fs FileSystem) Stash(_ context.Context, id envelopes.ID, payload []byte) e
 		return err
 	}
 
-	err = os.MkdirAll(path.Dir(loc), fs.getCreatePermissions())
+	err = os.MkdirAll(filepath.Dir(loc), fs.getCreatePermissions())
 	if err != nil {
 		return err
 	}
@@ -119,7 +118,7 @@ func (fs FileSystem) currentPath() (result string, err error) {
 	if err != nil {
 		return
 	}
-	return path.Join(exp, "current.txt"), nil
+	return filepath.Join(exp, "current.txt"), nil
 }
 
 func (fs FileSystem) path(id envelopes.ID) (string, error) {
@@ -130,17 +129,17 @@ func (fs FileSystem) path(id envelopes.ID) (string, error) {
 
 	switch fs.ObjectLayout {
 	case 0:
-		return path.Join(exp, ObjectsDir, id.String()+".json"), nil
+		return filepath.Join(exp, ObjectsDir, id.String()+".json"), nil
 	case 1:
 		full := id.String()
-		return path.Join(exp, ObjectsDir, full[:2], full[2:]+".json"), nil
+		return filepath.Join(exp, ObjectsDir, full[:2], full[2:]+".json"), nil
 	default:
 		return "", fmt.Errorf("unrecognized object layout %v", fs.ObjectLayout)
 	}
 }
 
 func (fs FileSystem) branchPath(name string) string {
-	return path.Join(fs.Root, "refs", "heads", name)
+	return filepath.Join(fs.Root, "refs", "heads", name)
 }
 
 // ReadBranch fetches the ID that a branch is pointing at.
@@ -191,7 +190,7 @@ func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID
 
 // ListBranches fetches the distinct names of the branches that exist in a repository.
 func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
-	absRoot, err := filepath.Abs(path.Dir(fs.branchPath("any_branch_name")))
+	absRoot, err := filepath.Abs(filepath.Dir(fs.branchPath("any_branch_name")))
 	if err != nil {
 		return nil, err
 	}

@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -29,25 +29,31 @@ import (
 )
 
 func TestFileSystem_Current(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	var ctx context.Context
+
+	if deadline, ok := t.Deadline(); ok {
+		const deleteFilesTime = -3 * time.Second
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline.Add(deleteFilesTime))
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
 
 	testCases := []string{
-		"./testdata/test1",
-		"./testdata/test2",
+		filepath.Join(".", "testdata", "test1"),
+		filepath.Join(".", "testdata", "test2"),
 	}
-
-	repo, err := filesystem.OpenRepository(ctx, "")
-	if err != nil {
-		t.Error(err)
-	}
-	subject := &repo.FileSystem
 
 	for _, tc := range testCases {
 		t.Run("", func(t *testing.T) {
-			subject.Root = tc
+			repo, err := filesystem.OpenRepository(ctx, tc)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-			head, err := subject.Current(context.Background())
+			head, err := repo.Current(ctx)
 			if err != nil {
 				t.Error(err)
 			}
@@ -72,7 +78,7 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 
-	testLocation := path.Join("testdata", "test", "roundtrip", "current")
+	testLocation := filepath.Join("testdata", "test", "roundtrip", "current")
 	err := os.MkdirAll(testLocation, os.ModePerm)
 	if err != nil {
 		t.Error(err)
@@ -171,7 +177,7 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 		},
 	}
 
-	testDir := path.Join("testdata", "test", "filesystem", "roundtrip")
+	testDir := filepath.Join("testdata", "test", "filesystem", "roundtrip")
 	err := os.MkdirAll(testDir, os.ModePerm)
 	if err != nil {
 		t.Error(err)
@@ -223,8 +229,8 @@ func TestFileSystem_ListBranches(t *testing.T) {
 		location string
 		expected []string
 	}{
-		{"./testdata/test4/.baronial", []string{"backup", "master"}},
-		{"./testdata/test3/.baronial", []string{}},
+		{filepath.Join(".", "testdata", "test4", ".baronial"), []string{"backup", "master"}},
+		{filepath.Join(".", "testdata", "test3", ".baronial"), []string{}},
 	}
 
 	subject := &filesystem.FileSystem{}
@@ -271,13 +277,8 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	benchDir := path.Join("testdata", "bench", "filesystem", "roundtrip")
-	repo, err := filesystem.OpenRepository(ctx, benchDir)
-	if err != nil {
-		b.Error(err)
-	}
-
-	err = os.MkdirAll(benchDir, os.ModePerm)
+	benchDir := filepath.Join("testdata", "bench", "filesystem", "roundtrip")
+	err := os.MkdirAll(benchDir, os.ModePerm)
 	if err != nil {
 		b.Log(err)
 		b.FailNow()
@@ -289,16 +290,22 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 		}
 	}()
 
+	repo, err := filesystem.OpenRepository(ctx, benchDir)
+	if err != nil {
+		b.Error(err)
+		return
+	}
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		currentBudget := envelopes.Budget{Balance: envelopes.Balance{"USD": big.NewRat(int64(i), 1)}}
-		err = repo.WriteBudget(context.Background(), currentBudget)
+		err = repo.WriteBudget(ctx, currentBudget)
 		if err != nil {
 			b.Error(err)
 			return
 		}
 		var loaded envelopes.Budget
-		err = repo.LoadBudget(context.Background(), currentBudget.ID(), &loaded)
+		err = repo.LoadBudget(ctx, currentBudget.ID(), &loaded)
 		if err != nil {
 			b.Error(err)
 			return

@@ -126,7 +126,8 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 	}
 
 	if config.Objects.Format == FormatJson {
-		if config.Objects.Version == 1 {
+		switch config.Objects.Version {
+		case 1:
 			if cache == nil {
 				retval.Loader, err = persistJson.NewLoaderV1(&fs)
 				if err != nil {
@@ -146,7 +147,7 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 					return nil, err
 				}
 			}
-		} else if config.Objects.Version == 2 {
+		case 2:
 			if cache == nil {
 				retval.Loader, err = persistJson.NewLoaderV2(&fs)
 				if err != nil {
@@ -166,7 +167,7 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 					return nil, err
 				}
 			}
-		} else if config.Objects.Version == 3 {
+		case 3:
 			if cache == nil {
 				retval.Loader, err = persistJson.NewLoaderV3(&fs)
 				if err != nil {
@@ -186,7 +187,7 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 					return nil, err
 				}
 			}
-		} else {
+		default:
 			return nil, ErrUnsupportedConfiguration{}
 		}
 	} else {
