@@ -71,7 +71,7 @@ func (c Cache) WriteBudget(ctx context.Context, subject envelopes.Budget) error 
 
 // WriteAccounts adds an instance of Accounts to this cache. If Writer isn't nil, it is immediately invoked.
 func (c Cache) WriteAccounts(ctx context.Context, subject envelopes.Accounts) error {
-	c.lruCache.Put(subject.ID(), subject)
+	c.lruCache.Put(subject.ID(), &subject)
 	if c.Writer == nil {
 		return nil
 	}
@@ -94,10 +94,12 @@ func (c Cache) missTransaction(ctx context.Context, subject envelopes.ID, destin
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.LoadTransaction(ctx, subject, destination)
+	var cacheCopy envelopes.Transaction
+	err := c.Loader.LoadTransaction(ctx, subject, &cacheCopy)
 	if err == nil {
-		c.lruCache.Put(subject, destination)
+		c.lruCache.Put(subject, &cacheCopy)
 	}
+	(*destination) = cacheCopy
 	return err
 }
 
@@ -117,9 +119,11 @@ func (c Cache) missState(ctx context.Context, subject envelopes.ID, destination 
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.LoadState(ctx, subject, destination)
+	var cacheCopy envelopes.State
+	err := c.Loader.LoadState(ctx, subject, &cacheCopy)
 	if err == nil {
-		c.lruCache.Put(subject, destination)
+		c.lruCache.Put(subject, &cacheCopy)
+		(*destination) = cacheCopy
 	}
 	return err
 }
@@ -140,9 +144,11 @@ func (c Cache) missBudget(ctx context.Context, subject envelopes.ID, destination
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.LoadBudget(ctx, subject, destination)
+	var cacheCopy envelopes.Budget
+	err := c.Loader.LoadBudget(ctx, subject, &cacheCopy)
 	if err == nil {
-		c.lruCache.Put(subject, destination)
+		c.lruCache.Put(subject, &cacheCopy)
+		(*destination) = cacheCopy
 	}
 	return err
 }
@@ -163,9 +169,11 @@ func (c Cache) missAccounts(ctx context.Context, subject envelopes.ID, destinati
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.LoadAccounts(ctx, subject, destination)
+	var cacheCopy envelopes.Accounts
+	err := c.Loader.LoadAccounts(ctx, subject, &cacheCopy)
 	if err == nil {
-		c.lruCache.Put(subject, destination)
+		c.lruCache.Put(subject, &cacheCopy)
+		(*destination) = cacheCopy.DeepCopy()
 	}
 	return err
 }
