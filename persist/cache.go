@@ -119,9 +119,11 @@ func (c Cache) missState(ctx context.Context, subject envelopes.ID, destination 
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.LoadState(ctx, subject, destination)
+	var cacheCopy envelopes.State
+	err := c.Loader.LoadState(ctx, subject, &cacheCopy)
 	if err == nil {
-		c.lruCache.Put(subject, destination)
+		c.lruCache.Put(subject, &cacheCopy)
+		(*destination) = cacheCopy.DeepCopy()
 	}
 	return err
 }
@@ -142,9 +144,11 @@ func (c Cache) missBudget(ctx context.Context, subject envelopes.ID, destination
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.LoadBudget(ctx, subject, destination)
+	var cacheCopy envelopes.Budget
+	err := c.Loader.LoadBudget(ctx, subject, &cacheCopy)
 	if err == nil {
-		c.lruCache.Put(subject, destination)
+		c.lruCache.Put(subject, &cacheCopy)
+		(*destination) = cacheCopy.DeepCopy()
 	}
 	return err
 }
@@ -165,9 +169,11 @@ func (c Cache) missAccounts(ctx context.Context, subject envelopes.ID, destinati
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.LoadAccounts(ctx, subject, destination)
+	var cacheCopy envelopes.Accounts
+	err := c.Loader.LoadAccounts(ctx, subject, &cacheCopy)
 	if err == nil {
-		c.lruCache.Put(subject, destination)
+		c.lruCache.Put(subject, &cacheCopy)
+		(*destination) = cacheCopy.DeepCopy()
 	}
 	return err
 }
