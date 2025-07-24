@@ -162,9 +162,11 @@ func testModifiedStateOnMiss(ctx context.Context) func(t *testing.T) {
 		subject := NewCache(10)
 		subject.Loader = underlyer
 
-		var expectedBalance = envelopes.Balance{"USD": big.NewRat(100, 1)}
+		var expectedBudget = envelopes.Budget{
+			Balance: envelopes.Balance{"USD": big.NewRat(100, 1)},
+		}
 		toWrite := envelopes.State{
-			Budget: &envelopes.Budget{Balance: expectedBalance},
+			Budget: &expectedBudget,
 		}
 		writtenId := toWrite.ID()
 
@@ -182,11 +184,13 @@ func testModifiedStateOnMiss(ctx context.Context) func(t *testing.T) {
 			return
 		}
 
-		if !firstLoad.Budget.Balance.Equal(expectedBalance) {
-			t.Errorf("unexpected balance on first load\n\tgot:  %q\n\twant: %q", firstLoad.Budget.Balance, expectedBalance)
+		if !firstLoad.Budget.Equal(expectedBudget) {
+			t.Errorf("unexpected balance on first load\n\tgot:  %v\n\twant: %v", firstLoad.Budget, expectedBudget)
 		}
 
-		firstLoad.Budget.Balance = envelopes.Balance{"EUR": big.NewRat(45, 1)}
+		firstLoad.Budget = &envelopes.Budget{
+			Balance: envelopes.Balance{"EUR": big.NewRat(45, 1)},
+		}
 
 		var secondLoad envelopes.State
 		err = subject.LoadState(ctx, writtenId, &secondLoad)
@@ -195,8 +199,8 @@ func testModifiedStateOnMiss(ctx context.Context) func(t *testing.T) {
 			return
 		}
 
-		if !secondLoad.Budget.Balance.Equal(expectedBalance) {
-			t.Errorf("unexpected balance on second load\n\tgot:  %q\n\twant: %q", secondLoad.Budget.Balance, expectedBalance)
+		if !secondLoad.Budget.Equal(expectedBudget) {
+			t.Errorf("unexpected balance on second load\n\tgot:  %v\n\twant: %v", secondLoad.Budget.Balance, expectedBudget)
 		}
 	}
 }

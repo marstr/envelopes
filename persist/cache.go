@@ -71,7 +71,7 @@ func (c Cache) WriteBudget(ctx context.Context, subject envelopes.Budget) error 
 
 // WriteAccounts adds an instance of Accounts to this cache. If Writer isn't nil, it is immediately invoked.
 func (c Cache) WriteAccounts(ctx context.Context, subject envelopes.Accounts) error {
-	c.lruCache.Put(subject.ID(), subject)
+	c.lruCache.Put(subject.ID(), &subject)
 	if c.Writer == nil {
 		return nil
 	}
@@ -123,7 +123,7 @@ func (c Cache) missState(ctx context.Context, subject envelopes.ID, destination 
 	err := c.Loader.LoadState(ctx, subject, &cacheCopy)
 	if err == nil {
 		c.lruCache.Put(subject, &cacheCopy)
-		(*destination) = cacheCopy.DeepCopy()
+		(*destination) = cacheCopy
 	}
 	return err
 }
@@ -148,7 +148,7 @@ func (c Cache) missBudget(ctx context.Context, subject envelopes.ID, destination
 	err := c.Loader.LoadBudget(ctx, subject, &cacheCopy)
 	if err == nil {
 		c.lruCache.Put(subject, &cacheCopy)
-		(*destination) = cacheCopy.DeepCopy()
+		(*destination) = cacheCopy
 	}
 	return err
 }
