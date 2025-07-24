@@ -94,10 +94,12 @@ func (c Cache) missTransaction(ctx context.Context, subject envelopes.ID, destin
 		return ErrObjectNotFound(subject)
 	}
 
-	err := c.Loader.LoadTransaction(ctx, subject, destination)
+	var cacheCopy envelopes.Transaction
+	err := c.Loader.LoadTransaction(ctx, subject, &cacheCopy)
 	if err == nil {
-		c.lruCache.Put(subject, destination)
+		c.lruCache.Put(subject, &cacheCopy)
 	}
+	(*destination) = cacheCopy
 	return err
 }
 
