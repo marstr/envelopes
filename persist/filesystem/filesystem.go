@@ -97,19 +97,12 @@ func (fs FileSystem) Stash(_ context.Context, id envelopes.ID, payload []byte) e
 		return err
 	}
 
-	err = os.MkdirAll(filepath.Dir(loc), fs.getCreatePermissions())
+	err = os.MkdirAll(filepath.Dir(loc), fs.getCreatePermissions()|0110|os.ModeDir)
 	if err != nil {
 		return err
 	}
 
-	handle, err := os.Create(loc)
-	if err != nil {
-		return err
-	}
-	defer handle.Close()
-
-	_, err = handle.Write(payload)
-	return err
+	return os.WriteFile(loc, payload, fs.getCreatePermissions())
 }
 
 // currentPath fetches the name of the file containing the ID to the most up-to-date Transaction.
@@ -149,6 +142,8 @@ func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelope
 	if err != nil {
 		return
 	}
+	defer handle.Close()
+
 	var contents [2 * cap(retval)]byte
 	var n int
 	n, err = handle.Read(contents[:])
@@ -173,19 +168,12 @@ func (fs FileSystem) ReadBranch(_ context.Context, name string) (retval envelope
 func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
 	branchLoc := fs.branchPath(name)
 
-	err := os.MkdirAll(filepath.Dir(branchLoc), fs.getCreatePermissions())
+	err := os.MkdirAll(filepath.Dir(branchLoc), fs.getCreatePermissions()|0110|os.ModeDir)
 	if err != nil {
 		return err
 	}
 
-	handle, err := os.Create(branchLoc)
-	if err != nil {
-		return err
-	}
-	defer handle.Close()
-
-	_, err = handle.WriteString(id.String())
-	return err
+	return os.WriteFile(branchLoc, id[:], fs.getCreatePermissions())
 }
 
 // ListBranches fetches the distinct names of the branches that exist in a repository.
