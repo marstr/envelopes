@@ -43,7 +43,7 @@ type FileSystem struct {
 
 func (fs FileSystem) getCreatePermissions() os.FileMode {
 	if fs.CreatePermissions == 0 {
-		return 0770
+		return 0660
 	}
 	return fs.CreatePermissions
 }
