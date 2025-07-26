@@ -137,10 +137,58 @@ func TestFileSystem_RoundTrip_Current(t *testing.T) {
 	}
 }
 
+func TestFileSystem_WriteBranch(t *testing.T) {
+	var ctx context.Context
+	deadline, ok := t.Deadline()
+	if ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+
+	testLoc, err := os.MkdirTemp("", "envelopes")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	subject := filesystem.FileSystem{
+		Root: testLoc,
+	}
+
+	expected := envelopes.Transaction{
+		Comment: "Freedom is secured not by the fulfilling of one's desires, but by the removal of desire... No man is free who is not master of himself.",
+	}.ID()
+
+	err = subject.WriteBranch(ctx, persist.DefaultBranch, expected)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	got, err := subject.ReadBranch(ctx, persist.DefaultBranch)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if !got.Equal(expected) {
+		t.Errorf("round trip failed.\n\tgot:  %s\n\twant: %s", got, expected)
+	}
+}
+
 func TestFileSystem_TransactionRoundTrip(t *testing.T) {
-	// ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	// defer cancel()
-	ctx := context.Background()
+	var ctx context.Context
+	deadline, ok := t.Deadline()
+	if ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
 
 	testCases := []envelopes.Transaction{
 		{},
