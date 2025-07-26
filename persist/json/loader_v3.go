@@ -65,9 +65,9 @@ func (dl LoaderV3) LoadTransaction(ctx context.Context, id envelopes.ID, toLoad 
 	toLoad.Committer.Email = unmarshaled.Committer.Email
 	toLoad.RecordID = envelopes.BankRecordID(unmarshaled.RecordId)
 	if unmarshaled.Reverts != nil {
-		toLoad.Reverts = *unmarshaled.Reverts
+		toLoad.Reverts = unmarshaled.Reverts
 	} else {
-		toLoad.Reverts = envelopes.ID{}
+		toLoad.Reverts = []envelopes.ID{}
 	}
 
 	return nil

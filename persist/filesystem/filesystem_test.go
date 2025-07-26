@@ -160,7 +160,7 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 			},
 		},
 		{
-			Reverts: envelopes.Transaction{Comment: "Not very good"}.ID(),
+			Reverts: []envelopes.ID{envelopes.Transaction{Comment: "Not very good"}.ID()},
 			State: &envelopes.State{
 				Budget: &envelopes.Budget{
 					Balance: envelopes.Balance{"USD": big.NewRat(100, 1)},

@@ -36,7 +36,7 @@ type (
 		Comment     string         `json:"comment"`
 		Committer   UserV3         `json:"committer,omitempty"`
 		RecordId    BankRecordIDV3 `json:"recordId,omitempty"`
-		Reverts     *envelopes.ID  `json:"reverts,omitempty"`
+		Reverts     []envelopes.ID `json:"reverts,omitempty"`
 		Parent      []envelopes.ID `json:"parent"`
 	}
 
