@@ -173,7 +173,7 @@ func (fs FileSystem) WriteBranch(_ context.Context, name string, id envelopes.ID
 		return err
 	}
 
-	return os.WriteFile(branchLoc, id[:], fs.getCreatePermissions())
+	return os.WriteFile(branchLoc, []byte(id.String()), fs.getCreatePermissions())
 }
 
 // ListBranches fetches the distinct names of the branches that exist in a repository.
