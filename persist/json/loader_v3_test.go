@@ -36,7 +36,7 @@ func TestLoaderV3_LoadTransaction_notNullingReverts(t *testing.T) {
 	}
 
 	var poisoned = envelopes.Transaction{
-		Reverts: bogus.ID(),
+		Reverts: []envelopes.ID{bogus.ID()},
 		Comment: "This transaction needs to have the Reverts field, and it needs to be not set to the default ID",
 	}
 
@@ -53,7 +53,7 @@ func TestLoaderV3_LoadTransaction_notNullingReverts(t *testing.T) {
 		return
 	}
 
-	if !poisoned.Reverts.Equal(envelopes.ID{}) {
+	if len(poisoned.Reverts) != 0 {
 		t.Errorf("The poison value %q was discovered after a deemed successful load that should've cleared it.", poisoned.Reverts)
 	}
 }

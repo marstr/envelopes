@@ -125,7 +125,9 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 						envelopes.Transaction{}.ID(),
 					},
 					RecordID: "20201212 575073 2,000 202,012,128,756",
-					Reverts:  envelopes.Transaction{Comment: "Clearly erroneous"}.ID(),
+					Reverts: []envelopes.ID{
+						envelopes.Transaction{Comment: "Clearly erroneous"}.ID(),
+					},
 					State: &envelopes.State{
 						Budget: &envelopes.Budget{
 							Balance: envelopes.Balance{"USD": big.NewRat(4511, 100)},

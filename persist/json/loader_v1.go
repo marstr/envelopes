@@ -66,7 +66,7 @@ func (dl LoaderV1) LoadTransaction(ctx context.Context, id envelopes.ID, toLoad 
 	toLoad.Committer.FullName = unmarshaled.Committer.FullName
 	toLoad.Committer.Email = unmarshaled.Committer.Email
 	toLoad.RecordID = envelopes.BankRecordID(unmarshaled.RecordId)
-	toLoad.Reverts = envelopes.ID{}
+	toLoad.Reverts = []envelopes.ID{}
 
 	return nil
 }
