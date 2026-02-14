@@ -35,6 +35,7 @@ type Transaction struct {
 	RecordID    BankRecordID
 	Parents     []ID
 	Reverts     []ID
+	Attachments map[string]Attachment
 }
 
 // ID fetches a SHA1 hash of this object that will uniquely identify it.

@@ -16,6 +16,7 @@ package envelopes
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/hex"
 	"sync"
 )
@@ -23,6 +24,12 @@ import (
 var identityBuilders = &sync.Pool{
 	New: func() interface{} {
 		return &bytes.Buffer{}
+	},
+}
+
+var hashers = &sync.Pool{
+	New: func() interface{} {
+		return sha1.New()
 	},
 }
 
