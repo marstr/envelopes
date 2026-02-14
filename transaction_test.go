@@ -23,6 +23,9 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 	}
 
 	return func(t *testing.T) {
+		var file2025ORFWHash [20]byte
+		copy(file2025ORFWHash[:], []byte("2d046b90a87e82ff35d972d5855f57c548f23129"))
+
 		testCases := []struct {
 			Subject  envelopes.Transaction
 			Expected string
@@ -146,6 +149,19 @@ func getTestTransactionIDLock(ctx context.Context) func(*testing.T) {
 					},
 				},
 				Expected: "0d186bf4bc88d299b483c3d3d8e2b0147529e50e",
+			},
+			{
+				Subject: envelopes.Transaction{
+					Attachments: map[string]envelopes.Attachment{
+						"2025ORFW.pdf": {
+							Extension: "pdf",
+							ContentID: envelopes.ID(file2025ORFWHash),
+							Contents:  openFishingRules,
+							Comment:   "\"Many men go fishing all of their lives without know that it is not fish they are after.\" -Henry David Thoreau",
+						},
+					},
+				},
+				Expected: "2bfe7a0177c279515c2afe58d721f5835d7ad4af",
 			},
 		}
 
