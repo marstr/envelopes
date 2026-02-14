@@ -18,7 +18,7 @@ func TestAttachment_ContentSHA1(t *testing.T) {
 	if ok {
 		ctx, cancel = context.WithDeadline(context.Background(), deadline)
 	} else {
-		ctx = context.Background()
+		ctx, cancel = context.WithCancel(context.Background())
 	}
 	defer cancel()
 
@@ -50,7 +50,7 @@ func TestAttachment_ContentSHA1_respectContext(t *testing.T) {
 	if ok {
 		ctx, cancel = context.WithDeadline(context.Background(), deadline.Add(-5*time.Second))
 	} else {
-		ctx = context.Background()
+		ctx, cancel = context.WithCancel(context.Background())
 	}
 	defer cancel()
 
