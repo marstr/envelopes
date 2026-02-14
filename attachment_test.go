@@ -84,7 +84,7 @@ func TestAttachment_ContentSHA1_respectContext(t *testing.T) {
 
 	select {
 	case <-pyle.Done():
-		t.Errorf("function did not fail and yield control within the time alloted")
+		t.Errorf("function did not fail and yield control within the time allotted")
 	case got := <-failureReason:
 		t.Log(got)
 	}
