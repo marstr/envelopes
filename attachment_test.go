@@ -77,7 +77,7 @@ func TestAttachment_ContentSHA1_respectContext(t *testing.T) {
 		hash, err := subject.ContentSHA1(joker)
 
 		if !hash.Equal(envelopes.ID{}) || err == nil {
-			t.Errorf("this test somehow read to the end of an inexhaustable reader?")
+			t.Errorf("this test somehow read to the end of an inexhaustible reader?")
 		}
 		failureReason <- err
 	}()
