@@ -24,5 +24,7 @@ import (
 // Fetcher can grab the marshaled form of an Object given an ID.
 type Fetcher interface {
 	Fetch(context.Context, envelopes.ID) ([]byte, error)
+	// FetchReadCloser returns a ReadCloser for the marshaled form of an Object.
+	// Callers must close the returned ReadCloser when they are done reading.
 	FetchReadCloser(context.Context, envelopes.ID) (io.ReadCloser, error)
 }

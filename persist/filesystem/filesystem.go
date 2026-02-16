@@ -88,7 +88,11 @@ func (fs FileSystem) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
 	return os.ReadFile(p)
 }
 
-// FetchReadCloser creates a file handle that can be used to read the contents of a file holding a marshaled IDer.
+// FetchReadCloser returns a ReadCloser that can be used to read the contents of a file
+// holding a marshaled IDer.
+//
+// See Also:
+// - FileSystem.StashReadCloser
 func (fs FileSystem) FetchReadCloser(_ context.Context, id envelopes.ID) (io.ReadCloser, error) {
 	p, err := fs.path(id)
 	if err != nil {
@@ -115,7 +119,13 @@ func (fs FileSystem) Stash(_ context.Context, id envelopes.ID, payload []byte) e
 	return os.WriteFile(loc, payload, fs.getCreatePermissions())
 }
 
-func (fs FileSystem) StashReadCloser(ctx context.Context, id envelopes.ID, payload io.ReadCloser) error {
+// StashReadCloser commits the provided payload to disk by streaming from the given ReadCloser.
+// Unlike Stash, which accepts the full payload as a byte slice, this method does not buffer the
+// entire contents in memory.
+//
+// See Also:
+// - FileSystem.FetchReadCloser
+func (fs FileSystem) StashReadCloser(_ context.Context, id envelopes.ID, payload io.ReadCloser) error {
 	loc, err := fs.path(id)
 	if err != nil {
 		return err

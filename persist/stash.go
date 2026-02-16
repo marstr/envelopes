@@ -11,5 +11,7 @@ import (
 // object, it is able to place them.
 type Stasher interface {
 	Stash(ctx context.Context, id envelopes.ID, payload []byte) error
+	// StashReadCloser takes ownership of payload. Implementations are responsible for reading from and
+	// closing the provided io.ReadCloser; callers must not close or reuse payload after calling this method.
 	StashReadCloser(ctx context.Context, id envelopes.ID, payload io.ReadCloser) error
 }
