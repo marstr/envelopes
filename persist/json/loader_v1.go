@@ -3,6 +3,7 @@ package json
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
@@ -131,4 +132,8 @@ func (dl LoaderV1) LoadAccounts(ctx context.Context, id envelopes.ID, toLoad *en
 	}
 
 	return json.Unmarshal(marshaled, toLoad)
+}
+
+func (dl LoaderV1) LoadAttachment(_ context.Context, _ envelopes.ID, _ *envelopes.Attachment) error {
+	return fmt.Errorf("Attachment is unsupported by format JSONV1")
 }

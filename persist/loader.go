@@ -39,6 +39,7 @@ type Loader interface {
 	LoadState(ctx context.Context, id envelopes.ID, destination *envelopes.State) error
 	LoadBudget(ctx context.Context, id envelopes.ID, destination *envelopes.Budget) error
 	LoadAccounts(ctx context.Context, id envelopes.ID, destination *envelopes.Accounts) error
+	LoadAttachment(ctx context.Context, id envelopes.ID, destination *envelopes.Attachment) error
 }
 
 type ErrNoCommonAncestor []envelopes.ID

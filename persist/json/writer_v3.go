@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"sort"
 
 	"github.com/marstr/envelopes"
@@ -39,6 +40,7 @@ func NewWriterV3WithLoopback(stasher persist.Stasher, loopback persist.Writer) (
 }
 
 func (dw WriterV3) WriteTransaction(ctx context.Context, subject envelopes.Transaction) error {
+	var err error
 	if subject.State == nil {
 		subject.State = &envelopes.State{}
 	}
@@ -55,11 +57,23 @@ func (dw WriterV3) WriteTransaction(ctx context.Context, subject envelopes.Trans
 	toMarshal.Committer.FullName = subject.Committer.FullName
 	toMarshal.Committer.Email = subject.Committer.Email
 	toMarshal.RecordId = BankRecordIDV3(subject.RecordID)
+
 	if len(subject.Reverts) != 0 {
 		toMarshal.Reverts = subject.Reverts
 	}
 
-	err := dw.loopback.WriteState(ctx, *subject.State)
+	if len(subject.Attachments) > 0 {
+		toMarshal.Attachments = make(map[string]envelopes.ID, len(subject.Attachments))
+		for k, v := range subject.Attachments {
+			err = dw.loopback.WriteAttachment(ctx, v)
+			if err != nil {
+				return err
+			}
+			toMarshal.Attachments[k] = v.ID()
+		}
+	}
+
+	err = dw.loopback.WriteState(ctx, *subject.State)
 	if err != nil {
 		return err
 	}
@@ -173,4 +187,25 @@ func (dw WriterV3) WriteAccounts(ctx context.Context, subject envelopes.Accounts
 	}
 
 	return dw.Stash(ctx, subject.ID(), buf.Bytes())
+}
+
+func (dw WriterV3) WriteAttachment(ctx context.Context, subject envelopes.Attachment) error {
+	var toMarshal AttachmentV3
+	toMarshal.Extension = subject.Extension
+	toMarshal.ContentID = subject.ContentID
+	toMarshal.Comment = subject.Comment
+
+	marshaled, err := json.Marshal(toMarshal)
+	if err != nil {
+		return err
+	}
+
+	err = dw.Stash(ctx, subject.ID(), marshaled)
+	if err != nil {
+		return err
+	}
+
+	var content io.ReadCloser
+	content, err = subject.Contents(ctx)
+	return dw.StashReadCloser(ctx, toMarshal.ContentID, content)
 }

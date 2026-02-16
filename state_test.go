@@ -61,7 +61,7 @@ func getTestStateIDDeterministic(ctx context.Context) func(*testing.T) {
 	}
 }
 
-func getTestStateIDLock(ctx context.Context) func(*testing.T) {
+func getTestStateIDLock(_ context.Context) func(*testing.T) {
 	return func(t *testing.T) {
 		testCases := []struct {
 			Subject  envelopes.State

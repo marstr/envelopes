@@ -32,6 +32,9 @@ type Writer interface {
 	// WriteBudget persists a Budget, and all objects composing it, in durable storage where it can be retrieved later.
 	WriteBudget(ctx context.Context, subject envelopes.Budget) error
 
-	// WriteAccounts persist an instance of Accounts in durable storage where it can be retrieved later.
+	// WriteAccounts persists an instance of Accounts in durable storage where it can be retrieved later.
 	WriteAccounts(ctx context.Context, subject envelopes.Accounts) error
+
+	// WriteAttachment persists an instance of Attachment in durable storage where it can be retrieved later. This should include reading the Contents and storing them durably.
+	WriteAttachment(ctx context.Context, subject envelopes.Attachment) error
 }
