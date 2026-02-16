@@ -3,6 +3,7 @@ package json
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
@@ -126,4 +127,8 @@ func (dw WriterV2) WriteAccounts(ctx context.Context, subject envelopes.Accounts
 	}
 
 	return dw.Stash(ctx, subject.ID(), marshaled)
+}
+
+func (dw WriterV2) WriteAttachment(ctx context.Context, subject envelopes.Attachment) error {
+	return fmt.Errorf("Attachment %s is unsupported in JSONV2 format", subject.ID())
 }

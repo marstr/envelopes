@@ -27,17 +27,18 @@ type (
 	Transaction = TransactionV3
 	// TransactionV3 is a copy of envelopes.Transaction for ORM purposes.
 	TransactionV3 struct {
-		State       envelopes.ID   `json:"state"`
-		PostedTime  time.Time      `json:"postedTime"`
-		ActualTime  time.Time      `json:"actualTime,omitempty"`
-		EnteredTime time.Time      `json:"enteredTime,omitempty"`
-		Amount      BalanceV3      `json:"amount"`
-		Merchant    string         `json:"merchant"`
-		Comment     string         `json:"comment"`
-		Committer   UserV3         `json:"committer,omitempty"`
-		RecordId    BankRecordIDV3 `json:"recordId,omitempty"`
-		Reverts     []envelopes.ID `json:"reverts,omitempty"`
-		Parent      []envelopes.ID `json:"parent"`
+		State       envelopes.ID            `json:"state"`
+		PostedTime  time.Time               `json:"postedTime"`
+		ActualTime  time.Time               `json:"actualTime,omitempty"`
+		EnteredTime time.Time               `json:"enteredTime,omitempty"`
+		Amount      BalanceV3               `json:"amount"`
+		Merchant    string                  `json:"merchant"`
+		Comment     string                  `json:"comment"`
+		Committer   UserV3                  `json:"committer,omitempty"`
+		RecordId    BankRecordIDV3          `json:"recordId,omitempty"`
+		Reverts     []envelopes.ID          `json:"reverts,omitempty"`
+		Parent      []envelopes.ID          `json:"parent"`
+		Attachments map[string]envelopes.ID `json:"attachments,omitempty"`
 	}
 
 	State = StateV3
@@ -61,6 +62,13 @@ type (
 	Accounts = AccountsV3
 	// AccountsV3 is a copy of envelopes.Accounts for ORM purposes.
 	AccountsV3 map[string]BalanceV3
+
+	Attachment   = AttachmentV3
+	AttachmentV3 struct {
+		Extension string       `json:"extension"`
+		ContentID envelopes.ID `json:"contentId"`
+		Comment   string       `json:"comment,omitempty"`
+	}
 )
 
 var jsonNumberPatternV3 = regexp.MustCompile(`^(?P<sign>-?)(?P<number>\d+)(?:\.(?P<fraction>\d+))?(?:[eE](?P<exponent>[\-+]?\d+))?$`)

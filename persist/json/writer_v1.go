@@ -135,3 +135,7 @@ func (dw WriterV1) WriteAccounts(ctx context.Context, subject envelopes.Accounts
 
 	return dw.Stash(ctx, subject.ID(), marshaled)
 }
+
+func (dw WriterV1) WriteAttachment(ctx context.Context, subject envelopes.Attachment) error {
+	return fmt.Errorf("Attachment %s is unsupported in JSONV1 format", subject.ID())
+}

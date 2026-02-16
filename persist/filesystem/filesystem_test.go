@@ -17,6 +17,7 @@ package filesystem_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -179,7 +180,76 @@ func TestFileSystem_WriteBranch(t *testing.T) {
 	}
 }
 
+func TestFileSystem_RoundTrip_Attachment(t *testing.T) {
+	var ctx context.Context
+	deadline, ok := t.Deadline()
+	if ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline)
+		defer cancel()
+	}
+
+	fishingRegulations := envelopes.Attachment{
+		Extension: "pdf",
+		Comment:   "\"There's always a bigger fish\" -Qui-Gon Jinn",
+		Contents: func(ctx context.Context) (io.ReadCloser, error) {
+			return os.Open("../../2025ORFW.pdf")
+		},
+	}
+
+	var err error
+	fishingRegulations.ContentID, err = fishingRegulations.ContentSHA1(ctx)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	testDir := filepath.Join("testdata", "test", "filesystem", "roundtripAttachment")
+	err = os.MkdirAll(testDir, os.ModePerm)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer func() {
+		err := os.RemoveAll(testDir)
+		if err != nil {
+			t.Logf("unable to delete %q: %v", testDir, err)
+		}
+	}()
+
+	repo, err := filesystem.OpenRepository(ctx, testDir)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	err = repo.WriteAttachment(ctx, fishingRegulations)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	var rehydrated envelopes.Attachment
+	err = repo.LoadAttachment(ctx, fishingRegulations.ID(), &rehydrated)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	var got envelopes.ID
+	got, err = rehydrated.ContentSHA1(ctx)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if !got.Equal(fishingRegulations.ContentID) {
+		t.Error("actual contents of the rehydrated file does not match original")
+	}
+}
+
 func TestFileSystem_TransactionRoundTrip(t *testing.T) {
+	var err error
 	var ctx context.Context
 	deadline, ok := t.Deadline()
 	if ok {
@@ -188,6 +258,20 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 		defer cancel()
 	} else {
 		ctx = context.Background()
+	}
+
+	fishingRegulations := envelopes.Attachment{
+		Extension: "pdf",
+		Comment:   "\"There's always a bigger fish\" -Qui-Gon Jinn",
+		Contents: func(ctx context.Context) (io.ReadCloser, error) {
+			return os.Open("../../2025ORFW.pdf")
+		},
+	}
+
+	fishingRegulations.ContentID, err = fishingRegulations.ContentSHA1(ctx)
+	if err != nil {
+		t.Error(err)
+		return
 	}
 
 	testCases := []envelopes.Transaction{
@@ -223,10 +307,28 @@ func TestFileSystem_TransactionRoundTrip(t *testing.T) {
 				},
 			},
 		},
+		{
+			State: &envelopes.State{
+				Budget: &envelopes.Budget{
+					Balance: envelopes.Balance{"USD": big.NewRat(100, 1)},
+					Children: map[string]*envelopes.Budget{
+						"groceries": {
+							Balance: envelopes.Balance{"USD": big.NewRat(15000, 1)},
+						},
+					},
+				},
+				Accounts: envelopes.Accounts{
+					"checking": envelopes.Balance{"USD": big.NewRat(15100, 1)},
+				},
+			},
+			Attachments: map[string]envelopes.Attachment{
+				"2025ODFW.pdf": fishingRegulations,
+			},
+		},
 	}
 
 	testDir := filepath.Join("testdata", "test", "filesystem", "roundtrip")
-	err := os.MkdirAll(testDir, os.ModePerm)
+	err = os.MkdirAll(testDir, os.ModePerm)
 	if err != nil {
 		t.Error(err)
 		return

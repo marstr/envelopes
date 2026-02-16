@@ -3,6 +3,7 @@ package json
 import (
 	"context"
 	"encoding/json"
+	"io"
 
 	"github.com/marstr/envelopes"
 	"github.com/marstr/envelopes/persist"
@@ -51,6 +52,16 @@ func (dl LoaderV3) LoadTransaction(ctx context.Context, id envelopes.ID, toLoad 
 	err = dl.loopback.LoadState(ctx, unmarshaled.State, &state)
 	if err != nil {
 		return err
+	}
+
+	toLoad.Attachments = make(map[string]envelopes.Attachment, len(unmarshaled.Attachments))
+	for k, v := range unmarshaled.Attachments {
+		var attachment envelopes.Attachment
+		err = dl.loopback.LoadAttachment(ctx, v, &attachment)
+		if err != nil {
+			return err
+		}
+		toLoad.Attachments[k] = attachment
 	}
 
 	toLoad.State = &state
@@ -143,6 +154,28 @@ func (dl LoaderV3) LoadAccounts(ctx context.Context, id envelopes.ID, toLoad *en
 	*toLoad = make(envelopes.Accounts, len(unmarshaled))
 	for k, v := range unmarshaled {
 		(*toLoad)[k] = envelopes.Balance(v)
+	}
+
+	return nil
+}
+
+func (dl LoaderV3) LoadAttachment(ctx context.Context, id envelopes.ID, toLoad *envelopes.Attachment) error {
+	marshaled, err := dl.Fetch(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	var unmarshaled AttachmentV3
+	err = json.Unmarshal(marshaled, &unmarshaled)
+	if err != nil {
+		return err
+	}
+
+	toLoad.Comment = unmarshaled.Comment
+	toLoad.ContentID = unmarshaled.ContentID
+	toLoad.Extension = unmarshaled.Extension
+	toLoad.Contents = func(ctx2 context.Context) (io.ReadCloser, error) {
+		return dl.FetchReadCloser(ctx2, toLoad.ContentID)
 	}
 
 	return nil

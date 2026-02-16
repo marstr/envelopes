@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 )
@@ -35,6 +36,7 @@ type Transaction struct {
 	RecordID    BankRecordID
 	Parents     []ID
 	Reverts     []ID
+	Attachments map[string]Attachment
 }
 
 // ID fetches a SHA1 hash of this object that will uniquely identify it.
@@ -117,6 +119,16 @@ func (t Transaction) Equal(other Transaction) bool {
 		}
 	}
 
+	if len(t.Attachments) != len(other.Attachments) {
+		return false
+	}
+
+	for k, v := range t.Attachments {
+		if !v.Equal(other.Attachments[k]) {
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -183,6 +195,27 @@ func (t Transaction) MarshalText() ([]byte, error) {
 			return nil, err
 		}
 	}
+
+	if len(t.Attachments) > 0 {
+		keys := make([]string, 0, len(t.Attachments))
+		for k := range t.Attachments {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+
+		_, err = fmt.Fprintln(identityBuilder, "attachments")
+		if err != nil {
+			return nil, err
+		}
+
+		for _, k := range keys {
+			_, err = fmt.Fprintf(identityBuilder, "\t%s %s\n", k, t.Attachments[k].ID())
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	if len(t.Reverts) > 0 {
 		strRevs := make([]string, len(t.Reverts))
 		for i := range t.Reverts {
