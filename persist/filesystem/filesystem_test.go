@@ -469,7 +469,7 @@ func TestFileSystem_StreamingRoundTrip(t *testing.T) {
 	t.Run("StashAndFetchReadCloser", func(t *testing.T) {
 		// Create a ReadCloser from the marshaled data
 		testContent := string(marshaled)
-		rc := io.NopCloser(io.Reader(&simpleReader{data: []byte(testContent)}))
+		rc := io.NopCloser(&simpleReader{data: []byte(testContent)})
 
 		// Stash using StashReadCloser
 		err := repo.FileSystem.StashReadCloser(ctx, testTransaction.ID(), rc)
