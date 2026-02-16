@@ -23,7 +23,7 @@ import (
 const (
 	// DefaultBranch is the name of the ref that will be used to to create a repository should no other branch name be
 	// specified.
-	DefaultBranch = "master"
+	DefaultBranch = "main"
 )
 
 // BranchReader indicates that a type is capable of discovering the envelopes.Transaction that a branch points at.
