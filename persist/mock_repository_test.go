@@ -39,7 +39,7 @@ func NewMockRepository(branchCapacity uint, transactionCapacity uint) *MockRepos
 	}
 }
 
-func (mb MockRepository) ReadBranch(_ context.Context, name string) (envelopes.ID, error) {
+func (mb *MockRepository) ReadBranch(_ context.Context, name string) (envelopes.ID, error) {
 	retval, ok := mb.branches[name]
 	if !ok {
 		return envelopes.ID{}, errors.New("no such branch")
@@ -47,12 +47,12 @@ func (mb MockRepository) ReadBranch(_ context.Context, name string) (envelopes.I
 	return retval, nil
 }
 
-func (mb MockRepository) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
+func (mb *MockRepository) WriteBranch(_ context.Context, name string, id envelopes.ID) error {
 	mb.branches[name] = id
 	return nil
 }
 
-func (mb MockRepository) ListBranches(ctx context.Context) (<-chan string, error) {
+func (mb *MockRepository) ListBranches(ctx context.Context) (<-chan string, error) {
 	retval := make(chan string)
 
 	go func() {
@@ -70,7 +70,7 @@ func (mb MockRepository) ListBranches(ctx context.Context) (<-chan string, error
 	return retval, nil
 }
 
-func (mb MockRepository) Current(_ context.Context) (RefSpec, error) {
+func (mb *MockRepository) Current(_ context.Context) (RefSpec, error) {
 	return mb.current, nil
 }
 
@@ -88,7 +88,7 @@ func (mb *MockRepository) SetCurrent(_ context.Context, current RefSpec) error {
 	return nil
 }
 
-func (mb MockRepository) ReadTag(_ context.Context, name string) (envelopes.ID, error) {
+func (mb *MockRepository) ReadTag(_ context.Context, name string) (envelopes.ID, error) {
 	retval, ok := mb.tags[name]
 	if !ok {
 		return envelopes.ID{}, errors.New("no such tag")
@@ -96,12 +96,12 @@ func (mb MockRepository) ReadTag(_ context.Context, name string) (envelopes.ID, 
 	return retval, nil
 }
 
-func (mb MockRepository) WriteTag(_ context.Context, name string, id envelopes.ID) error {
+func (mb *MockRepository) WriteTag(_ context.Context, name string, id envelopes.ID) error {
 	mb.tags[name] = id
 	return nil
 }
 
-func (mb MockRepository) ListTags(ctx context.Context) (<-chan string, error) {
+func (mb *MockRepository) ListTags(ctx context.Context) (<-chan string, error) {
 	retval := make(chan string)
 
 	go func() {
