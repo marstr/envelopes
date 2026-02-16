@@ -1,8 +1,10 @@
 package json
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"math/big"
 	"os"
 	"testing"
@@ -166,9 +168,31 @@ func (md mockDisk) Stash(_ context.Context, id envelopes.ID, payload []byte) err
 	return nil
 }
 
+func (md mockDisk) StashReadCloser(_ context.Context, id envelopes.ID, payload io.ReadCloser) error {
+	buffer, err := io.ReadAll(payload)
+	if err != nil {
+		return err
+	}
+
+	err = payload.Close()
+	if err != nil {
+		return err
+	}
+
+	md[id] = buffer
+	return nil
+}
+
 func (md mockDisk) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
 	if val, ok := md[id]; ok {
 		return val, nil
 	}
 	return []byte{}, persist.ErrObjectNotFound(id)
+}
+
+func (md mockDisk) FetchReadCloser(_ context.Context, id envelopes.ID) (io.ReadCloser, error) {
+	if val, ok := md[id]; ok {
+		return io.NopCloser(bytes.NewReader(val)), nil
+	}
+	return nil, persist.ErrObjectNotFound(id)
 }

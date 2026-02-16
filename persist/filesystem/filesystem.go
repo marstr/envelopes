@@ -20,6 +20,7 @@ package filesystem
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,6 +88,19 @@ func (fs FileSystem) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
 	return os.ReadFile(p)
 }
 
+// FetchReadCloser returns a ReadCloser that can be used to read the contents of a file
+// holding a marshaled IDer.
+//
+// See Also:
+// - FileSystem.StashReadCloser
+func (fs FileSystem) FetchReadCloser(_ context.Context, id envelopes.ID) (io.ReadCloser, error) {
+	p, err := fs.path(id)
+	if err != nil {
+		return nil, err
+	}
+	return os.Open(p)
+}
+
 // Stash commits the provided payload to disk at a place that it can retreive again if asked for the ID specified here.
 //
 // See Also:
@@ -103,6 +117,36 @@ func (fs FileSystem) Stash(_ context.Context, id envelopes.ID, payload []byte) e
 	}
 
 	return os.WriteFile(loc, payload, fs.getCreatePermissions())
+}
+
+// StashReadCloser commits the provided payload to disk by streaming from the given ReadCloser.
+// Unlike Stash, which accepts the full payload as a byte slice, this method does not buffer the
+// entire contents in memory.
+//
+// See Also:
+// - FileSystem.FetchReadCloser
+func (fs FileSystem) StashReadCloser(_ context.Context, id envelopes.ID, payload io.ReadCloser) error {
+	loc, err := fs.path(id)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(filepath.Dir(loc), fs.getCreatePermissions()|0110|os.ModeDir)
+	if err != nil {
+		return err
+	}
+
+	var handle io.WriteCloser
+	handle, err = os.Create(loc)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+
+	_, err = io.Copy(handle, payload)
+	payload.Close()
+
+	return err
 }
 
 // currentPath fetches the name of the file containing the ID to the most up-to-date Transaction.
