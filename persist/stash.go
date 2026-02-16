@@ -2,6 +2,8 @@ package persist
 
 import (
 	"context"
+	"io"
+
 	"github.com/marstr/envelopes"
 )
 
@@ -9,4 +11,5 @@ import (
 // object, it is able to place them.
 type Stasher interface {
 	Stash(ctx context.Context, id envelopes.ID, payload []byte) error
+	StashReadCloser(ctx context.Context, id envelopes.ID, payload io.ReadCloser) error
 }

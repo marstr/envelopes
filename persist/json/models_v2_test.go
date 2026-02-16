@@ -3,6 +3,7 @@ package json
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"math/big"
 	"os"
 	"testing"
@@ -163,6 +164,21 @@ type mockDisk map[envelopes.ID][]byte
 
 func (md mockDisk) Stash(_ context.Context, id envelopes.ID, payload []byte) error {
 	md[id] = payload
+	return nil
+}
+
+func (md mockDisk) StashReadCloser(_ context.Context, id envelopes.ID, payload io.ReadCloser) error {
+	buffer, err := io.ReadAll(payload)
+	if err != nil {
+		return err
+	}
+
+	err = payload.Close()
+	if err != nil {
+		return err
+	}
+
+	md[id] = buffer
 	return nil
 }
 

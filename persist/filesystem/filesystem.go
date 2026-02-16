@@ -20,6 +20,7 @@ package filesystem
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -103,6 +104,30 @@ func (fs FileSystem) Stash(_ context.Context, id envelopes.ID, payload []byte) e
 	}
 
 	return os.WriteFile(loc, payload, fs.getCreatePermissions())
+}
+
+func (fs FileSystem) StashReadCloser(ctx context.Context, id envelopes.ID, payload io.ReadCloser) error {
+	loc, err := fs.path(id)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(filepath.Dir(loc), fs.getCreatePermissions()|0110|os.ModeDir)
+	if err != nil {
+		return err
+	}
+
+	var handle io.WriteCloser
+	handle, err = os.Create(loc)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+
+	_, err = io.Copy(handle, payload)
+	payload.Close()
+
+	return err
 }
 
 // currentPath fetches the name of the file containing the ID to the most up-to-date Transaction.

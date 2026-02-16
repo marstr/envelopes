@@ -3,6 +3,7 @@ package json_test
 import (
 	"context"
 	"fmt"
+	"io"
 
 	"github.com/marstr/collection/v2"
 	"github.com/marstr/envelopes"
@@ -24,6 +25,21 @@ func NewMockFilesystemWithCapacity(cap uint) *MockFilesystem {
 
 func (mf MockFilesystem) Stash(ctx context.Context, id envelopes.ID, payload []byte) error {
 	mf.Put(id, payload)
+	return nil
+}
+
+func (mf MockFilesystem) StashReadCloser(ctx context.Context, id envelopes.ID, payload io.ReadCloser) error {
+	buffer, err := io.ReadAll(payload)
+	if err != nil {
+		return err
+	}
+
+	err = payload.Close()
+	if err != nil {
+		return err
+	}
+
+	mf.Put(id, buffer)
 	return nil
 }
 
