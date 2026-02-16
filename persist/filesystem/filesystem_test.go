@@ -379,7 +379,7 @@ func TestFileSystem_ListBranches(t *testing.T) {
 		location string
 		expected []string
 	}{
-		{filepath.Join(".", "testdata", "test4", ".baronial"), []string{"backup", "master"}},
+		{filepath.Join(".", "testdata", "test4", ".baronial"), []string{"backup", "main"}},
 		{filepath.Join(".", "testdata", "test3", ".baronial"), []string{}},
 	}
 
