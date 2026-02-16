@@ -17,6 +17,7 @@ package filesystem_test
 import (
 	"context"
 	"fmt"
+	"io"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -319,6 +320,199 @@ func TestFileSystem_ListBranches(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFileSystem_FetchReadCloser(t *testing.T) {
+	var ctx context.Context
+	deadline, ok := t.Deadline()
+	if ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+
+	// Create a temporary directory for testing
+	testDir := filepath.Join("testdata", "test", "filesystem", "fetchreadcloser")
+	err := os.MkdirAll(testDir, os.ModePerm)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer func() {
+		err := os.RemoveAll(testDir)
+		if err != nil {
+			t.Logf("unable to delete %q: %v", testDir, err)
+		}
+	}()
+
+	// Create a test transaction to store
+	testTransaction := envelopes.Transaction{
+		Comment: "Test transaction for FetchReadCloser",
+		Amount:  envelopes.Balance{"USD": big.NewRat(12345, 100)},
+	}
+
+	repo, err := filesystem.OpenRepository(ctx, testDir)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Write the transaction using the standard method
+	err = repo.WriteTransaction(ctx, testTransaction)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Now test FetchReadCloser
+	t.Run("ReadCloserSuccess", func(t *testing.T) {
+		rc, err := repo.FileSystem.FetchReadCloser(ctx, testTransaction.ID())
+		if err != nil {
+			t.Errorf("FetchReadCloser failed: %v", err)
+			return
+		}
+		defer rc.Close()
+
+		// Read all contents from the ReadCloser using io.ReadAll
+		gotContent, err := io.ReadAll(rc)
+		if err != nil {
+			t.Errorf("Failed to read from ReadCloser: %v", err)
+			return
+		}
+
+		// Compare with what Fetch would return
+		expectedContent, err := repo.FileSystem.Fetch(ctx, testTransaction.ID())
+		if err != nil {
+			t.Errorf("Failed to fetch expected content: %v", err)
+			return
+		}
+
+		// Verify content matches
+		if string(gotContent) != string(expectedContent) {
+			t.Errorf("Content mismatch.\ngot:  %q\nwant: %q", string(gotContent), string(expectedContent))
+		}
+	})
+
+	t.Run("CloseWithoutError", func(t *testing.T) {
+		rc, err := repo.FileSystem.FetchReadCloser(ctx, testTransaction.ID())
+		if err != nil {
+			t.Errorf("FetchReadCloser failed: %v", err)
+			return
+		}
+
+		// Close the ReadCloser
+		err = rc.Close()
+		if err != nil {
+			t.Errorf("Close failed: %v", err)
+		}
+	})
+
+	t.Run("NonExistentFile", func(t *testing.T) {
+		// Create an ID that doesn't exist
+		nonExistentTransaction := envelopes.Transaction{
+			Comment: "This transaction was never written",
+		}
+
+		_, err := repo.FileSystem.FetchReadCloser(ctx, nonExistentTransaction.ID())
+		if err == nil {
+			t.Error("Expected error for non-existent file, got nil")
+		}
+	})
+}
+
+func TestFileSystem_StreamingRoundTrip(t *testing.T) {
+	var ctx context.Context
+	deadline, ok := t.Deadline()
+	if ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+
+	// Create a temporary directory for testing
+	testDir := filepath.Join("testdata", "test", "filesystem", "streamingroundtrip")
+	err := os.MkdirAll(testDir, os.ModePerm)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	defer func() {
+		err := os.RemoveAll(testDir)
+		if err != nil {
+			t.Logf("unable to delete %q: %v", testDir, err)
+		}
+	}()
+
+	repo, err := filesystem.OpenRepository(ctx, testDir)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Create a test transaction
+	testTransaction := envelopes.Transaction{
+		Comment: "Streaming round-trip test transaction",
+		Amount:  envelopes.Balance{"USD": big.NewRat(54321, 100)},
+	}
+
+	// Marshal the transaction to bytes
+	marshaled, err := testTransaction.MarshalText()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Run("StashAndFetchReadCloser", func(t *testing.T) {
+		// Create a ReadCloser from the marshaled data
+		testContent := string(marshaled)
+		rc := io.NopCloser(io.Reader(&simpleReader{data: []byte(testContent)}))
+
+		// Stash using StashReadCloser
+		err := repo.FileSystem.StashReadCloser(ctx, testTransaction.ID(), rc)
+		if err != nil {
+			t.Errorf("StashReadCloser failed: %v", err)
+			return
+		}
+
+		// Fetch using FetchReadCloser
+		fetchedRC, err := repo.FileSystem.FetchReadCloser(ctx, testTransaction.ID())
+		if err != nil {
+			t.Errorf("FetchReadCloser failed: %v", err)
+			return
+		}
+		defer fetchedRC.Close()
+
+		// Read the fetched content
+		gotContent, err := io.ReadAll(fetchedRC)
+		if err != nil {
+			t.Errorf("Failed to read fetched content: %v", err)
+			return
+		}
+
+		// Verify the content matches
+		if string(gotContent) != testContent {
+			t.Errorf("Round-trip content mismatch.\ngot:  %q\nwant: %q", string(gotContent), testContent)
+		}
+	})
+}
+
+// simpleReader is a simple reader implementation for testing
+type simpleReader struct {
+	data []byte
+	pos  int
+}
+
+func (r *simpleReader) Read(p []byte) (n int, err error) {
+	if r.pos >= len(r.data) {
+		return 0, io.EOF
+	}
+	n = copy(p, r.data[r.pos:])
+	r.pos += n
+	return n, nil
 }
 
 func BenchmarkFileSystem_RoundTrip(b *testing.B) {
