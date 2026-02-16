@@ -223,3 +223,58 @@ func TestBareResolve(t *testing.T) {
 		})
 	}
 }
+
+func TestResolve_Tag(t *testing.T) {
+const primaryBranch = DefaultBranch
+const tagName = "v1.0.0"
+
+ctx := context.Background()
+
+mockRepo := NewMockRepository(2, 2)
+
+transaction := envelopes.Transaction{
+Comment: "Release 1.0.0",
+}
+tid := transaction.ID()
+err := mockRepo.WriteTransaction(ctx, transaction)
+if err != nil {
+t.Error(err)
+return
+}
+
+err = mockRepo.WriteBranch(ctx, primaryBranch, tid)
+if err != nil {
+t.Error(err)
+return
+}
+
+err = mockRepo.WriteTag(ctx, tagName, tid)
+if err != nil {
+t.Error(err)
+return
+}
+
+testCases := []struct {
+subject  RefSpec
+expected envelopes.ID
+}{
+{tagName, tid},
+{primaryBranch, tid},
+{RefSpec(tid.String()), tid},
+}
+
+for _, tc := range testCases {
+t.Run(fmt.Sprintf("%q", string(tc.subject)), func(t *testing.T) {
+got, err := Resolve(ctx, mockRepo, tc.subject)
+if err != nil {
+t.Error(err)
+return
+}
+
+if !got.Equal(tc.expected) {
+t.Logf("\n\tgot:  %q\n\twant: %q", got, tc.expected)
+t.Fail()
+}
+})
+}
+}
