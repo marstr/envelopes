@@ -278,3 +278,41 @@ t.Fail()
 })
 }
 }
+
+func TestBareResolve_TagWhenNoBranch(t *testing.T) {
+// This test ensures tags are resolved even when a branch with the same name doesn't exist
+const tagName = "release"
+
+ctx := context.Background()
+
+mockRepo := NewMockRepository(2, 2)
+
+transaction := envelopes.Transaction{
+Comment: "Release transaction",
+}
+tid := transaction.ID()
+err := mockRepo.WriteTransaction(ctx, transaction)
+if err != nil {
+t.Error(err)
+return
+}
+
+// Create only a tag, no branch with this name
+err = mockRepo.WriteTag(ctx, tagName, tid)
+if err != nil {
+t.Error(err)
+return
+}
+
+// Verify tag can be resolved
+got, err := BareResolve(ctx, mockRepo, RefSpec(tagName))
+if err != nil {
+t.Error(err)
+return
+}
+
+if !got.Equal(tid) {
+t.Logf("\n\tgot:  %q\n\twant: %q", got, tid)
+t.Fail()
+}
+}

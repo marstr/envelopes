@@ -30,10 +30,10 @@ type MockRepository struct {
 	Cache
 }
 
-func NewMockRepository(branchCapacity uint, transactionCapacity uint) *MockRepository {
+func NewMockRepository(refCapacity uint, transactionCapacity uint) *MockRepository {
 	return &MockRepository{
-		branches: make(map[string]envelopes.ID, branchCapacity),
-		tags:     make(map[string]envelopes.ID, branchCapacity),
+		branches: make(map[string]envelopes.ID, refCapacity),
+		tags:     make(map[string]envelopes.ID, refCapacity),
 		current:  "",
 		Cache:    *NewCache(transactionCapacity),
 	}
