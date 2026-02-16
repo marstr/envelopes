@@ -463,3 +463,99 @@ func BenchmarkFileSystem_RoundTrip(b *testing.B) {
 	}
 	b.StopTimer()
 }
+
+func TestFileSystem_WriteTag(t *testing.T) {
+	var ctx context.Context
+	deadline, ok := t.Deadline()
+	if ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithDeadline(context.Background(), deadline)
+		defer cancel()
+	} else {
+		ctx = context.Background()
+	}
+
+	testLoc, err := os.MkdirTemp("", "envelopes")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	subject := filesystem.FileSystem{
+		Root: testLoc,
+	}
+
+	expected := envelopes.Transaction{
+		Comment: "Tags are like branches, but they don't advance or anything.",
+	}.ID()
+
+	err = subject.WriteTag(ctx, "v1.0.0", expected)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	got, err := subject.ReadTag(ctx, "v1.0.0")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if got != expected {
+		t.Logf("\ngot:  %X\nwant: %X", got, expected)
+		t.Fail()
+	}
+}
+
+func TestFileSystem_ListTags(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Second)
+	defer cancel()
+
+	testCases := []struct {
+		location string
+		expected []string
+	}{
+		{filepath.Join(".", "testdata", "test5", ".baronial"), []string{"v1.0.0", "v1.1.0"}},
+		{filepath.Join(".", "testdata", "test3", ".baronial"), []string{}},
+	}
+
+	subject := &filesystem.FileSystem{}
+
+	for _, tc := range testCases {
+		t.Run(tc.location, func(t *testing.T) {
+			ctx2, cancel2 := context.WithTimeout(ctx, 100*time.Second)
+			defer cancel2()
+
+			subject.Root = tc.location
+
+			tags, err := subject.ListTags(ctx2)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			i := 0
+			for got := range tags {
+
+				if i >= len(tc.expected) {
+					t.Logf("Too many elements encountered, example: %s", got)
+					t.Fail()
+					return
+				}
+
+				if got != tc.expected[i] {
+					t.Logf("\n\tat position %d\n\tgot:  %q\n\twant: %q", i, got, tc.expected[i])
+					t.Fail()
+					return
+				}
+				i++
+			}
+
+			if i != len(tc.expected) {
+				t.Logf("Too few results, got %d want %d", i, len(tc.expected))
+				t.Fail()
+			}
+		})
+	}
+}
+

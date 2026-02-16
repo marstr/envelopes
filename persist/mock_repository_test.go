@@ -25,6 +25,7 @@ import (
 
 type MockRepository struct {
 	branches map[string]envelopes.ID
+	tags     map[string]envelopes.ID
 	current  RefSpec
 	Cache
 }
@@ -32,6 +33,7 @@ type MockRepository struct {
 func NewMockRepository(branchCapacity uint, transactionCapacity uint) *MockRepository {
 	return &MockRepository{
 		branches: make(map[string]envelopes.ID, branchCapacity),
+		tags:     make(map[string]envelopes.ID, branchCapacity),
 		current:  "",
 		Cache:    *NewCache(transactionCapacity),
 	}
@@ -85,3 +87,35 @@ func (mb *MockRepository) SetCurrent(_ context.Context, current RefSpec) error {
 	mb.current = current
 	return nil
 }
+
+func (mb MockRepository) ReadTag(_ context.Context, name string) (envelopes.ID, error) {
+	retval, ok := mb.tags[name]
+	if !ok {
+		return envelopes.ID{}, errors.New("no such tag")
+	}
+	return retval, nil
+}
+
+func (mb MockRepository) WriteTag(_ context.Context, name string, id envelopes.ID) error {
+	mb.tags[name] = id
+	return nil
+}
+
+func (mb MockRepository) ListTags(ctx context.Context) (<-chan string, error) {
+	retval := make(chan string)
+
+	go func() {
+		defer close(retval)
+		for k := range mb.tags {
+			select {
+			case <-ctx.Done():
+				return
+			case retval <- k:
+				// Intentionally Left Blank
+			}
+		}
+	}()
+
+	return retval, nil
+}
+

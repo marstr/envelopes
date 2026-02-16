@@ -254,3 +254,83 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 
 	return castResults, nil
 }
+
+func (fs FileSystem) tagPath(name string) string {
+	return filepath.Join(fs.Root, "refs", "tags", name)
+}
+
+// ReadTag fetches the ID that a tag is pointing at.
+func (fs FileSystem) ReadTag(_ context.Context, name string) (retval envelopes.ID, err error) {
+	tagLoc := fs.tagPath(name)
+	handle, err := os.Open(tagLoc)
+	if err != nil {
+		return
+	}
+	defer handle.Close()
+
+	var contents [2 * cap(retval)]byte
+	var n int
+	n, err = handle.Read(contents[:])
+	if err != nil {
+		return
+	}
+
+	if expected := cap(contents); n != expected {
+		err = fmt.Errorf(
+			"%s was not long enough to be a candidate for pointing to a Transaction ID (want: %v got: %v)",
+			tagLoc,
+			expected,
+			n)
+		return
+	}
+
+	err = retval.UnmarshalText(contents[:])
+	return
+}
+
+// WriteTag sets a tag to be pointing at a particular ID.
+func (fs FileSystem) WriteTag(_ context.Context, name string, id envelopes.ID) error {
+	tagLoc := fs.tagPath(name)
+
+	err := os.MkdirAll(filepath.Dir(tagLoc), fs.getCreatePermissions()|0110|os.ModeDir)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(tagLoc, []byte(id.String()), fs.getCreatePermissions())
+}
+
+// ListTags fetches the distinct names of the tags that exist in a repository.
+func (fs FileSystem) ListTags(ctx context.Context) (<-chan string, error) {
+	absRoot, err := filepath.Abs(filepath.Dir(fs.tagPath("any_tag_name")))
+	if err != nil {
+		return nil, err
+	}
+
+	dir := collection.Directory{
+		Location: absRoot,
+		Options:  collection.DirectoryOptionsExcludeDirectories | collection.DirectoryOptionsRecursive,
+	}
+
+	rawResults := dir.Enumerate(ctx)
+
+	prefix := absRoot + "/"
+	prefix = strings.Replace(prefix, "\\", "/", -1)
+	castResults := make(chan string)
+	go func() {
+		defer close(castResults)
+
+		for entry := range rawResults {
+			entry = strings.Replace(entry, "\\", "/", -1)
+			trimmed := strings.TrimPrefix(entry, prefix)
+			select {
+			case <-ctx.Done():
+				return
+			case castResults <- trimmed:
+				// Intentionally Left Blank
+			}
+		}
+	}()
+
+	return castResults, nil
+}
