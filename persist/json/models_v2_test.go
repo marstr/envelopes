@@ -1,6 +1,7 @@
 package json
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
@@ -187,4 +188,11 @@ func (md mockDisk) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
 		return val, nil
 	}
 	return []byte{}, persist.ErrObjectNotFound(id)
+}
+
+func (md mockDisk) FetchReadCloser(_ context.Context, id envelopes.ID) (io.ReadCloser, error) {
+	if val, ok := md[id]; ok {
+		return io.NopCloser(bytes.NewReader(val)), nil
+	}
+	return nil, persist.ErrObjectNotFound(id)
 }

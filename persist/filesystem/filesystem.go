@@ -88,6 +88,15 @@ func (fs FileSystem) Fetch(_ context.Context, id envelopes.ID) ([]byte, error) {
 	return os.ReadFile(p)
 }
 
+// FetchReadCloser creates a file handle that can be used to read the contents of a file holding a marshaled IDer.
+func (fs FileSystem) FetchReadCloser(_ context.Context, id envelopes.ID) (io.ReadCloser, error) {
+	p, err := fs.path(id)
+	if err != nil {
+		return nil, err
+	}
+	return os.Open(p)
+}
+
 // Stash commits the provided payload to disk at a place that it can retreive again if asked for the ID specified here.
 //
 // See Also:
