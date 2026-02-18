@@ -20,14 +20,22 @@ import (
 	"github.com/marstr/envelopes"
 )
 
-// TagReader indicates that a type is capable of discovering the envelopes.Transaction that a tag points at.
-type TagReader interface {
-	ReadTag(ctx context.Context, name string) (envelopes.ID, error)
+// Tag represents an immutable marker in the transaction log with an optional comment.
+type Tag struct {
+	// ID is the transaction ID that this tag points to.
+	ID envelopes.ID
+	// Comment is an optional message associated with the tag.
+	Comment string
 }
 
-// TagWriter indicates that a type is capable of setting the envelopes.Transaction that a tag points at.
+// TagReader indicates that a type is capable of discovering the Tag information.
+type TagReader interface {
+	ReadTag(ctx context.Context, name string) (Tag, error)
+}
+
+// TagWriter indicates that a type is capable of setting a Tag.
 type TagWriter interface {
-	WriteTag(ctx context.Context, name string, id envelopes.ID) error
+	WriteTag(ctx context.Context, name string, tag Tag) error
 }
 
 // TagReaderWriter indicates that a type has both the capabilities of a TagReader and TagWriter.

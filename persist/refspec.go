@@ -146,7 +146,11 @@ func resolveBranchRefSpec(ctx context.Context, reader BranchReader, subject RefS
 
 // resolveTagRefSpec finds the ID of the Transaction a tag is pointing to.
 func resolveTagRefSpec(ctx context.Context, reader TagReader, subject RefSpec) (envelopes.ID, error) {
-	return reader.ReadTag(ctx, string(subject))
+	tag, err := reader.ReadTag(ctx, string(subject))
+	if err != nil {
+		return envelopes.ID{}, err
+	}
+	return tag.ID, nil
 }
 
 // resolveCaretRefSpec finds the parent ID of the most recent Transaction.

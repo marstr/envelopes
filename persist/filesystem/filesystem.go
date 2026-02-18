@@ -255,41 +255,45 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 	return castResults, nil
 }
 
+// refsDir returns the absolute path to a refs subdirectory (e.g., "heads" or "tags").
+func (fs FileSystem) refsDir(subdir string) (string, error) {
+	return filepath.Abs(filepath.Join(fs.Root, "refs", subdir))
+}
+
 func (fs FileSystem) tagPath(name string) string {
 	return filepath.Join(fs.Root, "refs", "tags", name)
 }
 
-// ReadTag fetches the ID that a tag is pointing at.
-func (fs FileSystem) ReadTag(_ context.Context, name string) (retval envelopes.ID, err error) {
+// ReadTag fetches the Tag information including ID and comment.
+func (fs FileSystem) ReadTag(_ context.Context, name string) (retval persist.Tag, err error) {
 	tagLoc := fs.tagPath(name)
-	handle, err := os.Open(tagLoc)
-	if err != nil {
-		return
-	}
-	defer handle.Close()
-
-	var contents [2 * cap(retval)]byte
-	var n int
-	n, err = handle.Read(contents[:])
+	content, err := os.ReadFile(tagLoc)
 	if err != nil {
 		return
 	}
 
-	if expected := cap(contents); n != expected {
-		err = fmt.Errorf(
-			"%s was not long enough to be a candidate for pointing to a Transaction ID (want: %v got: %v)",
-			tagLoc,
-			expected,
-			n)
+	lines := strings.SplitN(string(content), "\n", 2)
+	if len(lines) == 0 || lines[0] == "" {
+		err = fmt.Errorf("%s does not contain a valid Transaction ID", tagLoc)
 		return
 	}
 
-	err = retval.UnmarshalText(contents[:])
+	// Parse the ID from the first line
+	err = retval.ID.UnmarshalText([]byte(strings.TrimSpace(lines[0])))
+	if err != nil {
+		return
+	}
+
+	// Parse the comment from remaining lines if present
+	if len(lines) > 1 {
+		retval.Comment = lines[1]
+	}
+
 	return
 }
 
-// WriteTag sets a tag to be pointing at a particular ID.
-func (fs FileSystem) WriteTag(_ context.Context, name string, id envelopes.ID) error {
+// WriteTag sets a tag with the given ID and comment.
+func (fs FileSystem) WriteTag(_ context.Context, name string, tag persist.Tag) error {
 	tagLoc := fs.tagPath(name)
 
 	err := os.MkdirAll(filepath.Dir(tagLoc), fs.getCreatePermissions()|0110|os.ModeDir)
@@ -297,12 +301,18 @@ func (fs FileSystem) WriteTag(_ context.Context, name string, id envelopes.ID) e
 		return err
 	}
 
-	return os.WriteFile(tagLoc, []byte(id.String()), fs.getCreatePermissions())
+	// Write ID on first line, comment on subsequent lines
+	content := tag.ID.String()
+	if tag.Comment != "" {
+		content += "\n" + tag.Comment
+	}
+
+	return os.WriteFile(tagLoc, []byte(content), fs.getCreatePermissions())
 }
 
 // ListTags fetches the distinct names of the tags that exist in a repository.
 func (fs FileSystem) ListTags(ctx context.Context) (<-chan string, error) {
-	absRoot, err := filepath.Abs(filepath.Dir(fs.tagPath("any_tag_name")))
+	absRoot, err := fs.refsDir("tags")
 	if err != nil {
 		return nil, err
 	}

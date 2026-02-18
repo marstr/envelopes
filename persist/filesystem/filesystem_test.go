@@ -485,11 +485,17 @@ func TestFileSystem_WriteTag(t *testing.T) {
 		Root: testLoc,
 	}
 
-	expected := envelopes.Transaction{
+	expectedID := envelopes.Transaction{
 		Comment: "Tags are like branches, but they don't advance or anything.",
 	}.ID()
+	expectedComment := "Release 1.0.0\nFirst stable release"
 
-	err = subject.WriteTag(ctx, "v1.0.0", expected)
+	expectedTag := persist.Tag{
+		ID:      expectedID,
+		Comment: expectedComment,
+	}
+
+	err = subject.WriteTag(ctx, "v1.0.0", expectedTag)
 	if err != nil {
 		t.Error(err)
 		return
@@ -501,8 +507,13 @@ func TestFileSystem_WriteTag(t *testing.T) {
 		return
 	}
 
-	if got != expected {
-		t.Logf("\ngot:  %X\nwant: %X", got, expected)
+	if got.ID != expectedTag.ID {
+		t.Logf("\ngot ID:  %X\nwant ID: %X", got.ID, expectedTag.ID)
+		t.Fail()
+	}
+
+	if got.Comment != expectedTag.Comment {
+		t.Logf("\ngot comment:  %q\nwant comment: %q", got.Comment, expectedTag.Comment)
 		t.Fail()
 	}
 }

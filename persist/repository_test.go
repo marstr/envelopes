@@ -541,12 +541,12 @@ func TestBareClone_WithTags(t *testing.T) {
 		return
 	}
 
-	if err := src.WriteTag(ctx, "v1.0.0", a.ID()); err != nil {
+	if err := src.WriteTag(ctx, "v1.0.0", Tag{ID: a.ID(), Comment: "First release"}); err != nil {
 		t.Error(err)
 		return
 	}
 
-	if err := src.WriteTag(ctx, "v2.0.0", c.ID()); err != nil {
+	if err := src.WriteTag(ctx, "v2.0.0", Tag{ID: c.ID(), Comment: "Second release"}); err != nil {
 		t.Error(err)
 		return
 	}
@@ -599,18 +599,22 @@ func TestBareClone_WithTags(t *testing.T) {
 	tagsFound := make(map[string]bool)
 	for tag := range readTags {
 		tagsFound[tag] = true
-		id, err := dest.ReadTag(ctx, tag)
+		gotTag, err := dest.ReadTag(ctx, tag)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		expectedID, err := src.ReadTag(ctx, tag)
+		expectedTag, err := src.ReadTag(ctx, tag)
 		if err != nil {
 			t.Error(err)
 			return
 		}
-		if !id.Equal(expectedID) {
-			t.Logf("Tag %q: got %q, want %q", tag, id, expectedID)
+		if !gotTag.ID.Equal(expectedTag.ID) {
+			t.Logf("Tag %q ID: got %q, want %q", tag, gotTag.ID, expectedTag.ID)
+			t.Fail()
+		}
+		if gotTag.Comment != expectedTag.Comment {
+			t.Logf("Tag %q Comment: got %q, want %q", tag, gotTag.Comment, expectedTag.Comment)
 			t.Fail()
 		}
 	}

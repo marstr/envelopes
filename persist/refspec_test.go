@@ -248,7 +248,7 @@ func TestResolve_Tag(t *testing.T) {
 		return
 	}
 
-	err = mockRepo.WriteTag(ctx, tagName, tid)
+	err = mockRepo.WriteTag(ctx, tagName, Tag{ID: tid, Comment: "Release 1.0.0"})
 	if err != nil {
 		t.Error(err)
 		return
@@ -298,7 +298,7 @@ func TestBareResolve_TagWhenNoBranch(t *testing.T) {
 	}
 
 	// Create only a tag, no branch with this name
-	err = mockRepo.WriteTag(ctx, tagName, tid)
+	err = mockRepo.WriteTag(ctx, tagName, Tag{ID: tid, Comment: "Release transaction"})
 	if err != nil {
 		t.Error(err)
 		return
