@@ -28,6 +28,8 @@ type BareRepositoryReader interface {
 	Loader
 	BranchReader
 	BranchLister
+	TagReader
+	TagLister
 }
 
 // BareRepositoryWriter indicates that a struct is able to add objects like envelopes.Budget, envelopes.Transaction,
@@ -35,6 +37,7 @@ type BareRepositoryReader interface {
 type BareRepositoryWriter interface {
 	Writer
 	BranchWriter
+	TagWriter
 }
 
 // BareRepositoryReaderWriter indicates that a struct has the ability to both read and write
@@ -103,6 +106,22 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 		}
 		heads = append(heads, val)
 		err = dest.WriteBranch(ctx, branch, val)
+		if err != nil {
+			return err
+		}
+	}
+
+	rawTags, err := src.ListTags(ctx)
+	if err != nil {
+		return err
+	}
+
+	for tag := range rawTags {
+		val, err := src.ReadTag(ctx, tag)
+		if err != nil {
+			return err
+		}
+		err = dest.WriteTag(ctx, tag, val)
 		if err != nil {
 			return err
 		}

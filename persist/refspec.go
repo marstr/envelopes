@@ -61,6 +61,11 @@ func Resolve(ctx context.Context, repo RepositoryReader, subject RefSpec) (envel
 		return resolved, err
 	}
 
+	resolved, err = resolveTagRefSpec(ctx, repo, subject)
+	if err == nil {
+		return resolved, err
+	}
+
 	resolved, err = resolveMostRecentRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
@@ -88,6 +93,11 @@ func BareResolve(ctx context.Context, repo BareRepositoryReader, subject RefSpec
 	}
 
 	resolved, err = resolveBranchRefSpec(ctx, repo, subject)
+	if err == nil {
+		return resolved, err
+	}
+
+	resolved, err = resolveTagRefSpec(ctx, repo, subject)
 	if err == nil {
 		return resolved, err
 	}
@@ -132,6 +142,15 @@ func ResolveMany(ctx context.Context, repo RepositoryReader, refs []RefSpec) ([]
 // resolveBranchRefSpec find the ID of the Transaction a branch is pointing to.
 func resolveBranchRefSpec(ctx context.Context, reader BranchReader, subject RefSpec) (envelopes.ID, error) {
 	return reader.ReadBranch(ctx, string(subject))
+}
+
+// resolveTagRefSpec finds the ID of the Transaction a tag is pointing to.
+func resolveTagRefSpec(ctx context.Context, reader TagReader, subject RefSpec) (envelopes.ID, error) {
+	tag, err := reader.ReadTag(ctx, string(subject))
+	if err != nil {
+		return envelopes.ID{}, err
+	}
+	return tag.ID, nil
 }
 
 // resolveCaretRefSpec finds the parent ID of the most recent Transaction.

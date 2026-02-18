@@ -503,3 +503,144 @@ func testSecondBranchedCommit(ctx context.Context) func(*testing.T) {
 		}
 	}
 }
+
+func TestBareClone_WithTags(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	const transactionCount = 3
+	const branchCount = 2
+	const tagCount = 2
+	src := NewMockRepository(branchCount+tagCount, transactionCount)
+
+	a := envelopes.Transaction{Comment: "First"}
+	if err := src.WriteTransaction(ctx, a); err != nil {
+		t.Error(err)
+		return
+	}
+
+	b := envelopes.Transaction{Comment: "Second", Parents: []envelopes.ID{a.ID()}}
+	if err := src.WriteTransaction(ctx, b); err != nil {
+		t.Error(err)
+		return
+	}
+
+	c := envelopes.Transaction{Comment: "Third", Parents: []envelopes.ID{b.ID()}}
+	if err := src.WriteTransaction(ctx, c); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := src.WriteBranch(ctx, DefaultBranch, c.ID()); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := src.WriteBranch(ctx, "develop", b.ID()); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := src.WriteTag(ctx, "v1.0.0", Tag{ID: a.ID(), Comment: "First release"}); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := src.WriteTag(ctx, "v2.0.0", Tag{ID: c.ID(), Comment: "Second release"}); err != nil {
+		t.Error(err)
+		return
+	}
+
+	dest := NewMockRepository(branchCount+tagCount, transactionCount)
+
+	if err := BareClone(ctx, src, dest); err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Verify branches were cloned
+	readBranches, err := dest.ListBranches(ctx)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	branchesFound := make(map[string]bool)
+	for branch := range readBranches {
+		branchesFound[branch] = true
+		id, err := dest.ReadBranch(ctx, branch)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		expectedID, err := src.ReadBranch(ctx, branch)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !id.Equal(expectedID) {
+			t.Logf("Branch %q: got %q, want %q", branch, id, expectedID)
+			t.Fail()
+		}
+	}
+
+	if !branchesFound[DefaultBranch] || !branchesFound["develop"] {
+		t.Logf("Missing branches: %v", branchesFound)
+		t.Fail()
+	}
+
+	// Verify tags were cloned
+	readTags, err := dest.ListTags(ctx)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	tagsFound := make(map[string]bool)
+	for tag := range readTags {
+		tagsFound[tag] = true
+		gotTag, err := dest.ReadTag(ctx, tag)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		expectedTag, err := src.ReadTag(ctx, tag)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !gotTag.ID.Equal(expectedTag.ID) {
+			t.Logf("Tag %q ID: got %q, want %q", tag, gotTag.ID, expectedTag.ID)
+			t.Fail()
+		}
+		if gotTag.Comment != expectedTag.Comment {
+			t.Logf("Tag %q Comment: got %q, want %q", tag, gotTag.Comment, expectedTag.Comment)
+			t.Fail()
+		}
+	}
+
+	if !tagsFound["v1.0.0"] || !tagsFound["v2.0.0"] {
+		t.Logf("Missing tags: %v", tagsFound)
+		t.Fail()
+	}
+
+	// Verify transactions were cloned
+	var loaded envelopes.Transaction
+	if err := dest.LoadTransaction(ctx, a.ID(), &loaded); err != nil {
+		t.Error(err)
+		return
+	}
+	if loaded.Comment != "First" {
+		t.Logf("Transaction a not cloned correctly")
+		t.Fail()
+	}
+
+	if err := dest.LoadTransaction(ctx, c.ID(), &loaded); err != nil {
+		t.Error(err)
+		return
+	}
+	if loaded.Comment != "Third" {
+		t.Logf("Transaction c not cloned correctly")
+		t.Fail()
+	}
+}

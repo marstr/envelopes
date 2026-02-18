@@ -254,3 +254,163 @@ func (fs FileSystem) ListBranches(ctx context.Context) (<-chan string, error) {
 
 	return castResults, nil
 }
+
+// refsDir returns the absolute path to a refs subdirectory (e.g., "heads" or "tags").
+func (fs FileSystem) refsDir(subdir string) (string, error) {
+	return filepath.Abs(filepath.Join(fs.Root, "refs", subdir))
+}
+
+func (fs FileSystem) tagPath(name string) string {
+	return filepath.Join(fs.Root, "refs", "tags", name)
+}
+
+// ReadTag fetches the Tag information including ID and comment.
+func (fs FileSystem) ReadTag(_ context.Context, name string) (retval persist.Tag, err error) {
+	tagLoc := fs.tagPath(name)
+	handle, err := os.Open(tagLoc)
+	if err != nil {
+		return
+	}
+	defer handle.Close()
+
+	// Read the ID from the first fixed number of bytes (same as branches)
+	var idBytes [2 * cap(retval.ID)]byte
+	var n int
+	n, err = handle.Read(idBytes[:])
+	if err != nil {
+		return
+	}
+
+	if expected := cap(idBytes); n != expected {
+		err = fmt.Errorf(
+			"%s was not long enough to be a candidate for pointing to a Transaction ID (want: %v got: %v)",
+			tagLoc,
+			expected,
+			n)
+		return
+	}
+
+	// Parse the ID
+	err = retval.ID.UnmarshalText(idBytes[:])
+	if err != nil {
+		return
+	}
+
+	// Read the rest of the file as the comment
+	// First, consume the newline character(s) after the ID
+	var newlineBuf [2]byte
+	n, err = handle.Read(newlineBuf[:])
+	if err != nil && err != io.EOF {
+		return persist.Tag{ID: retval.ID}, nil // No comment, just return the ID
+	}
+	
+	// Handle both Unix (\n) and Windows (\r\n) line endings
+	startOffset := 0
+	if n > 0 && newlineBuf[0] == '\r' && n > 1 && newlineBuf[1] == '\n' {
+		// Windows line ending, both bytes consumed
+		startOffset = 2
+	} else if n > 0 && newlineBuf[0] == '\n' {
+		// Unix line ending, one byte consumed
+		startOffset = 1
+	} else {
+		// No newline found, no comment
+		return persist.Tag{ID: retval.ID}, nil
+	}
+
+	// Read any remaining bytes as the comment
+	if n > startOffset {
+		// We read more than just the newline, prepend those bytes to the comment
+		remainingBytes := newlineBuf[startOffset:n]
+		commentBytes, readErr := io.ReadAll(handle)
+		if readErr != nil && readErr != io.EOF {
+			err = readErr
+			return
+		}
+		retval.Comment = string(remainingBytes) + string(commentBytes)
+	} else {
+		// Read the rest of the file
+		commentBytes, readErr := io.ReadAll(handle)
+		if readErr != nil && readErr != io.EOF {
+			err = readErr
+			return
+		}
+		retval.Comment = string(commentBytes)
+	}
+
+	return
+}
+
+// WriteTag sets a tag with the given ID and comment.
+func (fs FileSystem) WriteTag(_ context.Context, name string, tag persist.Tag) error {
+	tagLoc := fs.tagPath(name)
+
+	err := os.MkdirAll(filepath.Dir(tagLoc), fs.getCreatePermissions()|0110|os.ModeDir)
+	if err != nil {
+		return err
+	}
+
+	// Create the file
+	handle, err := os.Create(tagLoc)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+
+	// Write the ID
+	_, err = handle.WriteString(tag.ID.String())
+	if err != nil {
+		return err
+	}
+
+	// Write the comment if present
+	if tag.Comment != "" {
+		// Write newline separator
+		_, err = handle.WriteString("\n")
+		if err != nil {
+			return err
+		}
+		
+		// Write the comment
+		_, err = handle.WriteString(tag.Comment)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ListTags fetches the distinct names of the tags that exist in a repository.
+func (fs FileSystem) ListTags(ctx context.Context) (<-chan string, error) {
+	absRoot, err := fs.refsDir("tags")
+	if err != nil {
+		return nil, err
+	}
+
+	dir := collection.Directory{
+		Location: absRoot,
+		Options:  collection.DirectoryOptionsExcludeDirectories | collection.DirectoryOptionsRecursive,
+	}
+
+	rawResults := dir.Enumerate(ctx)
+
+	prefix := absRoot + "/"
+	prefix = strings.Replace(prefix, "\\", "/", -1)
+	castResults := make(chan string)
+	go func() {
+		defer close(castResults)
+
+		for entry := range rawResults {
+			entry = strings.Replace(entry, "\\", "/", -1)
+			trimmed := strings.TrimPrefix(entry, prefix)
+			select {
+			case <-ctx.Done():
+				return
+			case castResults <- trimmed:
+				// Intentionally Left Blank
+			}
+		}
+	}()
+
+	return castResults, nil
+}
