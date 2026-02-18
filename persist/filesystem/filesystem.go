@@ -267,26 +267,74 @@ func (fs FileSystem) tagPath(name string) string {
 // ReadTag fetches the Tag information including ID and comment.
 func (fs FileSystem) ReadTag(_ context.Context, name string) (retval persist.Tag, err error) {
 	tagLoc := fs.tagPath(name)
-	content, err := os.ReadFile(tagLoc)
+	handle, err := os.Open(tagLoc)
+	if err != nil {
+		return
+	}
+	defer handle.Close()
+
+	// Read the ID from the first fixed number of bytes (same as branches)
+	var idBytes [2 * cap(retval.ID)]byte
+	var n int
+	n, err = handle.Read(idBytes[:])
 	if err != nil {
 		return
 	}
 
-	lines := strings.SplitN(string(content), "\n", 2)
-	if len(lines) == 0 || lines[0] == "" {
-		err = fmt.Errorf("%s does not contain a valid Transaction ID", tagLoc)
+	if expected := cap(idBytes); n != expected {
+		err = fmt.Errorf(
+			"%s was not long enough to be a candidate for pointing to a Transaction ID (want: %v got: %v)",
+			tagLoc,
+			expected,
+			n)
 		return
 	}
 
-	// Parse the ID from the first line
-	err = retval.ID.UnmarshalText([]byte(strings.TrimSpace(lines[0])))
+	// Parse the ID
+	err = retval.ID.UnmarshalText(idBytes[:])
 	if err != nil {
 		return
 	}
 
-	// Parse the comment from remaining lines if present
-	if len(lines) > 1 {
-		retval.Comment = lines[1]
+	// Read the rest of the file as the comment
+	// First, consume the newline character(s) after the ID
+	var newlineBuf [2]byte
+	n, err = handle.Read(newlineBuf[:])
+	if err != nil && err != io.EOF {
+		return persist.Tag{ID: retval.ID}, nil // No comment, just return the ID
+	}
+	
+	// Handle both Unix (\n) and Windows (\r\n) line endings
+	startOffset := 0
+	if n > 0 && newlineBuf[0] == '\r' && n > 1 && newlineBuf[1] == '\n' {
+		// Windows line ending, both bytes consumed
+		startOffset = 2
+	} else if n > 0 && newlineBuf[0] == '\n' {
+		// Unix line ending, one byte consumed
+		startOffset = 1
+	} else {
+		// No newline found, no comment
+		return persist.Tag{ID: retval.ID}, nil
+	}
+
+	// Read any remaining bytes as the comment
+	if n > startOffset {
+		// We read more than just the newline, prepend those bytes to the comment
+		remainingBytes := newlineBuf[startOffset:n]
+		commentBytes, readErr := io.ReadAll(handle)
+		if readErr != nil && readErr != io.EOF {
+			err = readErr
+			return
+		}
+		retval.Comment = string(remainingBytes) + string(commentBytes)
+	} else {
+		// Read the rest of the file
+		commentBytes, readErr := io.ReadAll(handle)
+		if readErr != nil && readErr != io.EOF {
+			err = readErr
+			return
+		}
+		retval.Comment = string(commentBytes)
 	}
 
 	return
@@ -301,13 +349,35 @@ func (fs FileSystem) WriteTag(_ context.Context, name string, tag persist.Tag) e
 		return err
 	}
 
-	// Write ID on first line, comment on subsequent lines
-	content := tag.ID.String()
-	if tag.Comment != "" {
-		content += "\n" + tag.Comment
+	// Create the file
+	handle, err := os.Create(tagLoc)
+	if err != nil {
+		return err
+	}
+	defer handle.Close()
+
+	// Write the ID
+	_, err = handle.WriteString(tag.ID.String())
+	if err != nil {
+		return err
 	}
 
-	return os.WriteFile(tagLoc, []byte(content), fs.getCreatePermissions())
+	// Write the comment if present
+	if tag.Comment != "" {
+		// Write newline separator
+		_, err = handle.WriteString("\n")
+		if err != nil {
+			return err
+		}
+		
+		// Write the comment
+		_, err = handle.WriteString(tag.Comment)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ListTags fetches the distinct names of the tags that exist in a repository.
