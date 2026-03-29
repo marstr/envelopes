@@ -1,9 +1,11 @@
 package filesystem
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 
@@ -22,9 +24,14 @@ type RepositoryConfigEntry struct {
 }
 
 type RepositoryConfig struct {
-	Objects         RepositoryConfigEntry `json:"objects"`
-	ObjectLocations uint                  `json:"objectLocs"`
-	Branches        RepositoryConfigEntry `json:"branches"`
+	Objects         RepositoryConfigEntry   `json:"objects"`
+	ObjectLocations uint                    `json:"objectLocs"`
+	Branches        RepositoryConfigEntry   `json:"branches"`
+	Remotes         map[string]RemoteConfig `json:"remotes,omitempty"`
+}
+
+type RemoteConfig struct {
+	Url *url.URL `json:"url"`
 }
 
 const (
@@ -245,4 +252,23 @@ func writeConfig(_ context.Context, loc string, config *RepositoryConfig, mode o
 	}
 
 	return os.WriteFile(path.Join(loc, ConfigFilename), marshaled, mode)
+}
+
+func (r RemoteConfig) MarshalJSON() ([]byte, error) {
+	retval := &bytes.Buffer{}
+	_, err := fmt.Fprintf(retval, "{\"url\":%q}", r.Url.String())
+	return retval.Bytes(), err
+}
+
+func (r *RemoteConfig) UnmarshalJSON(encoded []byte) error {
+	topLevelProperties := make(map[string]json.RawMessage)
+	err := json.Unmarshal(encoded, &topLevelProperties)
+	if err != nil {
+		return err
+	}
+
+	rawUrl := topLevelProperties["url"]
+	rawUrl = rawUrl[1 : len(rawUrl)-1]
+	r.Url, err = url.Parse(string(rawUrl))
+	return err
 }

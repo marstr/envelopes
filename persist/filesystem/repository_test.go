@@ -2,7 +2,9 @@ package filesystem_test
 
 import (
 	"context"
+	"encoding/json"
 	"math/big"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -103,4 +105,94 @@ func TestCreateRepositoryLayout1(t *testing.T) {
 		t.Error(err)
 	}
 	defer handle.Close()
+}
+
+func TestRemoteConfig_UnmarshalJSON(t *testing.T) {
+	raw := []byte("{\"url\":\"https://go.dev/play\"}")
+
+	var hydrated filesystem.RemoteConfig
+	err := json.Unmarshal(raw, &hydrated)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if got := hydrated.Url.Scheme; got != "https" {
+		t.Errorf("want: \"https\" got: %q", hydrated.Url.Scheme)
+	}
+
+	if got := hydrated.Url.Hostname(); got != "go.dev" {
+		t.Errorf("want: \"go.dev\" got: %q", got)
+	}
+
+	if got := hydrated.Url.Path; got != "/play" {
+		t.Errorf("want: \"/play\" got: %q", got)
+	}
+}
+
+func TestRemoteConfig_UnmarshalJSON_IgnoreUnknownProperties(t *testing.T) {
+	raw := []byte("{\"foo\":\"bar\",\"url\":\"https://marstr.dev\"}")
+	var hydrated filesystem.RemoteConfig
+	err := json.Unmarshal(raw, &hydrated)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if got := hydrated.Url.Scheme; got != "https" {
+		t.Errorf("want: \"https\" got: %q", got)
+	}
+
+	if got := hydrated.Url.Hostname(); got != "marstr.dev" {
+		t.Errorf("want: \"marstr.dev\" got: %q", got)
+	}
+}
+
+func TestRemoteConfig_MarshalingRoundTripFromUnmarshaled(t *testing.T) {
+	remote, err := url.Parse("//scotty.iot.strohomish:9043")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	original := filesystem.RemoteConfig{
+		Url: remote,
+	}
+
+	marshaled, err := json.Marshal(original)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	var unmarshaled filesystem.RemoteConfig
+	err = json.Unmarshal(marshaled, &unmarshaled)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if got, want := unmarshaled.Url.String(), remote.String(); got != want {
+		t.Errorf("got: %q want: %q", got, want)
+	}
+}
+
+func TestRemoteConfig_MarshalingRoundTripFromMarshaled(t *testing.T) {
+	original := `{"url":"//scotty.iot.strohomish:9043"}`
+
+	var unmarshaled filesystem.RemoteConfig
+	err := json.Unmarshal([]byte(original), &unmarshaled)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	marshaled, err := json.Marshal(unmarshaled)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if got := string(marshaled); got != original {
+		t.Errorf("want: %q got: %q", original, got)
+	}
 }
