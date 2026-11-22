@@ -17,6 +17,7 @@ package persist
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"sync"
@@ -50,69 +51,102 @@ var (
 )
 
 // Resolve interprets a RefSpec that is provided to the envelopes.Transaction ID it is referring to.
-func Resolve(ctx context.Context, repo RepositoryReader, subject RefSpec) (envelopes.ID, error) {
-	resolved, err := resolveTransactionRefSpec(ctx, repo, subject)
+func Resolve(ctx context.Context, repo RepositoryReader, subject RefSpec) (resolved envelopes.ID, err error) {
+	logger := diagnosticLogger(repo)
+	interpretation := "transaction"
+	defer func() { logResolution(ctx, logger, "resolve", interpretation, subject, resolved, err) }()
+
+	resolved, err = resolveTransactionRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
+	interpretation = "branch"
 	resolved, err = resolveBranchRefSpec(ctx, repo, subject)
 	if err == nil {
 		return resolved, err
 	}
+	logResolution(ctx, logger, "resolve", "branch_probe", subject, resolved, err)
 
+	interpretation = "tag"
 	resolved, err = resolveTagRefSpec(ctx, repo, subject)
 	if err == nil {
 		return resolved, err
 	}
+	logResolution(ctx, logger, "resolve", "tag_probe", subject, resolved, err)
 
+	interpretation = "head"
 	resolved, err = resolveMostRecentRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
+	interpretation = "caret"
 	resolved, err = resolveCaretRefSpec(ctx, repo, subject, Resolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
+	interpretation = "tilde"
 	resolved, err = resolveTildeRefSpec(ctx, repo, subject, Resolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
+	interpretation = "unresolved"
 	return envelopes.ID{}, ErrNoRefSpec(subject)
 }
 
 // BareResolve interprets a RefSpec that is provided to the envelopes.Transaction ID it is referring to, but does not support referencing the most recent checked-in transaction.
-func BareResolve(ctx context.Context, repo BareRepositoryReader, subject RefSpec) (envelopes.ID, error) {
+func BareResolve(ctx context.Context, repo BareRepositoryReader, subject RefSpec) (resolved envelopes.ID, err error) {
+	logger := diagnosticLogger(repo)
+	interpretation := "transaction"
+	defer func() { logResolution(ctx, logger, "bare_resolve", interpretation, subject, resolved, err) }()
 
-	resolved, err := resolveTransactionRefSpec(ctx, repo, subject)
+	resolved, err = resolveTransactionRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
+	interpretation = "branch"
 	resolved, err = resolveBranchRefSpec(ctx, repo, subject)
 	if err == nil {
 		return resolved, err
 	}
+	logResolution(ctx, logger, "bare_resolve", "branch_probe", subject, resolved, err)
 
+	interpretation = "tag"
 	resolved, err = resolveTagRefSpec(ctx, repo, subject)
 	if err == nil {
 		return resolved, err
 	}
+	logResolution(ctx, logger, "bare_resolve", "tag_probe", subject, resolved, err)
 
+	interpretation = "caret"
 	resolved, err = resolveCaretRefSpec(ctx, repo, subject, BareResolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
+	interpretation = "tilde"
 	resolved, err = resolveTildeRefSpec(ctx, repo, subject, BareResolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
 		return resolved, err
 	}
 
+	interpretation = "unresolved"
 	return envelopes.ID{}, ErrNoRefSpec(subject)
+}
+
+func logResolution(ctx context.Context, logger *slog.Logger, operation, interpretation string, ref RefSpec, id envelopes.ID, err error) {
+	if logger == nil {
+		return
+	}
+	attrs := []slog.Attr{slog.String("reference", string(ref))}
+	if err == nil {
+		attrs = append(attrs, slog.Any("object_id", id))
+	}
+	logDiagnostic(ctx, logger, operation, interpretation, err, attrs...)
 }
 
 // ResolveMany interprets each of the RefSpec's provided, finding the envelopes.Transaction ID they are referring to. The resulting array matches the order of the provided array.

@@ -52,6 +52,10 @@ implement it without changing the existing repository interfaces. Clone prefers
 the destination's logger, falling back to the source's. Progress records distinguish
 written objects from completed reference updates; clone summaries count successfully
 written branches, tags, and transactions without logging every visited object.
+`persist.Resolve` and `persist.BareResolve` use the same optional capability to
+record the successful interpretation (transaction, branch, tag, HEAD, or ancestor
+expression) and failed branch/tag probes at Debug level. Resolution records include
+reference names and expressions but not the referenced objects' contents.
 
 Debug logs can contain non-index filesystem paths and object IDs. They do not include
 financial payloads, comments, user details, attachment contents, bank-record IDs, or

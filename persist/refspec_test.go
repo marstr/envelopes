@@ -15,12 +15,131 @@
 package persist
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"github.com/marstr/envelopes"
 )
+
+func TestResolutionDiagnostics(t *testing.T) {
+	ctx := context.Background()
+	mock := NewMockRepository(1, 10)
+	parent := envelopes.Transaction{Comment: "private-parent-comment-sentinel"}
+	child := envelopes.Transaction{Comment: "private-child-comment-sentinel", Parents: []envelopes.ID{parent.ID()}}
+	for _, transaction := range []envelopes.Transaction{parent, child} {
+		if err := mock.WriteTransaction(ctx, transaction); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := mock.WriteBranch(ctx, DefaultBranch, child.ID()); err != nil {
+		t.Fatal(err)
+	}
+	if err := mock.WriteTag(ctx, "tag", Tag{ID: parent.ID(), Comment: "private-tag-comment-sentinel"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := mock.SetCurrent(ctx, RefSpec(DefaultBranch)); err != nil {
+		t.Fatal(err)
+	}
+	missing := envelopes.ID{99}
+	for _, bare := range []bool{false, true} {
+		for _, tc := range []struct {
+			name    string
+			ref     RefSpec
+			stage   string
+			id      envelopes.ID
+			wantErr error
+		}{
+			{name: "transaction", ref: RefSpec(child.ID().String()), stage: "transaction", id: child.ID()},
+			{name: "uninitialized", ref: RefSpec((envelopes.ID{}).String()), stage: "transaction"},
+			{name: "branch", ref: RefSpec(DefaultBranch), stage: "branch", id: child.ID()},
+			{name: "tag", ref: "tag", stage: "tag", id: parent.ID()},
+			{name: "head", ref: MostRecentTransactionAlias, stage: "head", id: child.ID()},
+			{name: "caret", ref: RefSpec(DefaultBranch) + "^", stage: "caret", id: parent.ID()},
+			{name: "tilde", ref: RefSpec(DefaultBranch) + "~1", stage: "tilde", id: parent.ID()},
+			{name: "invalid", ref: "unknown", stage: "unresolved", wantErr: ErrNoRefSpec("unknown")},
+			{name: "missing object", ref: RefSpec(missing.String()), stage: "transaction", wantErr: ErrObjectNotFound(missing)},
+		} {
+			t.Run(fmt.Sprintf("%s/bare=%v", tc.name, bare), func(t *testing.T) {
+				var logs bytes.Buffer
+				repo := &loggingRepository{
+					MockRepository: mock,
+					logger:         slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})).With("command", "resolve"),
+				}
+				var id envelopes.ID
+				var err error
+				operation := "resolve"
+				if bare {
+					operation = "bare_resolve"
+					if tc.name == "head" {
+						tc.stage, tc.id, tc.wantErr = "unresolved", envelopes.ID{}, ErrNoRefSpec(tc.ref)
+					}
+					id, err = BareResolve(ctx, repo, tc.ref)
+				} else {
+					id, err = Resolve(ctx, repo, tc.ref)
+				}
+				if err != tc.wantErr || id != tc.id {
+					t.Fatalf("resolution changed: got %s, %v; want %s, %v", id, err, tc.id, tc.wantErr)
+				}
+				records := diagnosticRecords(t, &logs)
+				record := findDiagnostic(t, records, operation, tc.stage)
+				if record["reference"] != string(tc.ref) || record["command"] != "resolve" {
+					t.Fatalf("missing resolution context: %v", record)
+				}
+				if err == nil && record["object_id"] != id.String() {
+					t.Fatalf("missing resolved ID: %v", record)
+				}
+				if tc.name == "tag" {
+					probe := findDiagnostic(t, records, operation, "branch_probe")
+					if probe["error"] == nil {
+						t.Fatal("failed branch probe lost its cause")
+					}
+				}
+				for _, record := range records {
+					if record["level"] != "DEBUG" {
+						t.Fatalf("failed probe produced warning/error: %v", record)
+					}
+				}
+				for _, private := range []string{parent.Comment, child.Comment, "private-tag-comment-sentinel"} {
+					if strings.Contains(logs.String(), private) {
+						t.Fatal("logged object contents during resolution")
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestResolutionDiagnosticsDisabled(t *testing.T) {
+	ctx := context.Background()
+	var logs bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	previous := slog.Default()
+	slog.SetDefault(logger)
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	mock := NewMockRepository(1, 10)
+	for _, repo := range []RepositoryReader{
+		mock,
+		&loggingRepository{MockRepository: mock},
+		&loggingRepository{
+			MockRepository: mock,
+			logger:         slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelInfo})),
+		},
+	} {
+		if _, err := Resolve(ctx, repo, "unknown"); err != ErrNoRefSpec("unknown") {
+			t.Fatal(err)
+		}
+		if _, err := BareResolve(ctx, repo, "unknown"); err != ErrNoRefSpec("unknown") {
+			t.Fatal(err)
+		}
+	}
+	if logs.Len() != 0 {
+		t.Fatal("disabled resolution diagnostics emitted logs")
+	}
+}
 
 func TestResolve(t *testing.T) {
 	const primaryBranch = DefaultBranch
