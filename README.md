@@ -56,6 +56,10 @@ written branches, tags, and transactions without logging every visited object.
 record the successful interpretation (transaction, branch, tag, HEAD, or ancestor
 expression) and failed branch/tag probes at Debug level. Resolution records include
 reference names and expressions but not the referenced objects' contents.
+JSON loaders add the failing object type, ID, and JSON format version to decoding
+errors without adding logs or including the serialized payload in the new context.
+The underlying error remains available through `errors.Is` and `errors.As`;
+fetch failures are returned unchanged.
 
 Debug logs can contain non-index filesystem paths and object IDs. They do not include
 financial payloads, comments, user details, attachment contents, bank-record IDs, or

@@ -2,7 +2,6 @@ package json
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/marstr/envelopes"
@@ -41,7 +40,7 @@ func (dl LoaderV2) LoadTransaction(ctx context.Context, id envelopes.ID, toLoad 
 	}
 
 	var unmarshaled TransactionV2
-	err = json.Unmarshal(marshaled, &unmarshaled)
+	err = unmarshalObject(marshaled, &unmarshaled, "transaction", id, 2)
 	if err != nil {
 		return err
 	}
@@ -75,7 +74,7 @@ func (dl LoaderV2) LoadState(ctx context.Context, id envelopes.ID, toLoad *envel
 	}
 
 	var unmarshaled StateV2
-	err = json.Unmarshal(marshaled, &unmarshaled)
+	err = unmarshalObject(marshaled, &unmarshaled, "state", id, 2)
 	if err != nil {
 		return err
 	}
@@ -102,7 +101,7 @@ func (dl LoaderV2) LoadBudget(ctx context.Context, id envelopes.ID, toLoad *enve
 	}
 
 	var unmarshaled BudgetV2
-	err = json.Unmarshal(marshaled, &unmarshaled)
+	err = unmarshalObject(marshaled, &unmarshaled, "budget", id, 2)
 	if err != nil {
 		return err
 	}
@@ -127,7 +126,7 @@ func (dl LoaderV2) LoadAccounts(ctx context.Context, id envelopes.ID, toLoad *en
 		return err
 	}
 
-	return json.Unmarshal(marshaled, toLoad)
+	return unmarshalObject(marshaled, toLoad, "accounts", id, 2)
 }
 
 func (dl LoaderV2) LoadAttachment(_ context.Context, _ envelopes.ID, _ *envelopes.Attachment) error {
