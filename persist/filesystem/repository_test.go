@@ -200,6 +200,24 @@ func TestRepository_LoggerDisabledAndConfigWriteFailure(t *testing.T) {
 	}
 }
 
+func TestRepository_CommitDiagnostics(t *testing.T) {
+	ctx := context.Background()
+	var logs bytes.Buffer
+	repo, err := filesystem.OpenRepository(ctx, t.TempDir(), filesystem.RepositoryLogger(
+		slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SetCurrent(ctx, ""); err != nil {
+		t.Fatal(err)
+	}
+	logs.Reset()
+	if err := persist.Commit(ctx, repo, envelopes.Transaction{}); err != nil {
+		t.Fatal(err)
+	}
+	operationRecord(t, logRecords(t, &logs), "commit", "complete")
+}
+
 func TestOpenRepositoryLayout1(t *testing.T) {
 	var ctx context.Context
 

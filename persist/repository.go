@@ -18,6 +18,7 @@ package persist
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/marstr/envelopes"
 )
@@ -84,6 +85,7 @@ func BareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 	aggregatedOptions := cloneOptions{}
 	for _, option := range options {
 		if err := option(&aggregatedOptions); err != nil {
+			logDiagnostic(ctx, cloneLogger(src, dest), "clone", "options", err)
 			return err
 		}
 	}
@@ -91,7 +93,24 @@ func BareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 	return bareClone(ctx, src, dest, aggregatedOptions)
 }
 
-func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositoryWriter, options cloneOptions) error {
+func cloneLogger(src BareRepositoryReader, dest BareRepositoryWriter) *slog.Logger {
+	if logger := diagnosticLogger(dest); logger != nil {
+		return logger
+	}
+	return diagnosticLogger(src)
+}
+
+func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositoryWriter, options cloneOptions) (err error) {
+	logger := cloneLogger(src, dest)
+	stage := "list_branches"
+	branches, tags, transactions := 0, 0, 0
+	logDiagnostic(ctx, logger, "clone", "start", nil, slog.Uint64("max_depth", uint64(options.Depth)))
+	defer func() {
+		logDiagnostic(ctx, logger, "clone", stage, err,
+			slog.Int("branches_written", branches), slog.Int("tags_written", tags),
+			slog.Int("transactions_written", transactions))
+	}()
+
 	rawBranches, err := src.ListBranches(ctx)
 	if err != nil {
 		return err
@@ -100,31 +119,38 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 	heads := make([]envelopes.ID, 0)
 
 	for branch := range rawBranches {
+		stage = "read_branch"
 		val, err := src.ReadBranch(ctx, branch)
 		if err != nil {
 			return err
 		}
 		heads = append(heads, val)
+		stage = "write_branch"
 		err = dest.WriteBranch(ctx, branch, val)
 		if err != nil {
 			return err
 		}
+		branches++
 	}
 
+	stage = "list_tags"
 	rawTags, err := src.ListTags(ctx)
 	if err != nil {
 		return err
 	}
 
 	for tag := range rawTags {
+		stage = "read_tag"
 		val, err := src.ReadTag(ctx, tag)
 		if err != nil {
 			return err
 		}
+		stage = "write_tag"
 		err = dest.WriteTag(ctx, tag, val)
 		if err != nil {
 			return err
 		}
+		tags++
 	}
 
 	walker := Walker{
@@ -132,16 +158,30 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 		MaxDepth: options.Depth,
 	}
 
-	return walker.Walk(ctx, func(ctx context.Context, _ envelopes.ID, transaction envelopes.Transaction) error {
-		return dest.WriteTransaction(ctx, transaction)
+	stage = "load_transaction"
+	err = walker.Walk(ctx, func(ctx context.Context, _ envelopes.ID, transaction envelopes.Transaction) error {
+		stage = "write_transaction"
+		if writeErr := dest.WriteTransaction(ctx, transaction); writeErr != nil {
+			return writeErr
+		}
+		transactions++
+		stage = "load_transaction"
+		return nil
 	}, heads...)
+	if err == nil {
+		stage = "complete"
+	}
+	return err
 }
 
 // Commit assigns the currently checked out commit as the parent of the provided transaction, writes that transaction,
 // then updates the reference to the currently checkout out branch as appropriate.
 func Commit(ctx context.Context, repo RepositoryReaderWriter, transaction envelopes.Transaction, additionalParents ...envelopes.ID) error {
+	logger := diagnosticLogger(repo)
+	logDiagnostic(ctx, logger, "commit", "start", nil)
 	head, err := repo.Current(ctx)
 	if err != nil {
+		logDiagnostic(ctx, logger, "commit", "current", err)
 		return err
 	}
 
@@ -149,6 +189,7 @@ func Commit(ctx context.Context, repo RepositoryReaderWriter, transaction envelo
 	if head != "" {
 		parent, err = Resolve(ctx, repo, head)
 		if err != nil {
+			logDiagnostic(ctx, logger, "commit", "resolve_parent", err)
 			return err
 		}
 	}
@@ -164,21 +205,31 @@ func Commit(ctx context.Context, repo RepositoryReaderWriter, transaction envelo
 
 	err = repo.WriteTransaction(ctx, transaction)
 	if err != nil {
+		logDiagnostic(ctx, logger, "commit", "write_transaction", err)
 		return err
 	}
 
+	id := transaction.ID()
+	logDiagnostic(ctx, logger, "commit", "transaction_written", nil,
+		slog.Any("object_id", id), slog.Int("parent_count", len(transaction.Parents)))
+
 	_, err = repo.ReadBranch(ctx, string(head))
 	if err == nil {
-		err = repo.WriteBranch(ctx, string(head), transaction.ID())
+		logDiagnostic(ctx, logger, "commit", "reference_mode", nil, slog.String("mode", "branch"))
+		err = repo.WriteBranch(ctx, string(head), id)
 		if err != nil {
+			logDiagnostic(ctx, logger, "commit", "write_branch", err, slog.Any("object_id", id))
 			return err
 		}
 	} else {
-		err = repo.SetCurrent(ctx, RefSpec(transaction.ID().String()))
+		logDiagnostic(ctx, logger, "commit", "reference_mode", err, slog.String("mode", "detached"))
+		err = repo.SetCurrent(ctx, RefSpec(id.String()))
 		if err != nil {
+			logDiagnostic(ctx, logger, "commit", "set_current", err, slog.Any("object_id", id))
 			return err
 		}
 	}
 
+	logDiagnostic(ctx, logger, "commit", "complete", nil, slog.Any("object_id", id))
 	return nil
 }

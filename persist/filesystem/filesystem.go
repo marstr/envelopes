@@ -46,6 +46,11 @@ type FileSystem struct {
 	Logger *slog.Logger
 }
 
+// DiagnosticLogger supplies the configured logger to higher-level persistence operations.
+func (fs FileSystem) DiagnosticLogger() *slog.Logger {
+	return fs.Logger
+}
+
 func (fs FileSystem) debug(ctx context.Context, operation, stage, loc string, err error, attrs ...slog.Attr) {
 	if fs.Logger == nil || !fs.Logger.Enabled(ctx, slog.LevelDebug) {
 		return
