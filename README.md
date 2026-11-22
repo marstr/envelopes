@@ -17,6 +17,52 @@ the root directory of your project:
 $ go get github.com/marstr/envelopes
 ```
 
+Go 1.21 or later is required.
+
+## persistence diagnostics
+
+Filesystem persistence is silent by default, including when the executable configures
+`slog.Default()`. Supply your application's `*slog.Logger` to opt in:
+
+```go
+logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+    Level: slog.LevelDebug,
+})).With("component", "envelopes")
+
+repo, err := filesystem.OpenRepository(ctx, root,
+    filesystem.RepositoryLogger(logger),
+)
+```
+
+The same option works with `OpenRepositoryWithCache`. For a standalone `FileSystem`
+or `FilesystemBankRecordIDIndex`, set its `Logger` field in a keyed struct literal.
+Configure it before concurrent use; nil disables logging. The application owns the
+handler, destination, level, and any additional attributes or redaction.
+
+Debug records describe filesystem I/O, reference operations, repository configuration,
+and bank-index operations. Returned failures are also Debug: the executable should
+handle and report its final error rather than receive duplicate Error logs from each
+library layer. Warn records report failures that existing APIs do not return, such as
+ignored close errors or asynchronous index read/parse failures. Arithmetic, cache hits,
+JSON codecs, and graph algorithms do not emit their own logs.
+
+Debug logs can contain non-index filesystem paths and object IDs. They do not include
+financial payloads, comments, user details, attachment contents, bank-record IDs, or
+bank-index filenames (which reversibly encode those IDs). Treat debug logs as
+potentially sensitive and choose their destination appropriately.
+
+Repository options are applied after configuration detection, so failures before
+logger injection remain returned errors without library logs. Stream-open records
+do not mean contents have been consumed, and copy records do not guarantee durable
+storage. Directory-listing summaries describe emitted entries; the underlying
+enumerator does not expose filesystem errors.
+
+Adding optional logger fields preserves keyed literals but requires updating any
+unkeyed `FileSystem` or `FilesystemBankRecordIDIndex` literals.
+Repository options now reach the backing object store as well as the returned
+filesystem. A new repository saves its selected object layout; changing the layout
+of an existing repository is rejected rather than leaving its objects inaccessible.
+
 ## model overview
 
 ### balances
