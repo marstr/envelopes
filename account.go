@@ -46,8 +46,8 @@ func (accs Accounts) ID() ID {
 }
 
 // Names fetches the distinct account names represented in this structure.
-func (accs Accounts) Names() []string {
-	names := make([]string, 0, len(accs))
+func (accs Accounts) Names() (names []string) {
+	names = make([]string, 0, len(accs))
 
 	for name := range accs {
 		names = append(names, name)
@@ -55,7 +55,7 @@ func (accs Accounts) Names() []string {
 
 	sort.Strings(names)
 
-	return names
+	return
 }
 
 // RenameAccount changes the name associated with an account. If the new name already exists in this collection of
@@ -71,9 +71,9 @@ func (accs Accounts) RenameAccount(old, new string) bool {
 }
 
 // HasAccount determines whether or not an account exists with the desired name.s
-func (accs Accounts) HasAccount(name string) bool {
-	_, ok := accs[name]
-	return ok
+func (accs Accounts) HasAccount(name string) (ok bool) {
+	_, ok = accs[name]
+	return
 }
 
 // Balance finds the total balance of all accounts in this collection.

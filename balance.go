@@ -302,7 +302,7 @@ func ParseBalanceWithDefault(raw []byte, def AssetType) (Balance, error) {
 
 // ParseBalance converts between a string representation of an amount of dollars
 // into an int64 number of cents.
-func ParseBalance(raw []byte) (Balance, error) {
+func ParseBalance(raw []byte) (result Balance, err error) {
 	return ParseBalanceWithDefault(raw, DefaultAsset)
 }
 

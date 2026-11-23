@@ -125,25 +125,25 @@ func (b Budget) Equal(other Budget) bool {
 // See Also:
 //
 //	Budget.Balance
-func (b Budget) RecursiveBalance() Balance {
-	sum := b.Balance
+func (b Budget) RecursiveBalance() (sum Balance) {
+	sum = b.Balance
 	for _, child := range b.Children {
 		sum = sum.Add(child.RecursiveBalance())
 	}
-	return sum
+	return
 }
 
 // ChildNames returns an alphabetically sorted list of the names of each of the chilren
 // of this budget.
-func (b Budget) ChildNames() []string {
-	results := make([]string, 0, len(b.Children))
+func (b Budget) ChildNames() (results []string) {
+	results = make([]string, 0, len(b.Children))
 
 	for name := range b.Children {
 		results = append(results, name)
 	}
 
 	sort.Strings(results)
-	return results
+	return
 }
 
 // Negate reverses the sign of each balance in a budget.

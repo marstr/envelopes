@@ -40,7 +40,7 @@ type Transaction struct {
 }
 
 // ID fetches a SHA1 hash of this object that will uniquely identify it.
-func (t Transaction) ID() ID {
+func (t Transaction) ID() (id ID) {
 	marshaled, err := t.MarshalText()
 	if err != nil {
 		return ID{}

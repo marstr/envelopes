@@ -58,17 +58,17 @@ func (id ID) String() string {
 
 // MarshalText produces a 20-byte hexadecimal text representation
 // of this ID.
-func (id ID) MarshalText() ([]byte, error) {
+func (id ID) MarshalText() (results []byte, err error) {
 	var raw [2 * len(id)]byte
-	results := raw[:]
+	results = raw[:]
 	hex.Encode(results, id[:])
-	return results, nil
+	return
 }
 
 // UnmarshalText takes a text representation of an ID and reads it
 // into a more usable format.
-func (id *ID) UnmarshalText(content []byte) error {
+func (id *ID) UnmarshalText(content []byte) (err error) {
 	// Truncate content to size to trim trailing whitespace if present.
-	_, err := hex.Decode(id[:], content[:2*len(id)])
-	return err
+	_, err = hex.Decode(id[:], content[:2*len(id)])
+	return
 }
