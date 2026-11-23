@@ -48,7 +48,7 @@ func (i Impact) Negate() Impact {
 }
 
 // ID calculates the SHA1 hash of this object.
-func (s State) ID() (id ID) {
+func (s State) ID() ID {
 	marshaled, err := s.MarshalText()
 	if err != nil {
 		return ID{}

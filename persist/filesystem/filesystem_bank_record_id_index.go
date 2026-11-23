@@ -201,48 +201,47 @@ func (index FilesystemBankRecordIDIndex) AppendBankRecordID(bankRecordID envelop
 	return index.processBankRecordID(os.O_APPEND|os.O_CREATE|os.O_WRONLY, bankRecordID, transactionIDs...)
 }
 
-func (index FilesystemBankRecordIDIndex) processBankRecordID(flag int, bankRecordID envelopes.BankRecordID, transactionIds ...envelopes.ID) (err error) {
+func (index FilesystemBankRecordIDIndex) processBankRecordID(flag int, bankRecordID envelopes.BankRecordID, transactionIds ...envelopes.ID) error {
 	operation := "write_bank_record"
 	if flag&os.O_APPEND != 0 {
 		operation = "append_bank_record"
 	}
-	stage := "noop"
 	count := 0
-	defer func() { index.log(slog.LevelDebug, operation, stage, err, slog.Int("count", count)) }()
 	if len(transactionIds) == 0 {
+		index.log(slog.LevelDebug, operation, "noop", nil, slog.Int("count", count))
 		return nil
 	}
 
-	stage = "path"
-	var fileName string
-	fileName, err = index.bankRecordIdFilename(bankRecordID)
+	fileName, err := index.bankRecordIdFilename(bankRecordID)
 	if err != nil {
+		index.log(slog.LevelDebug, operation, "path", err, slog.Int("count", count))
 		return err
 	}
 
 	path := filepath.Dir(fileName)
 
-	stage = "mkdir"
 	err = os.MkdirAll(path, os.ModePerm)
 	if err != nil {
+		index.log(slog.LevelDebug, operation, "mkdir", err, slog.Int("count", count))
 		return err
 	}
 	var handle *os.File
-	stage = "open"
 	handle, err = os.OpenFile(fileName, flag, os.ModePerm)
 	if err != nil {
+		index.log(slog.LevelDebug, operation, "open", err, slog.Int("count", count))
 		return err
 	}
 	defer index.close(operation, handle)
 
-	stage = "write"
 	for _, transaction := range transactionIds {
 		_, err = fmt.Fprintln(handle, transaction.String())
 		if err != nil {
+			index.log(slog.LevelDebug, operation, "write", err, slog.Int("count", count))
 			return err
 		}
 		count++
 	}
+	index.log(slog.LevelDebug, operation, "write", nil, slog.Int("count", count))
 	return nil
 }
 

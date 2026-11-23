@@ -3,16 +3,12 @@ package persist
 import (
 	"context"
 	"log/slog"
+
+	"github.com/marstr/envelopes"
 )
 
-// DiagnosticLoggerProvider optionally supplies a logger for persistence operations.
-// Repositories without this capability, or returning nil, do not emit diagnostics.
-type DiagnosticLoggerProvider interface {
-	DiagnosticLogger() *slog.Logger
-}
-
 func diagnosticLogger(repository interface{}) *slog.Logger {
-	if provider, ok := repository.(DiagnosticLoggerProvider); ok {
+	if provider, ok := repository.(envelopes.DiagnosticLoggerProvider); ok {
 		return provider.DiagnosticLogger()
 	}
 	return nil

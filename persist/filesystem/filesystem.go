@@ -46,6 +46,8 @@ type FileSystem struct {
 	Logger *slog.Logger
 }
 
+var _ envelopes.DiagnosticLoggerProvider = FileSystem{}
+
 // DiagnosticLogger supplies the configured logger to higher-level persistence operations.
 func (fs FileSystem) DiagnosticLogger() *slog.Logger {
 	return fs.Logger
@@ -86,22 +88,21 @@ func (fs FileSystem) getCreatePermissions() os.FileMode {
 }
 
 // Current fetches the RefSpec that was most recently used to populate the index.
-func (fs FileSystem) Current(ctx context.Context) (result persist.RefSpec, err error) {
+func (fs FileSystem) Current(ctx context.Context) (persist.RefSpec, error) {
 	p, err := fs.currentPath()
 	if err != nil {
 		fs.debug(ctx, "current", "path", p, err)
-		return
+		return "", err
 	}
 
 	raw, err := os.ReadFile(p)
 	fs.debug(ctx, "current", "read", p, err)
 	if err != nil {
-		return
+		return "", err
 	}
 
 	trimmed := strings.TrimSpace(string(raw))
-	result = persist.RefSpec(trimmed)
-	return
+	return persist.RefSpec(trimmed), nil
 }
 
 // SetCurrent replaces the current pointer to the most recent Transaction with a given RefSpec. For instance, this
@@ -205,10 +206,10 @@ func (fs FileSystem) StashReadCloser(ctx context.Context, id envelopes.ID, paylo
 }
 
 // currentPath fetches the name of the file containing the ID to the most up-to-date Transaction.
-func (fs FileSystem) currentPath() (result string, err error) {
+func (fs FileSystem) currentPath() (string, error) {
 	exp, err := homedir.Expand(fs.Root)
 	if err != nil {
-		return
+		return "", err
 	}
 	return filepath.Join(exp, "current.txt"), nil
 }
@@ -235,22 +236,22 @@ func (fs FileSystem) branchPath(name string) string {
 }
 
 // ReadBranch fetches the ID that a branch is pointing at.
-func (fs FileSystem) ReadBranch(ctx context.Context, name string) (retval envelopes.ID, err error) {
+func (fs FileSystem) ReadBranch(ctx context.Context, name string) (envelopes.ID, error) {
 	branchLoc := fs.branchPath(name)
-	stage := "open"
-	defer func() { fs.debug(ctx, "read_branch", stage, branchLoc, err) }()
+	var retval envelopes.ID
 	handle, err := os.Open(branchLoc)
 	if err != nil {
-		return
+		fs.debug(ctx, "read_branch", "open", branchLoc, err)
+		return retval, err
 	}
 	defer fs.close(ctx, "read_branch", branchLoc, handle)
 
-	stage = "read"
 	var contents [2 * cap(retval)]byte
 	var n int
 	n, err = handle.Read(contents[:])
 	if err != nil {
-		return
+		fs.debug(ctx, "read_branch", "read", branchLoc, err)
+		return retval, err
 	}
 
 	if expected := cap(contents); n != expected {
@@ -259,12 +260,13 @@ func (fs FileSystem) ReadBranch(ctx context.Context, name string) (retval envelo
 			branchLoc,
 			expected,
 			n)
-		return
+		fs.debug(ctx, "read_branch", "read", branchLoc, err)
+		return retval, err
 	}
 
-	stage = "parse"
 	err = retval.UnmarshalText(contents[:])
-	return
+	fs.debug(ctx, "read_branch", "parse", branchLoc, err)
+	return retval, err
 }
 
 // WriteBranch sets a branch to be pointing at a particular ID.
@@ -333,23 +335,23 @@ func (fs FileSystem) tagPath(name string) string {
 }
 
 // ReadTag fetches the Tag information including ID and comment.
-func (fs FileSystem) ReadTag(ctx context.Context, name string) (retval persist.Tag, err error) {
+func (fs FileSystem) ReadTag(ctx context.Context, name string) (persist.Tag, error) {
 	tagLoc := fs.tagPath(name)
-	stage := "open"
-	defer func() { fs.debug(ctx, "read_tag", stage, tagLoc, err) }()
+	var retval persist.Tag
 	handle, err := os.Open(tagLoc)
 	if err != nil {
-		return
+		fs.debug(ctx, "read_tag", "open", tagLoc, err)
+		return retval, err
 	}
 	defer fs.close(ctx, "read_tag", tagLoc, handle)
 
-	stage = "read"
 	// Read the ID from the first fixed number of bytes (same as branches)
 	var idBytes [2 * cap(retval.ID)]byte
 	var n int
 	n, err = handle.Read(idBytes[:])
 	if err != nil {
-		return
+		fs.debug(ctx, "read_tag", "read", tagLoc, err)
+		return retval, err
 	}
 
 	if expected := cap(idBytes); n != expected {
@@ -358,23 +360,24 @@ func (fs FileSystem) ReadTag(ctx context.Context, name string) (retval persist.T
 			tagLoc,
 			expected,
 			n)
-		return
+		fs.debug(ctx, "read_tag", "read", tagLoc, err)
+		return retval, err
 	}
 
 	// Parse the ID
-	stage = "parse"
 	err = retval.ID.UnmarshalText(idBytes[:])
 	if err != nil {
-		return
+		fs.debug(ctx, "read_tag", "parse", tagLoc, err)
+		return retval, err
 	}
 
 	// Read the rest of the file as the comment
 	// First, consume the newline character(s) after the ID
 	var newlineBuf [2]byte
-	stage = "read_comment"
 	n, err = handle.Read(newlineBuf[:])
 	if err != nil && err != io.EOF {
-		fs.warn(ctx, "read_tag", stage, tagLoc, err)
+		fs.warn(ctx, "read_tag", "read_comment", tagLoc, err)
+		fs.debug(ctx, "read_tag", "read_comment", tagLoc, nil)
 		return persist.Tag{ID: retval.ID}, nil // No comment, just return the ID
 	}
 
@@ -388,6 +391,7 @@ func (fs FileSystem) ReadTag(ctx context.Context, name string) (retval persist.T
 		startOffset = 1
 	} else {
 		// No newline found, no comment
+		fs.debug(ctx, "read_tag", "read_comment", tagLoc, nil)
 		return persist.Tag{ID: retval.ID}, nil
 	}
 
@@ -397,46 +401,46 @@ func (fs FileSystem) ReadTag(ctx context.Context, name string) (retval persist.T
 		remainingBytes := newlineBuf[startOffset:n]
 		commentBytes, readErr := io.ReadAll(handle)
 		if readErr != nil && readErr != io.EOF {
-			err = readErr
-			return
+			fs.debug(ctx, "read_tag", "read_comment", tagLoc, readErr)
+			return retval, readErr
 		}
 		retval.Comment = string(remainingBytes) + string(commentBytes)
 	} else {
 		// Read the rest of the file
 		commentBytes, readErr := io.ReadAll(handle)
 		if readErr != nil && readErr != io.EOF {
-			err = readErr
-			return
+			fs.debug(ctx, "read_tag", "read_comment", tagLoc, readErr)
+			return retval, readErr
 		}
 		retval.Comment = string(commentBytes)
 	}
 
-	return
+	fs.debug(ctx, "read_tag", "read_comment", tagLoc, nil)
+	return retval, nil
 }
 
 // WriteTag sets a tag with the given ID and comment.
-func (fs FileSystem) WriteTag(ctx context.Context, name string, tag persist.Tag) (err error) {
+func (fs FileSystem) WriteTag(ctx context.Context, name string, tag persist.Tag) error {
 	tagLoc := fs.tagPath(name)
-	stage := "mkdir"
-	defer func() { fs.debug(ctx, "write_tag", stage, tagLoc, err, slog.Any("object_id", tag.ID)) }()
 
-	err = os.MkdirAll(filepath.Dir(tagLoc), fs.getCreatePermissions()|0110|os.ModeDir)
+	err := os.MkdirAll(filepath.Dir(tagLoc), fs.getCreatePermissions()|0110|os.ModeDir)
 	if err != nil {
+		fs.debug(ctx, "write_tag", "mkdir", tagLoc, err, slog.Any("object_id", tag.ID))
 		return err
 	}
 
 	// Create the file
-	stage = "open"
 	handle, err := os.Create(tagLoc)
 	if err != nil {
+		fs.debug(ctx, "write_tag", "open", tagLoc, err, slog.Any("object_id", tag.ID))
 		return err
 	}
 	defer fs.close(ctx, "write_tag", tagLoc, handle)
 
 	// Write the ID
-	stage = "write"
 	_, err = handle.WriteString(tag.ID.String())
 	if err != nil {
+		fs.debug(ctx, "write_tag", "write", tagLoc, err, slog.Any("object_id", tag.ID))
 		return err
 	}
 
@@ -445,16 +449,19 @@ func (fs FileSystem) WriteTag(ctx context.Context, name string, tag persist.Tag)
 		// Write newline separator
 		_, err = handle.WriteString("\n")
 		if err != nil {
+			fs.debug(ctx, "write_tag", "write", tagLoc, err, slog.Any("object_id", tag.ID))
 			return err
 		}
 
 		// Write the comment
 		_, err = handle.WriteString(tag.Comment)
 		if err != nil {
+			fs.debug(ctx, "write_tag", "write", tagLoc, err, slog.Any("object_id", tag.ID))
 			return err
 		}
 	}
 
+	fs.debug(ctx, "write_tag", "write", tagLoc, nil, slog.Any("object_id", tag.ID))
 	return nil
 }
 

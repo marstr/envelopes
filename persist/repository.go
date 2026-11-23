@@ -100,55 +100,50 @@ func cloneLogger(src BareRepositoryReader, dest BareRepositoryWriter) *slog.Logg
 	return diagnosticLogger(src)
 }
 
-func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositoryWriter, options cloneOptions) (err error) {
+func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositoryWriter, options cloneOptions) error {
 	logger := cloneLogger(src, dest)
-	stage := "list_branches"
 	branches, tags, transactions := 0, 0, 0
 	logDiagnostic(ctx, logger, "clone", "start", nil, slog.Uint64("max_depth", uint64(options.Depth)))
-	defer func() {
+	finish := func(stage string, err error) error {
 		logDiagnostic(ctx, logger, "clone", stage, err,
 			slog.Int("branches_written", branches), slog.Int("tags_written", tags),
 			slog.Int("transactions_written", transactions))
-	}()
+		return err
+	}
 
 	rawBranches, err := src.ListBranches(ctx)
 	if err != nil {
-		return err
+		return finish("list_branches", err)
 	}
 
 	heads := make([]envelopes.ID, 0)
 
 	for branch := range rawBranches {
-		stage = "read_branch"
 		val, err := src.ReadBranch(ctx, branch)
 		if err != nil {
-			return err
+			return finish("read_branch", err)
 		}
 		heads = append(heads, val)
-		stage = "write_branch"
 		err = dest.WriteBranch(ctx, branch, val)
 		if err != nil {
-			return err
+			return finish("write_branch", err)
 		}
 		branches++
 	}
 
-	stage = "list_tags"
 	rawTags, err := src.ListTags(ctx)
 	if err != nil {
-		return err
+		return finish("list_tags", err)
 	}
 
 	for tag := range rawTags {
-		stage = "read_tag"
 		val, err := src.ReadTag(ctx, tag)
 		if err != nil {
-			return err
+			return finish("read_tag", err)
 		}
-		stage = "write_tag"
 		err = dest.WriteTag(ctx, tag, val)
 		if err != nil {
-			return err
+			return finish("write_tag", err)
 		}
 		tags++
 	}
@@ -158,7 +153,7 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 		MaxDepth: options.Depth,
 	}
 
-	stage = "load_transaction"
+	stage := "load_transaction"
 	err = walker.Walk(ctx, func(ctx context.Context, _ envelopes.ID, transaction envelopes.Transaction) error {
 		stage = "write_transaction"
 		if writeErr := dest.WriteTransaction(ctx, transaction); writeErr != nil {
@@ -171,7 +166,7 @@ func bareClone(ctx context.Context, src BareRepositoryReader, dest BareRepositor
 	if err == nil {
 		stage = "complete"
 	}
-	return err
+	return finish(stage, err)
 }
 
 // Commit assigns the currently checked out commit as the parent of the provided transaction, writes that transaction,

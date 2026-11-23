@@ -51,90 +51,88 @@ var (
 )
 
 // Resolve interprets a RefSpec that is provided to the envelopes.Transaction ID it is referring to.
-func Resolve(ctx context.Context, repo RepositoryReader, subject RefSpec) (resolved envelopes.ID, err error) {
+func Resolve(ctx context.Context, repo RepositoryReader, subject RefSpec) (envelopes.ID, error) {
 	logger := diagnosticLogger(repo)
-	interpretation := "transaction"
-	defer func() { logResolution(ctx, logger, "resolve", interpretation, subject, resolved, err) }()
 
-	resolved, err = resolveTransactionRefSpec(ctx, repo, subject)
+	resolved, err := resolveTransactionRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
+		logResolution(ctx, logger, "resolve", "transaction", subject, resolved, err)
 		return resolved, err
 	}
 
-	interpretation = "branch"
 	resolved, err = resolveBranchRefSpec(ctx, repo, subject)
 	if err == nil {
+		logResolution(ctx, logger, "resolve", "branch", subject, resolved, nil)
 		return resolved, err
 	}
 	logResolution(ctx, logger, "resolve", "branch_probe", subject, resolved, err)
 
-	interpretation = "tag"
 	resolved, err = resolveTagRefSpec(ctx, repo, subject)
 	if err == nil {
+		logResolution(ctx, logger, "resolve", "tag", subject, resolved, nil)
 		return resolved, err
 	}
 	logResolution(ctx, logger, "resolve", "tag_probe", subject, resolved, err)
 
-	interpretation = "head"
 	resolved, err = resolveMostRecentRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
+		logResolution(ctx, logger, "resolve", "head", subject, resolved, err)
 		return resolved, err
 	}
 
-	interpretation = "caret"
 	resolved, err = resolveCaretRefSpec(ctx, repo, subject, Resolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
+		logResolution(ctx, logger, "resolve", "caret", subject, resolved, err)
 		return resolved, err
 	}
 
-	interpretation = "tilde"
 	resolved, err = resolveTildeRefSpec(ctx, repo, subject, Resolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
+		logResolution(ctx, logger, "resolve", "tilde", subject, resolved, err)
 		return resolved, err
 	}
 
-	interpretation = "unresolved"
+	logResolution(ctx, logger, "resolve", "unresolved", subject, envelopes.ID{}, ErrNoRefSpec(subject))
 	return envelopes.ID{}, ErrNoRefSpec(subject)
 }
 
 // BareResolve interprets a RefSpec that is provided to the envelopes.Transaction ID it is referring to, but does not support referencing the most recent checked-in transaction.
-func BareResolve(ctx context.Context, repo BareRepositoryReader, subject RefSpec) (resolved envelopes.ID, err error) {
+func BareResolve(ctx context.Context, repo BareRepositoryReader, subject RefSpec) (envelopes.ID, error) {
 	logger := diagnosticLogger(repo)
-	interpretation := "transaction"
-	defer func() { logResolution(ctx, logger, "bare_resolve", interpretation, subject, resolved, err) }()
 
-	resolved, err = resolveTransactionRefSpec(ctx, repo, subject)
+	resolved, err := resolveTransactionRefSpec(ctx, repo, subject)
 	if _, ok := err.(ErrNoRefSpec); !ok {
+		logResolution(ctx, logger, "bare_resolve", "transaction", subject, resolved, err)
 		return resolved, err
 	}
 
-	interpretation = "branch"
 	resolved, err = resolveBranchRefSpec(ctx, repo, subject)
 	if err == nil {
+		logResolution(ctx, logger, "bare_resolve", "branch", subject, resolved, nil)
 		return resolved, err
 	}
 	logResolution(ctx, logger, "bare_resolve", "branch_probe", subject, resolved, err)
 
-	interpretation = "tag"
 	resolved, err = resolveTagRefSpec(ctx, repo, subject)
 	if err == nil {
+		logResolution(ctx, logger, "bare_resolve", "tag", subject, resolved, nil)
 		return resolved, err
 	}
 	logResolution(ctx, logger, "bare_resolve", "tag_probe", subject, resolved, err)
 
-	interpretation = "caret"
 	resolved, err = resolveCaretRefSpec(ctx, repo, subject, BareResolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
+		logResolution(ctx, logger, "bare_resolve", "caret", subject, resolved, err)
 		return resolved, err
 	}
 
-	interpretation = "tilde"
 	resolved, err = resolveTildeRefSpec(ctx, repo, subject, BareResolve)
 	if _, ok := err.(ErrNoRefSpec); !ok {
+		logResolution(ctx, logger, "bare_resolve", "tilde", subject, resolved, err)
 		return resolved, err
 	}
 
-	interpretation = "unresolved"
+	logResolution(ctx, logger, "bare_resolve", "unresolved", subject, envelopes.ID{}, ErrNoRefSpec(subject))
 	return envelopes.ID{}, ErrNoRefSpec(subject)
 }
 
