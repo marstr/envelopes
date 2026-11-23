@@ -1,12 +1,249 @@
 package persist
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/marstr/envelopes"
 )
+
+type loggingRepository struct {
+	*MockRepository
+	logger       *slog.Logger
+	failureStage string
+	failure      error
+}
+
+func (repo *loggingRepository) DiagnosticLogger() *slog.Logger { return repo.logger }
+
+func (repo *loggingRepository) WriteTransaction(ctx context.Context, transaction envelopes.Transaction) error {
+	if repo.failureStage == "write_transaction" {
+		return repo.failure
+	}
+	return repo.MockRepository.WriteTransaction(ctx, transaction)
+}
+
+func (repo *loggingRepository) WriteBranch(ctx context.Context, name string, id envelopes.ID) error {
+	if repo.failureStage == "write_branch" {
+		return repo.failure
+	}
+	return repo.MockRepository.WriteBranch(ctx, name, id)
+}
+
+func (repo *loggingRepository) SetCurrent(ctx context.Context, ref RefSpec) error {
+	if repo.failureStage == "set_current" {
+		return repo.failure
+	}
+	return repo.MockRepository.SetCurrent(ctx, ref)
+}
+
+func diagnosticRecords(t *testing.T, logs *bytes.Buffer) []map[string]interface{} {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(logs.Bytes()))
+	var records []map[string]interface{}
+	for {
+		var record map[string]interface{}
+		err := decoder.Decode(&record)
+		if err == io.EOF {
+			return records
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		records = append(records, record)
+	}
+}
+
+func findDiagnostic(t *testing.T, records []map[string]interface{}, operation, stage string) map[string]interface{} {
+	t.Helper()
+	for _, record := range records {
+		if record["operation"] == operation && record["stage"] == stage {
+			return record
+		}
+	}
+	t.Fatalf("missing %s/%s diagnostic in %v", operation, stage, records)
+	return nil
+}
+
+func TestCommitDiagnostics(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		branch  bool
+		failure string
+	}{
+		{name: "detached"},
+		{name: "branch", branch: true},
+		{name: "transaction failure", failure: "write_transaction"},
+		{name: "branch failure", branch: true, failure: "write_branch"},
+		{name: "current failure", failure: "set_current"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			var logs bytes.Buffer
+			failure := errors.New("write failed")
+			mock := NewMockRepository(1, 10)
+			if tc.branch {
+				if err := mock.WriteBranch(ctx, DefaultBranch, envelopes.ID{}); err != nil {
+					t.Fatal(err)
+				}
+				if err := mock.SetCurrent(ctx, RefSpec(DefaultBranch)); err != nil {
+					t.Fatal(err)
+				}
+			}
+			repo := &loggingRepository{
+				MockRepository: mock,
+				logger:         slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})).With("command", "commit"),
+				failureStage:   tc.failure,
+				failure:        failure,
+			}
+			const comment = "private-commit-comment-sentinel"
+			err := Commit(ctx, repo, envelopes.Transaction{Comment: comment})
+			records := diagnosticRecords(t, &logs)
+			if tc.failure != "" {
+				if err != failure {
+					t.Fatalf("commit error changed: %v", err)
+				}
+				record := findDiagnostic(t, records, "commit", tc.failure)
+				if record["error"] != failure.Error() {
+					t.Fatalf("failure diagnostic: %v", record)
+				}
+				for _, record := range records {
+					if record["operation"] == "commit" && record["stage"] == "complete" {
+						t.Fatal("failed commit claimed completion")
+					}
+				}
+			} else {
+				if err != nil {
+					t.Fatal(err)
+				}
+				findDiagnostic(t, records, "commit", "complete")
+			}
+			if tc.failure != "write_transaction" {
+				record := findDiagnostic(t, records, "commit", "transaction_written")
+				if record["object_id"] == nil || record["command"] != "commit" {
+					t.Fatalf("missing commit context: %v", record)
+				}
+				record = findDiagnostic(t, records, "commit", "reference_mode")
+				mode := "detached"
+				if tc.branch {
+					mode = "branch"
+				}
+				if record["mode"] != mode {
+					t.Fatalf("reference mode: %v", record)
+				}
+			}
+			for _, record := range records {
+				if record["level"] != "DEBUG" {
+					t.Fatalf("unexpected log level: %v", record)
+				}
+			}
+			if strings.Contains(logs.String(), comment) {
+				t.Fatal("logged transaction comment")
+			}
+		})
+	}
+}
+
+func TestBareCloneDiagnostics(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		failure    bool
+		sourceOnly bool
+	}{
+		{name: "success"},
+		{name: "partial failure", failure: true},
+		{name: "source logger", sourceOnly: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			var sourceLogs, destinationLogs bytes.Buffer
+			src := &loggingRepository{
+				MockRepository: NewMockRepository(1, 10),
+				logger:         slog.New(slog.NewJSONHandler(&sourceLogs, &slog.HandlerOptions{Level: slog.LevelDebug})),
+			}
+			parent := envelopes.Transaction{Comment: "private-clone-parent-sentinel"}
+			child := envelopes.Transaction{Comment: "private-clone-child-sentinel", Parents: []envelopes.ID{parent.ID()}}
+			for _, transaction := range []envelopes.Transaction{parent, child} {
+				if err := src.WriteTransaction(ctx, transaction); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := src.WriteBranch(ctx, DefaultBranch, child.ID()); err != nil {
+				t.Fatal(err)
+			}
+			if err := src.WriteTag(ctx, "tag", Tag{ID: parent.ID(), Comment: "private-tag-sentinel"}); err != nil {
+				t.Fatal(err)
+			}
+			dest := &loggingRepository{
+				MockRepository: NewMockRepository(1, 10),
+				logger:         slog.New(slog.NewJSONHandler(&destinationLogs, &slog.HandlerOptions{Level: slog.LevelDebug})),
+			}
+			if tc.sourceOnly {
+				dest.logger = nil
+			}
+			if tc.failure {
+				dest.failureStage = "write_transaction"
+				dest.failure = errors.New("transaction write failed")
+			}
+			err := BareClone(ctx, src, dest)
+			logs := &destinationLogs
+			if tc.sourceOnly {
+				logs = &sourceLogs
+			} else if sourceLogs.Len() != 0 {
+				t.Fatal("clone summary was duplicated in source logger")
+			}
+			stage := "complete"
+			count := float64(2)
+			if tc.failure {
+				if err != dest.failure {
+					t.Fatalf("clone error changed: %v", err)
+				}
+				stage, count = "write_transaction", 0
+			} else if err != nil {
+				t.Fatal(err)
+			}
+			record := findDiagnostic(t, diagnosticRecords(t, logs), "clone", stage)
+			if record["branches_written"] != float64(1) || record["tags_written"] != float64(1) ||
+				record["transactions_written"] != count {
+				t.Fatalf("partial-progress counts: %v", record)
+			}
+			for _, private := range []string{parent.Comment, child.Comment, "private-tag-sentinel"} {
+				if strings.Contains(logs.String(), private) {
+					t.Fatal("logged cloned financial metadata")
+				}
+			}
+		})
+	}
+}
+
+func TestOrchestrationDiagnosticsDisabled(t *testing.T) {
+	var logs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+	ctx := context.Background()
+	for _, repo := range []RepositoryReaderWriter{
+		NewMockRepository(1, 10),
+		&loggingRepository{MockRepository: NewMockRepository(1, 10)},
+	} {
+		if err := Commit(ctx, repo, envelopes.Transaction{}); err != nil {
+			t.Fatal(err)
+		}
+		if err := BareClone(ctx, repo, NewMockRepository(1, 10)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if logs.Len() != 0 {
+		t.Fatal("orchestration diagnostics used the default logger")
+	}
+}
 
 func TestBareClone(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)

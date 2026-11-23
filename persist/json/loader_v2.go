@@ -43,7 +43,7 @@ func (dl LoaderV2) LoadTransaction(ctx context.Context, id envelopes.ID, toLoad 
 	var unmarshaled TransactionV2
 	err = json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode transaction object %s (JSONV2): %w", id, err)
 	}
 
 	var state envelopes.State
@@ -77,7 +77,7 @@ func (dl LoaderV2) LoadState(ctx context.Context, id envelopes.ID, toLoad *envel
 	var unmarshaled StateV2
 	err = json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode state object %s (JSONV2): %w", id, err)
 	}
 
 	var budget envelopes.Budget
@@ -104,7 +104,7 @@ func (dl LoaderV2) LoadBudget(ctx context.Context, id envelopes.ID, toLoad *enve
 	var unmarshaled BudgetV2
 	err = json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode budget object %s (JSONV2): %w", id, err)
 	}
 
 	toLoad.Balance = envelopes.Balance(unmarshaled.Balance)
@@ -127,7 +127,10 @@ func (dl LoaderV2) LoadAccounts(ctx context.Context, id envelopes.ID, toLoad *en
 		return err
 	}
 
-	return json.Unmarshal(marshaled, toLoad)
+	if err := json.Unmarshal(marshaled, toLoad); err != nil {
+		return fmt.Errorf("decode accounts object %s (JSONV2): %w", id, err)
+	}
+	return nil
 }
 
 func (dl LoaderV2) LoadAttachment(_ context.Context, _ envelopes.ID, _ *envelopes.Attachment) error {

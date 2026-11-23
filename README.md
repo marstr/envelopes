@@ -17,6 +17,8 @@ the root directory of your project:
 $ go get github.com/marstr/envelopes
 ```
 
+Go 1.21 or later is required.
+
 ## model overview
 
 ### balances

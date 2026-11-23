@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path"
 
@@ -62,6 +63,14 @@ type Repository struct {
 
 type RepositoryOption func(repository *Repository) error
 
+// RepositoryLogger sets the logger used for persistence diagnostics. A nil logger disables logging.
+func RepositoryLogger(logger *slog.Logger) RepositoryOption {
+	return func(repository *Repository) error {
+		repository.FileSystem.Logger = logger
+		return nil
+	}
+}
+
 // RepositoryFileMode creates a RepositoryOption that changes the permissions that will be used for newly created files
 // as they are written.
 func RepositoryFileMode(mode os.FileMode) RepositoryOption {
@@ -114,75 +123,74 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 		creatingRepo = true
 	}
 
-	fs := FileSystem{
-		Root:         loc,
-		ObjectLayout: config.ObjectLocations,
-	}
-
 	retval := Repository{
-		FileSystem: fs,
-		Loader:     nil,
-		Writer:     nil,
+		FileSystem: FileSystem{
+			Root:         loc,
+			ObjectLayout: config.ObjectLocations,
+		},
+		Loader: nil,
+		Writer: nil,
 	}
+	fs := &retval.FileSystem
 
 	if config.Objects.Format == FormatJson {
 		switch config.Objects.Version {
 		case 1:
 			if cache == nil {
-				retval.Loader, err = persistJson.NewLoaderV1(&fs)
+				retval.Loader, err = persistJson.NewLoaderV1(fs)
 				if err != nil {
 					return nil, err
 				}
-				retval.Writer, err = persistJson.NewWriterV1(&fs)
+				retval.Writer, err = persistJson.NewWriterV1(fs)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				retval.Loader, err = persistJson.NewLoaderV1WithLoopback(&fs, cache)
+				retval.Loader, err = persistJson.NewLoaderV1WithLoopback(fs, cache)
 				if err != nil {
 					return nil, err
 				}
-				retval.Writer, err = persistJson.NewWriterV1WithLoopback(&fs, cache)
+				retval.Writer, err = persistJson.NewWriterV1WithLoopback(fs, cache)
 				if err != nil {
 					return nil, err
 				}
 			}
 		case 2:
 			if cache == nil {
-				retval.Loader, err = persistJson.NewLoaderV2(&fs)
+				retval.Loader, err = persistJson.NewLoaderV2(fs)
 				if err != nil {
 					return nil, err
 				}
-				retval.Writer, err = persistJson.NewWriterV2(&fs)
+				retval.Writer, err = persistJson.NewWriterV2(fs)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				retval.Loader, err = persistJson.NewLoaderV2WithLoopback(&fs, cache)
+				retval.Loader, err = persistJson.NewLoaderV2WithLoopback(fs, cache)
 				if err != nil {
 					return nil, err
 				}
-				retval.Writer, err = persistJson.NewWriterV2WithLoopback(&fs, cache)
+				retval.Writer, err = persistJson.NewWriterV2WithLoopback(fs, cache)
 				if err != nil {
 					return nil, err
 				}
 			}
 		case 3:
 			if cache == nil {
-				retval.Loader, err = persistJson.NewLoaderV3(&fs)
+				retval.Loader, err = persistJson.NewLoaderV3(fs)
 				if err != nil {
 					return nil, err
 				}
-				retval.Writer, err = persistJson.NewWriterV3(&fs)
+				retval.Writer, err = persistJson.NewWriterV3(fs)
 				if err != nil {
 					return nil, err
 				}
 			} else {
-				retval.Loader, err = persistJson.NewLoaderV3WithLoopback(&fs, cache)
+				retval.Loader, err = persistJson.NewLoaderV3WithLoopback(fs, cache)
 				if err != nil {
 					return nil, err
 				}
-				retval.Writer, err = persistJson.NewWriterV3WithLoopback(&fs, cache)
+				retval.Writer, err = persistJson.NewWriterV3WithLoopback(fs, cache)
 				if err != nil {
 					return nil, err
 				}
@@ -208,13 +216,31 @@ func openRepository(ctx context.Context, loc string, cache *persist.Cache, optio
 		}
 	}
 
+	if !creatingRepo && fs.ObjectLayout != config.ObjectLocations {
+		err = fmt.Errorf("cannot change an existing repository's object layout from %v to %v",
+			config.ObjectLocations, fs.ObjectLayout)
+		fs.debug(ctx, "open_repository", "options", fs.Root, err)
+		return nil, err
+	}
+
+	fs.debug(ctx, "open_repository", "configuration", fs.Root, nil,
+		slog.Bool("creating", creatingRepo),
+		slog.String("format", config.Objects.Format),
+		slog.Uint64("version", uint64(config.Objects.Version)),
+		slog.Uint64("object_layout", uint64(fs.ObjectLayout)),
+		slog.Bool("cache_enabled", cache != nil))
+
 	if creatingRepo {
-		err = writeConfig(ctx, fs.Root, config, fs.getCreatePermissions())
+		effectiveConfig := *config
+		effectiveConfig.ObjectLocations = fs.ObjectLayout
+		err = writeConfig(ctx, fs.Root, &effectiveConfig, fs.getCreatePermissions())
+		fs.debug(ctx, "write_config", "write", path.Join(fs.Root, ConfigFilename), err)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	fs.debug(ctx, "open_repository", "complete", fs.Root, nil)
 	return &retval, nil
 }
 

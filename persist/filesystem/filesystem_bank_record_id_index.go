@@ -18,7 +18,10 @@ import (
 	"bufio"
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,6 +41,36 @@ func (err ErrEmptyBankRecordID) Error() string {
 type FilesystemBankRecordIDIndex struct {
 	Root            string
 	DecoratedWriter persist.Writer
+
+	// Logger receives index diagnostics without bank-record IDs or index filenames. Nil disables logging.
+	Logger *slog.Logger
+}
+
+func (index FilesystemBankRecordIDIndex) log(level slog.Level, operation, stage string, err error, attrs ...slog.Attr) {
+	ctx := context.Background()
+	if index.Logger == nil || !index.Logger.Enabled(ctx, level) {
+		return
+	}
+	attrs = append(attrs, slog.String("operation", operation), slog.String("stage", stage))
+	if err != nil {
+		if stage == "parse" {
+			attrs = append(attrs, slog.String("error", "invalid transaction ID"))
+		} else {
+			// Index filenames reversibly encode bank-record IDs.
+			var pathErr *os.PathError
+			if errors.As(err, &pathErr) {
+				err = pathErr.Err
+			}
+			attrs = append(attrs, slog.Any("error", err))
+		}
+	}
+	index.Logger.LogAttrs(ctx, level, "bank-record index operation", attrs...)
+}
+
+func (index FilesystemBankRecordIDIndex) close(operation string, handle io.Closer) {
+	if err := handle.Close(); err != nil {
+		index.log(slog.LevelWarn, operation, "close", err)
+	}
 }
 
 // Converts an arbitrary bank transaction ID to something that's deterministic and only contains characters safe for
@@ -125,14 +158,18 @@ func (index FilesystemBankRecordIDIndex) HasBankRecordId(id envelopes.BankRecord
 	var err error
 	fileName, err = index.bankRecordIdFilename(id)
 	if err != nil {
+		index.log(slog.LevelDebug, "has_bank_record", "path", err)
 		return false, err
 	}
 	_, err = os.Stat(fileName)
 	if os.IsNotExist(err) {
+		index.log(slog.LevelDebug, "has_bank_record", "stat", nil, slog.Bool("found", false))
 		return false, nil
 	} else if err != nil {
+		index.log(slog.LevelDebug, "has_bank_record", "stat", err)
 		return false, err
 	}
+	index.log(slog.LevelDebug, "has_bank_record", "stat", nil, slog.Bool("found", true))
 	return true, nil
 }
 
@@ -142,12 +179,15 @@ func (index FilesystemBankRecordIDIndex) ClearBankRecordID(bankRecordID envelope
 	var err error
 	fileName, err = index.bankRecordIdFilename(bankRecordID)
 	if err != nil {
+		index.log(slog.LevelDebug, "clear_bank_record", "path", err)
 		return err
 	}
 	err = os.Remove(fileName)
 	if os.IsNotExist(err) {
+		index.log(slog.LevelDebug, "clear_bank_record", "remove", nil, slog.Bool("found", false))
 		return nil
 	}
+	index.log(slog.LevelDebug, "clear_bank_record", "remove", err, slog.Bool("found", err == nil))
 	return err
 }
 
@@ -162,14 +202,19 @@ func (index FilesystemBankRecordIDIndex) AppendBankRecordID(bankRecordID envelop
 }
 
 func (index FilesystemBankRecordIDIndex) processBankRecordID(flag int, bankRecordID envelopes.BankRecordID, transactionIds ...envelopes.ID) error {
+	operation := "write_bank_record"
+	if flag&os.O_APPEND != 0 {
+		operation = "append_bank_record"
+	}
+	count := 0
 	if len(transactionIds) == 0 {
+		index.log(slog.LevelDebug, operation, "noop", nil, slog.Int("count", count))
 		return nil
 	}
 
-	var err error
-	var fileName string
-	fileName, err = index.bankRecordIdFilename(bankRecordID)
+	fileName, err := index.bankRecordIdFilename(bankRecordID)
 	if err != nil {
+		index.log(slog.LevelDebug, operation, "path", err, slog.Int("count", count))
 		return err
 	}
 
@@ -177,21 +222,26 @@ func (index FilesystemBankRecordIDIndex) processBankRecordID(flag int, bankRecor
 
 	err = os.MkdirAll(path, os.ModePerm)
 	if err != nil {
+		index.log(slog.LevelDebug, operation, "mkdir", err, slog.Int("count", count))
 		return err
 	}
 	var handle *os.File
 	handle, err = os.OpenFile(fileName, flag, os.ModePerm)
 	if err != nil {
+		index.log(slog.LevelDebug, operation, "open", err, slog.Int("count", count))
 		return err
 	}
-	defer handle.Close()
+	defer index.close(operation, handle)
 
 	for _, transaction := range transactionIds {
 		_, err = fmt.Fprintln(handle, transaction.String())
 		if err != nil {
+			index.log(slog.LevelDebug, operation, "write", err, slog.Int("count", count))
 			return err
 		}
+		count++
 	}
+	index.log(slog.LevelDebug, operation, "write", nil, slog.Int("count", count))
 	return nil
 }
 
@@ -204,19 +254,22 @@ func (index FilesystemBankRecordIDIndex) listTransactions(id envelopes.BankRecor
 	var fileName string
 	fileName, err = index.bankRecordIdFilename(id)
 	if err != nil {
+		index.log(slog.LevelDebug, "list_bank_transactions", "path", err)
 		return nil, err
 	}
 
 	var handle *os.File
 	handle, err = os.Open(fileName)
 	if err != nil {
+		index.log(slog.LevelDebug, "list_bank_transactions", "open", err)
 		return nil, err
 	}
+	index.log(slog.LevelDebug, "list_bank_transactions", "open", nil)
 
 	retval := make(chan envelopes.ID)
 	go func() {
 		defer close(retval)
-		defer handle.Close()
+		defer index.close("list_bank_transactions", handle)
 
 		reader := bufio.NewReader(handle)
 		for {
@@ -224,12 +277,16 @@ func (index FilesystemBankRecordIDIndex) listTransactions(id envelopes.BankRecor
 			var current envelopes.ID
 			line, err = reader.ReadBytes('\n')
 			if err != nil {
+				if err != io.EOF {
+					index.log(slog.LevelWarn, "list_bank_transactions", "read", err)
+				}
 				// this is why channels are so bad for this
 				return
 			}
 
 			err = current.UnmarshalText(line)
 			if err != nil {
+				index.log(slog.LevelWarn, "list_bank_transactions", "parse", err)
 				// this is why channels are so bad for this
 				return
 			}

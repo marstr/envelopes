@@ -3,6 +3,7 @@ package json
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	"github.com/marstr/envelopes"
@@ -45,7 +46,7 @@ func (dl LoaderV3) LoadTransaction(ctx context.Context, id envelopes.ID, toLoad 
 	var unmarshaled TransactionV3
 	err = json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode transaction object %s (JSONV3): %w", id, err)
 	}
 
 	var state envelopes.State
@@ -93,7 +94,7 @@ func (dl LoaderV3) LoadState(ctx context.Context, id envelopes.ID, toLoad *envel
 	var unmarshaled StateV3
 	err = json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode state object %s (JSONV3): %w", id, err)
 	}
 
 	var budget envelopes.Budget
@@ -122,7 +123,7 @@ func (dl LoaderV3) LoadBudget(ctx context.Context, id envelopes.ID, toLoad *enve
 	var unmarshaled BudgetV3
 	err = json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode budget object %s (JSONV3): %w", id, err)
 	}
 
 	toLoad.Balance = envelopes.Balance(unmarshaled.Balance)
@@ -148,7 +149,7 @@ func (dl LoaderV3) LoadAccounts(ctx context.Context, id envelopes.ID, toLoad *en
 	var unmarshaled AccountsV3
 	err = json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode accounts object %s (JSONV3): %w", id, err)
 	}
 
 	*toLoad = make(envelopes.Accounts, len(unmarshaled))
@@ -168,7 +169,7 @@ func (dl LoaderV3) LoadAttachment(ctx context.Context, id envelopes.ID, toLoad *
 	var unmarshaled AttachmentV3
 	err = json.Unmarshal(marshaled, &unmarshaled)
 	if err != nil {
-		return err
+		return fmt.Errorf("decode attachment object %s (JSONV3): %w", id, err)
 	}
 
 	toLoad.Comment = unmarshaled.Comment

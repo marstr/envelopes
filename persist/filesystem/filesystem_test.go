@@ -15,12 +15,17 @@
 package filesystem_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,6 +33,223 @@ import (
 	"github.com/marstr/envelopes/persist"
 	"github.com/marstr/envelopes/persist/filesystem"
 )
+
+func logRecords(t *testing.T, buf *bytes.Buffer) []map[string]interface{} {
+	t.Helper()
+	decoder := json.NewDecoder(bytes.NewReader(buf.Bytes()))
+	var records []map[string]interface{}
+	for {
+		var record map[string]interface{}
+		err := decoder.Decode(&record)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		records = append(records, record)
+	}
+	return records
+}
+
+func operationRecord(t *testing.T, records []map[string]interface{}, operation, stage string) map[string]interface{} {
+	t.Helper()
+	for _, record := range records {
+		if record["operation"] == operation && record["stage"] == stage {
+			return record
+		}
+	}
+	t.Fatalf("missing %s/%s log in %v", operation, stage, records)
+	return nil
+}
+
+func TestFileSystem_Logging(t *testing.T) {
+	ctx := context.Background()
+	var defaultLogs bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&defaultLogs, &slog.HandlerOptions{Level: slog.LevelDebug})))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	for _, level := range []slog.Level{slog.LevelDebug, slog.LevelInfo} {
+		t.Run(level.String(), func(t *testing.T) {
+			var logs bytes.Buffer
+			logger := slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: level})).
+				With("command", "test")
+			fs := filesystem.FileSystem{Root: t.TempDir()}
+			id := envelopes.ID{1}
+			const payload = "private-payload-sentinel"
+			if err := fs.Stash(ctx, id, []byte(payload)); err != nil {
+				t.Fatal(err)
+			}
+			if defaultLogs.Len() != 0 {
+				t.Fatal("nil filesystem logger used the default logger")
+			}
+
+			fs.Logger = logger
+			raw, err := fs.Fetch(ctx, id)
+			if err != nil || string(raw) != payload {
+				t.Fatalf("fetch: %q, %v", raw, err)
+			}
+			if level == slog.LevelInfo {
+				if logs.Len() != 0 {
+					t.Fatal("Debug diagnostics were not filtered")
+				}
+				return
+			}
+			record := operationRecord(t, logRecords(t, &logs), "fetch", "read")
+			if record["command"] != "test" || record["object_id"] != id.String() ||
+				record["path"] != filepath.Join(fs.Root, filesystem.ObjectsDir, id.String()+".json") ||
+				record["bytes"] != float64(len(payload)) {
+				t.Fatalf("missing diagnostic context: %v", record)
+			}
+			if strings.Contains(logs.String(), payload) {
+				t.Fatal("logged object payload")
+			}
+
+			logs.Reset()
+			_, err = fs.Fetch(ctx, envelopes.ID{2})
+			if !os.IsNotExist(err) {
+				t.Fatalf("missing object error changed: %v", err)
+			}
+			record = operationRecord(t, logRecords(t, &logs), "fetch", "read")
+			if record["level"] != "DEBUG" || record["error"] != err.Error() {
+				t.Fatalf("missing object diagnostic: %v", record)
+			}
+		})
+	}
+}
+
+type failingStream struct {
+	readErr  error
+	closeErr error
+	closed   bool
+}
+
+func (stream *failingStream) Read([]byte) (int, error) { return 0, stream.readErr }
+func (stream *failingStream) Close() error {
+	stream.closed = true
+	return stream.closeErr
+}
+
+func TestFileSystem_StreamLogging(t *testing.T) {
+	ctx := context.Background()
+	var logs bytes.Buffer
+	fs := filesystem.FileSystem{
+		Root:   t.TempDir(),
+		Logger: slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
+	}
+	readErr := errors.New("source read failed")
+	closeErr := errors.New("source close failed")
+	stream := &failingStream{readErr: readErr, closeErr: closeErr}
+	err := fs.StashReadCloser(ctx, envelopes.ID{3}, stream)
+	if err != readErr || !stream.closed {
+		t.Fatalf("stream error/ownership changed: %v, closed=%v", err, stream.closed)
+	}
+	records := logRecords(t, &logs)
+	copyRecord := operationRecord(t, records, "stash_stream", "copy")
+	if copyRecord["error"] != readErr.Error() || copyRecord["bytes"] != float64(0) {
+		t.Fatalf("copy diagnostic: %v", copyRecord)
+	}
+	closeRecord := operationRecord(t, records, "stash_stream_source", "close")
+	if closeRecord["level"] != "WARN" || closeRecord["error"] != closeErr.Error() {
+		t.Fatalf("ignored close diagnostic: %v", closeRecord)
+	}
+
+	logs.Reset()
+	const contents = "private-attachment-sentinel"
+	if err := fs.StashReadCloser(ctx, envelopes.ID{4}, io.NopCloser(strings.NewReader(contents))); err != nil {
+		t.Fatal(err)
+	}
+	handle, err := fs.FetchReadCloser(ctx, envelopes.ID{4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer handle.Close()
+	record := operationRecord(t, logRecords(t, &logs), "fetch_stream", "open")
+	if _, hasBytes := record["bytes"]; hasBytes {
+		t.Fatal("stream opening claimed to have read bytes")
+	}
+	raw, err := io.ReadAll(handle)
+	if err != nil || string(raw) != contents {
+		t.Fatalf("stream fetch: %q, %v", raw, err)
+	}
+	if strings.Contains(logs.String(), contents) {
+		t.Fatal("logged attachment content")
+	}
+
+	logs.Reset()
+	blockedRoot := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(blockedRoot, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	fs.Root = blockedRoot
+	err = fs.Stash(ctx, envelopes.ID{5}, nil)
+	if err == nil {
+		t.Fatal("expected mkdir failure")
+	}
+	record = operationRecord(t, logRecords(t, &logs), "stash", "mkdir")
+	if record["error"] != err.Error() {
+		t.Fatalf("mkdir diagnostic: %v", record)
+	}
+}
+
+func TestFileSystem_ReferenceLogging(t *testing.T) {
+	ctx := context.Background()
+	var logs bytes.Buffer
+	fs := filesystem.FileSystem{
+		Root:   t.TempDir(),
+		Logger: slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug})),
+	}
+	id := envelopes.ID{6}
+	const comment = "private-tag-comment-sentinel"
+	if err := fs.WriteTag(ctx, "tag", persist.Tag{ID: id, Comment: comment}); err != nil {
+		t.Fatal(err)
+	}
+	tag, err := fs.ReadTag(ctx, "tag")
+	if err != nil || tag.ID != id || tag.Comment != comment {
+		t.Fatalf("tag: %v, %v", tag, err)
+	}
+	if _, err := fs.ReadBranch(ctx, "missing"); !os.IsNotExist(err) {
+		t.Fatalf("branch miss: %v", err)
+	}
+	if _, err := fs.ReadTag(ctx, "missing"); !os.IsNotExist(err) {
+		t.Fatalf("tag miss: %v", err)
+	}
+	for _, record := range logRecords(t, &logs) {
+		if record["level"] != "DEBUG" {
+			t.Fatalf("reference miss produced a warning/error: %v", record)
+		}
+	}
+	if strings.Contains(logs.String(), comment) {
+		t.Fatal("logged tag comment")
+	}
+
+	logs.Reset()
+	tags, err := fs.ListTags(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range tags {
+	}
+	record := operationRecord(t, logRecords(t, &logs), "list_tags", "enumerated")
+	if record["count"] != float64(1) {
+		t.Fatalf("listing count: %v", record)
+	}
+
+	logs.Reset()
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	branches, err := fs.ListBranches(canceled)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for range branches {
+	}
+	record = operationRecord(t, logRecords(t, &logs), "list_branches", "enumerated")
+	if record["level"] != "DEBUG" || record["error"] != context.Canceled.Error() {
+		t.Fatalf("listing cancellation: %v", record)
+	}
+}
 
 func TestFileSystem_Current(t *testing.T) {
 	var ctx context.Context
@@ -569,4 +791,3 @@ func TestFileSystem_ListTags(t *testing.T) {
 		})
 	}
 }
-
